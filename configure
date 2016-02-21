@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo
+echo My apologies\; I have not enjoyed my previous encounter with autotools.
+echo
+echo For a package supposed to overcome platform differences, it had too many
+echo version dependencies of its own.  Also, I failed to grasp the logic or
+echo structure of the autotools, making it seem like an endless series of
+echo fixes without clarity of why any of them was needed, and where.
+echo
+echo Please accept my humble offering of Makefiles instead.
+echo

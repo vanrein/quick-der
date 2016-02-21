@@ -1,0 +1,3 @@
+[submodule "tool/hexio"]
+	path = tool/hexio
+	url = https://github.com/vanrein/hexio
