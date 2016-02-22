@@ -122,4 +122,5 @@ And of course, there are many useful things we may do with this library:
 
   * **Kerberos in PKIX.** [Certificates wrapping Kerberos Tickets](http://github.com/arpa2/kerberos2pkix) for use with [TLS-KDH](https://tools.ietf.org/html/draft-vanrein-tls-kdh)
   * **Miniature LDAP services.** These can help you centralise your data storage under own control; for instance, your PGP key ring or your vCard collection are good canidadates for sharing locally.
+  * **Remote PKCS #11.** The main issue in doing this well is proper encapsulation, but with Quick and Easy DER, and the emphasis of both on security and well-defined sizes, it appears to be a perfect match to wrap PKCS #11 arguments in DER structures.
 

@@ -45,7 +45,7 @@ as a flag, as in
             DER_PACK_STORE | ...,
             ...,
             DER_PACK_LEAVE,
-            DER_WALK_END
+            DER_PACK_END
     }
 
 Note that `DER_PACK_LEAVE` is an instruction on its own.  The other two
@@ -58,7 +58,7 @@ forms are extended with a tag that is verified to match, for instance
             DER_PACK_LEAVE,
             DER_PACK_STORE | DER_TAG_OCTETSTRING,
             DER_PACK_LEAVE,
-            DER_WALK_END
+            DER_PACK_END
     }
 
 An example ASN.1 structure that could be traversed by this would be
@@ -94,7 +94,7 @@ we might have used
             DER_PACK_STORE | DER_TAG_CONTEXT (0),
             DER_PACK_STORE | DER_TAG_OCTETSTRING,
             DER_PACK_LEAVE,
-            DER_WALK_END
+            DER_PACK_END
     }
 
 to find `output[0]` set to the DER sequence for `[0] INTEGER`, so in hex
@@ -124,7 +124,7 @@ The path expression to store this set would be
 
     derwalk path_primes [] = {
             DER_PACK_STORE | DER_TAG_SET_OF,
-            DER_WALK_END
+            DER_PACK_END
     }
 
 The result would be stored in `output[0]` as the sequence `02 01 02` and so on,
