@@ -72,7 +72,7 @@ After invoking `der_unpack()` on this path, there are two values in the `output`
 array of `dercursor`, namely for the two `DER_PACK_STORE` instructions.  From the
 following input data
 
-    30 16				 -- tag SEQUENCE, length 16
+    30 16                                -- tag SEQUENCE, length 16
        a0 03                             -- tag a0 for [0], length 3
           02 01 07                       -- tag INTEGER, length 1, value 7
        04 09 51 75 69 63 6b 20 44 45 52  -- tag 4, length 9, "Quick DER"
@@ -108,7 +108,7 @@ Imagine the ASN.1 structure
 which is a `SET OF` and can thus contain as many `INTEGER` values as desired.
 An example hexdump of a DER value listing the first 5 primes would be
 
-    31 0c        -- SET, containing 12 bytes
+    31 0f        -- SET, containing 15 bytes
        02 01 02  -- INTEGER 2
        02 01 03  -- INTEGER 3
        02 01 05  -- INTEGER 5
@@ -231,7 +231,7 @@ These things combined should enable you to specify things like
 
     void print (dercursor *input) {
             Certificate crt;
-            if (der_unpack (&crs, path_demo, outputs, 1) == 0) {
+            if (der_unpack (&input, path_demo, (dercursor *) &crt, 1) == 0) {
                     ...crt.tbsCertificate.issuer...
             }
     }
