@@ -231,7 +231,7 @@ These things combined should enable you to specify things like
 
     void print (dercursor *input) {
             Certificate crt;
-            if (der_unpack (&input, path_demo, (dercursor *) &crt, 1) == 0) {
+            if (der_unpack (&input, path_cert, (dercursor *) &crt, 1) == 0) {
                     ...crt.tbsCertificate.issuer...
             }
     }
