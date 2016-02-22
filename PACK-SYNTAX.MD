@@ -97,8 +97,9 @@ we might have used
             DER_PACK_END
     }
 
-to find `output[0]` set to the DER sequence for `[0] INTEGER`, so in hex
-the bytes `a0 03 02 01 07` instead of just to `07`.  This can be useful at
+to find `output[0]` set to the DER sequence *contained in* `[0] INTEGER`,
+which means the `INTEGER` in DER coding, so in hex
+the bytes `02 01 07` instead of just to `07`.  This can be useful at
 some times.
 
 Imagine the ASN.1 structure
@@ -118,7 +119,7 @@ An example hexdump of a DER value listing the first 5 primes would be
 If we had to store each `INTEGER` in a separate `output[]` entry, we would need
 a variable-sized output array.  What `der_unpack()` does in these cases is the
 same as demonstrated for `[0] INTEGER` above; it stores the entire structure
-of the `SET OF` and leaves it for further processing.
+*contained inside* the `SET OF` and leaves it for further processing.
 
 The path expression to store this set would be
 
@@ -128,7 +129,7 @@ The path expression to store this set would be
     }
 
 The result would be stored in `output[0]` as the sequence `02 01 02` and so on,
-of length 12.  It is now possible to do a few things:
+of length 15.  It is now possible to do a few things:
 
   * use `der_iterate_first()` and `der_iterate_next()` to find the individual
     values in the set;
