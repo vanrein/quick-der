@@ -2,6 +2,7 @@
 SUBDIRS = lib tool test
 
 all:
+	git submodule update --init
 	for d in $(SUBDIRS); do make -C "$$d" all ; done
 
 install:

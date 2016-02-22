@@ -1,4 +1,4 @@
-# Quick DER sizes: Sometimes small is bettar
+# Quick DER sizes: Sometimes Small is Better
 
 <img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
