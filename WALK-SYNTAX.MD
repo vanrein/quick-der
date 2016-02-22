@@ -67,7 +67,7 @@ The two statements shown could be used to get to the `OCTET STRING` in
 This relates to the DER sequence for this structure; let's say the `INTEGER`
 value is `7` and the `OCTET STRING` is `Quick DER`, then the encoding would be
 
-    30 16				 -- tag SEQUENCE, length 16
+    30 16                                -- tag SEQUENCE, length 16
        a0 03                             -- tag a0 for [0], length 3
           02 01 07                       -- tag INTEGER, length 1, value 7
        04 09 51 75 69 63 6b 20 44 45 52  -- tag 4, length 9, "Quick DER"
