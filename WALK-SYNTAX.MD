@@ -1,5 +1,7 @@
 # Syntax for Walking Paths
 
+![Quick DER logo](quick-der-logo.png)
+
 This specification describes how to make `der_walk()` traverse the path in DER
 binaries that you intend it to take.
 

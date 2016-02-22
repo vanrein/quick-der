@@ -29,17 +29,5 @@ libquickder.a: $(OBJS)
 libquickder.so: $(OBJS)
 	gcc -I../include --shared -Os -o "$@" $(OBJS)
 
-# test-kxover: test-kxover.c quick-der.c libquickder.a
-# 	gcc -I../include -ggdb3 -o $@ test-kxover.c libquickder.a -lc
-# 
-# test-cert-1: test-cert-1.c quick-der.c libquickder.a
-# 	gcc -I../include -ggdb3 -o $@ test-cert-1.c libquickder.a -lc
-# 
-# test-cert-2: test-cert-2.c quick-der.c libquickder.a
-# 	gcc -I../include -ggdb3 -DDEBUG -o $@ test-cert-2.c libquickder.a -lc
-# 
-# test-cert-3: test-cert-3.c quick-der.c libquickder.a
-# 	gcc -I../include -ggdb3 -o $@ test-cert-3.c libquickder.a -lc
-
 stats: $(OBJS)
 	@for o in *.o ; do objdump -h -j .text $$o | sed -e '/\.text/!d' -e 's/^.*\.text[ \t]*\([^ \t]*\).*/\1'" $${o%.o}/" ;done | while read sz fun ; do printf '%5d %s\n' 0x$$sz $$fun ; done

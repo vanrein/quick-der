@@ -1,5 +1,7 @@
 # Syntax for Packing Paths
 
+![Quick DER logo](quick-der-logo.png)
+
 This specification describes the path format used by `der_unpack()` and
 `der_pack()` to pass through a DER binary and map it to (or from) an array
 of `dercursor` values.

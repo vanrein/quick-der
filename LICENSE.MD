@@ -1,5 +1,7 @@
 # Quick DER licensing terms
 
+![Quick DER logo](quick-der-logo.png)
+
 Copyright (c) 2016, Rick van Rein, OpenFortress.nl
 All rights reserved.
 

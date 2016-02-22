@@ -1,5 +1,7 @@
 # Quick DER parsing support
 
+![Quick DER logo](quick-der-logo.png)
+
 > *Quick DER parsing aims to get you started with the parsing of DER (and most
 > BER) encoded ASN.1 data really quickly.  It also aims to makes quick parsers,
 > by using shared data structures whenever possible.*
