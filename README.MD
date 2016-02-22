@@ -43,7 +43,7 @@ in the respective `dercursor` variables to be NULL values; specifically, the
 function `der_isnull()` returns a true value for these elements.
 
 
-## Extra Code Facilities
+## Extra Coding Facilities
 
 There are routines `der_iterate_first()` and `der_iterate_next()` routines
 to manually iterate over a DER structure's components.  This can be used to

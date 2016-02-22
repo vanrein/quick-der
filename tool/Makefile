@@ -5,8 +5,14 @@ all:
 clean:
 
 install:
-	install -m 0755 hexio/derdump.py "$(PREFIX)/bin/derdump"
+	#
+	# The hexio submodule did not arrive well in GIT
+	#
+	# If you need a good DER dumping utility, check it out yourself:
+	# https://github.com/vanrein/hexio
+	#
+	@#NOTYET# install -m 0755 hexio/derdump.py "$(PREFIX)/bin/derdump"
 
 uninstall:
-	rm -f "$(PREFIX)/bin/derdump"
+	@#NOTYET# rm -f "$(PREFIX)/bin/derdump"
 
