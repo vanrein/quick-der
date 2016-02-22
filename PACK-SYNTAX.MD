@@ -130,7 +130,7 @@ The path expression to store this set would be
             DER_PACK_END
     }
 
-The result would be stored in `output[0]` as the sequence `02 01 02` and so on,
+The result would be stored in `output[0]` as the sequence `02 01 02 ...`
 of length 15.  It is now possible to do a few things:
 
   * use `der_iterate_first()` and `der_iterate_next()` to find the individual
@@ -138,8 +138,8 @@ of length 15.  It is now possible to do a few things:
   * manually skip through the list with `der_skip()` until it hits the end of
     the set;
   * counting the entries with `der_countelements()` and then allocate an array
-    `dercursor primal[4]`, in the heap or on the stack, and pass it into
-    `der_unpack ()` with the last parameter set to the count of 4.
+    `dercursor primal[5]`, in the heap or on the stack, and pass it into
+    `der_unpack ()` with the last parameter set to the count of 5.
 
 
 ## Optionals, Choices and the ANYs
