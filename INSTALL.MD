@@ -1,6 +1,6 @@
 # Installing Quick DER
 
-<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
     ./configure
     make

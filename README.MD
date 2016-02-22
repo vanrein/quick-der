@@ -1,6 +1,6 @@
 # Quick (and Easy) DER, a Library for parsing ASN.1
 
-<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
 > *Quick DER, or if you like, "Quick and Easy DER", is a library for handling
 > DER, which is a widely used binary representation of ASN.1 syntax in binary

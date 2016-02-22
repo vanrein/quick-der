@@ -1,6 +1,6 @@
 # Quick DER sizes: Sometimes small is bettar
 
-<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
 > *This is a decription of the sizes of structures used by Quick DER.  As this
 > demonstrates, the library is quite useful for embedded purposes.*

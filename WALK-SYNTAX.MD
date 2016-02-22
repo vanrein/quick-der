@@ -1,6 +1,6 @@
 # Syntax for Walking Paths
 
-<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
 This specification describes how to make `der_walk()` traverse the path in DER
 binaries that you intend it to take.
