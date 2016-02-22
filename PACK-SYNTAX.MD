@@ -226,8 +226,8 @@ These things combined should enable you to specify things like
     #include <quick-der/api.h>
     #include <quick-der/rfc5280.h>
 
-    typedef asn1_rfc5280_Certificate Certificate;
-    derwalk path_cert = { DER_RFC5280_CERTIFICATE, DER_PACK_END };
+    typedef rfc5280_Certificate_ovly Certificate;
+    derwalk path_cert [] = { rfc5280_Certificate_PACK, DER_PACK_END };
 
     void print (dercursor *input) {
             Certificate crt;
