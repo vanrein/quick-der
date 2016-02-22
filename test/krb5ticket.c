@@ -63,6 +63,7 @@
  */
 
 derwalk pack_Ticket [] = {
+	DER_PACK_ENTER | DER_TAG_APPLICATION (1),	// Ticket [APPLICATION 1]
 	DER_PACK_ENTER | DER_TAG_SEQUENCE,		// Ticket
 	DER_PACK_ENTER | DER_TAG_CONTEXT (0),		// [0] tkt-vno
 	DER_PACK_STORE | DER_TAG_INTEGER,		// tkt-vno (5)
@@ -93,6 +94,7 @@ derwalk pack_Ticket [] = {
 	DER_PACK_LEAVE,					// enc-part
 	DER_PACK_LEAVE,					// [3] enc-part
 	DER_PACK_LEAVE,					// Ticket
+	DER_PACK_LEAVE,					// Ticket [APPLICATION 1]
 	DER_PACK_END
 };
 

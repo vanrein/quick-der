@@ -74,8 +74,15 @@ Here is the count for der_unpack()ing a few standard structures:
 
   * 16 dercursor values for a PKIX Certificate
   * 03 dercursor values for a PKIX Certificate Extension
-  * 07 dercursor values for a Kerberos5 Ticket's unencrypted part
+  * 07 dercursor values for a Kerberos5 Ticket
   * 14 dercursor values for a Kerberos5 Ticket's EncTicketPart
+
+Oh, and the walking paths that instruct the parser are very small too:
+
+  * 46 bytes for a PKIX Certificate
+  * 07 bytes for a PKIX Certificate Extension
+  * 33 bytes for a Kerberos5 Ticket
+  * 55 bytes for a Kerberos5 Ticket's EncTicketPart
 
 Quite humble, isn't it?
 
@@ -99,7 +106,7 @@ nesting depth while running der_unpack() over some standard structures:
 
   * 4 nesting levels for a PKIX Certificate
   * 1 nesting levels for a PKIX Certificate Extension
-  * 4 nesting levels for a Kerberos5 Ticket's unencrypted part
+  * 5 nesting levels for a Kerberos5 Ticket's unencrypted part
   * 5 nesting levels for a Kerberos5 Ticket's EncTicketPart
 
 The reason that Kerberos is using a few more nesting levels is that it uses
