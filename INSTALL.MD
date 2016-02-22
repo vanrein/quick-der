@@ -1,6 +1,6 @@
 # Installing Quick DER
 
-![Quick DER logo](quick-der-logo.png)
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
 
     ./configure
     make

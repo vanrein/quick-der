@@ -1,6 +1,6 @@
 # Quick DER parsing support
 
-![Quick DER logo](quick-der-logo.png)
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
 
 > *Quick DER parsing aims to get you started with the parsing of DER (and most
 > BER) encoded ASN.1 data really quickly.  It also aims to makes quick parsers,

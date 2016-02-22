@@ -1,6 +1,6 @@
 # Syntax for Walking Paths
 
-![Quick DER logo](quick-der-logo.png)
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right"/>
 
 This specification describes how to make `der_walk()` traverse the path in DER
 binaries that you intend it to take.
@@ -88,18 +88,6 @@ length of 9, and you can continue to process it:
 
     printf ("Found \"%.*s\"\n", crs.derlen, crs.derptr);
 
-## There is more
-
-Also have a look at the individual steps that can be taken with
-`der_enter()` and `der_skip()`.  And take a look at
-`der_iterate_first()` and `der_iterate_next()` if you need iterators.
-
-Where `der_walk()` is ideally suited to retrieve a single bit of information
-from the repository, the `der_unpack()` routine can unpack a complete DER
-structure (only deferring dynamically-sized parts to later calls).  The latter
-also has a reverse routine `der_pack()`.  You will want to read the
-[PACK SYNTAX](PACK-SYNTAX.MD) for the walking paths used with those routines.
-
 
 ## Optionals, Choices and the ANYs
 
@@ -115,4 +103,17 @@ there will be no validation of that particular tag.
 
 The forms `ANY` and `ANY DEFINED BY` receive the same treatment as `CHOICE`,
 but can be declare with a separate symbol `DER_WALK_ANY`.
+
+
+## There is more
+
+Also have a look at the individual steps that can be taken with
+`der_enter()` and `der_skip()`.  And take a look at
+`der_iterate_first()` and `der_iterate_next()` if you need iterators.
+
+Where `der_walk()` is ideally suited to retrieve a single bit of information
+from the repository, the `der_unpack()` routine can unpack a complete DER
+structure (only deferring dynamically-sized parts to later calls).  The latter
+also has a reverse routine `der_pack()`.  You will want to read the
+[PACK SYNTAX](PACK-SYNTAX.MD) for the walking paths used with those routines.
 
