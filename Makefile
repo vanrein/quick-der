@@ -1,15 +1,19 @@
-# SUBDIRS = lib asn2qder rfc test
-SUBDIRS = lib tool test
+# SUBDIRS = lib asn2qder test rfc arpa2
+SUBDIRS = lib tool test rfc
 
 all:
-	git submodule update --init
-	for d in $(SUBDIRS); do make -C "$$d" all ; done
+	#
+	# To incorporate subprojects with valuable add-ons, run:
+	#
+	# git submodule update --init
+	#
+	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Made all subdirectories"
 
 install:
-	for d in $(SUBDIRS); do make -C "$$d" install ; done
+	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Installed all subdirectories"
 
 uninstall:
-	for d in $(SUBDIRS); do make -C "$$d" uninstall ; done
+	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Uninstalled all subdirectories"
 
 clean:
-	for d in $(SUBDIRS); do make -C "$$d" clean ; done
+	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Cleaned all subdirectories"

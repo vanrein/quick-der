@@ -215,22 +215,22 @@ Without `der_prepack()` your DER representation may end up being Primitive.
 
 ## ASN.1 Compiler and RFC Library
 
-The intention is to generate this syntax automatically from ASN.1 files, including
-the overlay structures.  The result would be a headerfile that provides macros
+The can generate this syntax automatically from common ASN.1 files, including
+the overlay structures.  The result of this is a headerfile providing macros
 that can fill paths, and structures that capture the structure of ASN.1 and
 specifically the labels used.
 
-Once we have a compiler, it is our intent to collect the RFCs and perhaps
-other specifications that use ASN.1 syntax, and to derive their header files
+Now we have a compiler, we have started to collect RFCs (and we may later add
+other specifications) that use ASN.1 syntax, and to derive their header files
 for distribution in the developer version of Quick and Easy DER.
 
-These things combined should enable you to specify things like
+These things combined enable you to specify things like
 
     #include <quick-der/api.h>
     #include <quick-der/rfc5280.h>
 
-    typedef rfc5280_Certificate_ovly Certificate;
-    derwalk path_cert [] = { rfc5280_Certificate_PACK, DER_PACK_END };
+    typedef DER_OVLY_rfc5280_Certificate Certificate;
+    derwalk path_cert [] = { DER_PACK_rfc5280_Certificate, DER_PACK_END };
 
     void print (dercursor *input) {
             Certificate crt;
@@ -239,7 +239,7 @@ These things combined should enable you to specify things like
             }
     }
 
-In short, you will be up and running with DER-encoded PKIX Certificates.
+In short, you are already up and running with DER-encoded PKIX Certificates.
 
 And it will be
 

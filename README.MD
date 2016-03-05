@@ -110,13 +110,48 @@ ideal for embedded applications, but is also beneficial for a secure programming
 style.
 
 
+## ASN.1 Compiler
+
+We have equiped a simple
+[ASN.1 Compiler](https://github.com/vanrein/asn2quickder)
+with a backend that generates both the overlay data structures and the
+byte codes for `der_pack()` and `der_unpack()`.  For most everyday ASN.1
+this should suffice to produce a header file from an ASN.1 module.
+
+
+## RFC Collection
+
+We have started a collection of RFC's, stripped down to ASN.1 modules,
+that can be mapped to header files that can simply be include in a C program:
+
+    #include <quick-der/rfc5280.h>
+    #include <quick-der/rfc4120.h>
+    #include <quick-der/rfc4511.h>
+
+These three examples were included already:
+
+  * X.509 certificate and CRL structures
+  * Kerberos packet formats and messaging
+  * LDAP as a protocol description
+
+Most modules do things that confuse the compiler, so small changes have been
+made, and clearly marked with `asn1ate` and an explanation in the ASN.1 files
+in the `rfc/` directory.  The issues found were usually quite simple:
+
+  * we had to use uppercase initial characters in type names
+  * we removed complex constraints (as Quick DER does not implement them anyway)
+  * LDAP contained an infinitely circular reference for `Filter.not`
+
+There are some specifications that go far beyond the abilities of `asn1ate`,
+by using such concepts as macros.  This applied to the SNMP RFC's.
+
 ## Future Plans
 
 There are a few things that this library can use:
 
-  * **Proper tests.** The current `test` directory is far too small; we can take a PKIX certificate apart and re-compose it, so we're definately doing something good, but this is nowhere near thorough testing.  If you run into a problem case, then *please* share it so we can solve it and extend our test base.
-  * **ASN.1 compilation.** The compiler for [libtasn1](http://git.savannah.gnu.org/cgit/libtasn1.git/tree/lib) may be an interesting piece of software to modify to create the `derwalk[]` structures that we currently create by hand, together with the overlay structures with syntax-derived labels.
-  * **RFC Library.** A collection of most/all standards that use DER today, in a pre-compiled form that can simply be included as `<quick-der/rfc5280.h>` and then permits processing of the structures defined in it (in this case, PKIX Certificates).
+  * **More testing.** The current `test` directory is far too small; we can take a PKIX certificate apart and re-compose it, so we're definately doing something good, but this is nowhere near thorough testing.  If you run into a problem case, then *please* share it so we can solve it and extend our test base.
+  * **Compiler output testing.** The compiler output is currently compiled to see if there are C syntactical problems, but that is all.  They have been visually compared to manually crafted code, too.  More exhaustive tests, including a full application, would be in order.
+  * **Python embedding.** This would be useful for many protocol applications that need to modify a few things.  It also greatly helps to get more protocols within the reach of Python.  See our [ideas about Python of Quick DER](PYTHON.MD) for a plan that greatly simplifies ASN.1 processing with Python.
 
 And of course, there are many useful things we may do with this library:
 
