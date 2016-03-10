@@ -11,7 +11,7 @@
 
 PREFIX = /usr/local
 
-TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h
+TARGETS = # rfc3280.h rfc4120.h rfc4511.h rfc5280.h
 
 ASN2QUICKDER_DIR = ../tool/asn1ate
 
