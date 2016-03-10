@@ -3,4 +3,4 @@
 	url = https://github.com/vanrein/hexio
 [submodule "tool/asn1ate"]
 	path = tool/asn1ate
-	url = https://github.com/vanrein/quick-der
+	url = https://github.com/vanrein/asn2quickder

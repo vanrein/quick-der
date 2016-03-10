@@ -151,7 +151,7 @@ There are a few things that this library can use:
 
   * **More testing.** The current `test` directory is far too small; we can take a PKIX certificate apart and re-compose it, so we're definately doing something good, but this is nowhere near thorough testing.  If you run into a problem case, then *please* share it so we can solve it and extend our test base.
   * **Compiler output testing.** The compiler output is currently compiled to see if there are C syntactical problems, but that is all.  They have been visually compared to manually crafted code, too.  More exhaustive tests, including a full application, would be in order.
-  * **Python embedding.** This would be useful for many protocol applications that need to modify a few things.  It also greatly helps to get more protocols within the reach of Python.  See our [ideas about Python of Quick DER](PYTHON.MD) for a plan that greatly simplifies ASN.1 processing with Python.
+  * **Python embedding.** This would be useful for many protocol applications that need to modify a few things.  It also greatly helps to get more protocols within the reach of Python.  See our [ideas about Python Quick DER](PYTHON.MD) for a plan that greatly simplifies ASN.1 processing with Python.
 
 And of course, there are many useful things we may do with this library:
 
