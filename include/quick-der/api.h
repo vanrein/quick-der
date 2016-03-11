@@ -12,7 +12,7 @@
 #  include <stdio.h>
 #  define DPRINTF printf
 #else
-#  define DPRINTF
+#  define DPRINTF(...)
 #endif
 
 
