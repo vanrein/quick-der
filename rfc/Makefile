@@ -21,10 +21,10 @@ ASN2QUICKDER_RUN = PYTHONPATH='$(ASN2QUICKDER_DIR)' $(ASN2QUICKDER_CMD)
 all: $(TARGETS) test
 
 test: $(TARGETS)
-	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && gcc -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests'
+	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && [ -r $h ] && gcc -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests' || echo Skipped compilation of skipped header files
 
 %.h: %.asn1
-	$(ASN2QUICKDER_RUN) $<
+	@ [ -r $(ASN2QUICKDER_CMD) ] && $(ASN2QUICKDER_RUN) $< || echo Skipped ASN.1 header file generation for $<
 
 clean:
 	rm -f $(TARGETS) $(foreach h,$(TARGETS),$(h:.h=.c) $(h:.h=.o))
