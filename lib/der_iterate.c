@@ -32,6 +32,7 @@ int der_iterate_first (const dercursor *container, dercursor *iterator) {
 	}
 #else
 	*iterator = *container;
+	return 1;
 #endif
 }
 

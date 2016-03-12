@@ -7,13 +7,13 @@ all:
 	#
 	# git submodule update --init
 	#
-	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Made all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Made all subdirectories"
 
 install:
-	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Installed all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Installed all subdirectories"
 
 uninstall:
-	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Uninstalled all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Uninstalled all subdirectories"
 
 clean:
-	@ $(foreach d,$(SUBDIRS),make -C '$d' all &&) echo "Cleaned all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Cleaned all subdirectories"

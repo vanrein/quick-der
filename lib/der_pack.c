@@ -15,7 +15,7 @@
  * total insertion.  In this case, the function may return DER_DERLEN_ERROR
  * to indicate an error.
  */
-size_t der_pack_prepack (const derprep *derp, uint8_t **bufend) {
+static size_t der_pack_prepack (const derprep *derp, uint8_t **bufend) {
 	size_t totlen = 0;
 	size_t elmlen;
 	size_t cnt = derp->derlen_msb & ~DER_DERLEN_FLAG_CONSTRUCTED;
