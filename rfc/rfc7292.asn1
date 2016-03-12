@@ -1,0 +1,205 @@
+ -- asn1ate: PKCS-12 {
+ -- asn1ate:     iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1) pkcs-12(12)
+ -- asn1ate:     modules(0) pkcs-12(1)}
+RFC7292
+
+ -- PKCS #12 v1.1 ASN.1 Module
+ -- Revised October 27, 2012
+
+ -- This module has been checked for conformance with the ASN.1 standard
+ -- by the OSS ASN.1 Tools
+
+ DEFINITIONS IMPLICIT TAGS ::=
+
+ BEGIN
+
+ -- EXPORTS ALL
+ -- All types and values defined in this module are exported for use
+ -- in other ASN.1 modules.
+
+ IMPORTS
+
+ -- All commented out below:
+ -- asn1ate: informationFramework
+ -- asn1ate: InformationFramework
+ -- asn1ate:     FROM UsefulDefinitions {joint-iso-itu-t(2) ds(5) module(1)
+                            --asn1ate:  usefulDefinitions(0) 3}
+
+ -- All commented out below:
+ -- asn1ate: ATTRIBUTE
+ -- asn1ate:     FROM InformationFramework informationFramework
+
+ ContentInfo, DigestInfo
+     -- asn1ate: FROM PKCS-7 {iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1)
+     -- asn1ate:              pkcs-7(7) modules(0) pkcs-7(1)}
+     FROM RFC2315
+
+ PrivateKeyInfo, EncryptedPrivateKeyInfo
+     -- asn1ate: FROM PKCS-8 member-body(2) us(840) rsadsi(113549) pkcs(1)
+     -- asn1ate:             pkcs-8(8) modules(1) pkcs-8(1)}
+     FROM RFC5208
+
+ -- All commented out below:
+ -- asn1ate: pkcs-9, friendlyName, localKeyId, certTypes, crlTypes
+ -- asn1ate:     FROM PKCS-9 {iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1)
+ -- asn1ate:                  pkcs-9(9) modules(0) pkcs-9(1)}
+;
+
+ -- ============================
+ -- Object identifiers
+ -- ============================
+
+
+ rsadsi  OBJECT IDENTIFIER ::= {iso(1) member-body(2) us(840)
+                                rsadsi(113549)}
+ pkcs    OBJECT IDENTIFIER ::= {rsadsi pkcs(1)}
+ pkcs-12 OBJECT IDENTIFIER ::= {pkcs 12}
+ pkcs-12PbeIds OBJECT IDENTIFIER ::= {pkcs-12 1}
+ pbeWithSHAAnd128BitRC4          OBJECT IDENTIFIER ::= {pkcs-12PbeIds 1}
+ pbeWithSHAAnd40BitRC4           OBJECT IDENTIFIER ::= {pkcs-12PbeIds 2}
+ pbeWithSHAAnd3-KeyTripleDES-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 3}
+ pbeWithSHAAnd2-KeyTripleDES-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 4}
+ pbeWithSHAAnd128BitRC2-CBC      OBJECT IDENTIFIER ::= {pkcs-12PbeIds 5}
+ pbewithSHAAnd40BitRC2-CBC       OBJECT IDENTIFIER ::= {pkcs-12PbeIds 6}
+
+ bagtypes OBJECT IDENTIFIER ::= {pkcs-12 10 1}
+
+ -- ============================
+ -- The PFX PDU
+ -- ============================
+
+ PFX ::= SEQUENCE {
+     -- asn1ate: version    INTEGER {v3(3)}(v3,...),
+     version    INTEGER,
+     authSafe   ContentInfo,
+     macData    MacData OPTIONAL
+ }
+
+ MacData ::= SEQUENCE {
+     mac        DigestInfo,
+     macSalt    OCTET STRING,
+     iterations INTEGER DEFAULT 1
+     -- Note: The default is for historical reasons and its use is
+     -- deprecated.
+ }
+
+ AuthenticatedSafe ::= SEQUENCE OF ContentInfo
+     -- Data if unencrypted
+     -- EncryptedData if password-encrypted
+     -- EnvelopedData if public key-encrypted
+
+ SafeContents ::= SEQUENCE OF SafeBag
+
+ SafeBag ::= SEQUENCE {
+     -- asn1ate: bagId         BAG-TYPE.&id ({PKCS12BagSet}),
+     -- asn1ate: bagValue      [0] EXPLICIT BAG-TYPE.&Type({PKCS12BagSet}{@bagId}),
+     bagId         OBJECT IDENTIFIER,
+     bagValue      [0] EXPLICIT ANY DEFINED BY bagId,
+     bagAttributes SET OF PKCS12Attribute OPTIONAL
+ }
+
+ -- ============================
+ -- Bag types
+ -- ============================
+
+ -- asn1ate: keyBag BAG-TYPE ::=
+ -- asn1ate:     {KeyBag              IDENTIFIED BY {bagtypes 1}}
+ -- asn1ate: pkcs8ShroudedKeyBag BAG-TYPE ::=
+ -- asn1ate:     {PKCS8ShroudedKeyBag IDENTIFIED BY {bagtypes 2}}
+ -- asn1ate: certBag BAG-TYPE ::=
+ -- asn1ate:     {CertBag             IDENTIFIED BY {bagtypes 3}}
+ -- asn1ate: crlBag BAG-TYPE ::=
+ -- asn1ate:     {CRLBag              IDENTIFIED BY {bagtypes 4}}
+ -- asn1ate: secretBag BAG-TYPE ::=
+ -- asn1ate:     {SecretBag           IDENTIFIED BY {bagtypes 5}}
+ -- asn1ate: safeContentsBag BAG-TYPE ::=
+ -- asn1ate:     {SafeContents        IDENTIFIED BY {bagtypes 6}}
+
+ -- asn1ate: PKCS12BagSet BAG-TYPE ::= {
+ -- asn1ate:     keyBag |
+ -- asn1ate:     pkcs8ShroudedKeyBag |
+ -- asn1ate:     certBag |
+ -- asn1ate:     crlBag |
+ -- asn1ate:     secretBag |
+ -- asn1ate:     safeContentsBag,
+ -- asn1ate:     ... - - For future extensions
+ -- asn1ate: }
+
+ --asn1ate: BAG-TYPE ::= TYPE-IDENTIFIER
+
+ -- KeyBag
+ KeyBag ::= PrivateKeyInfo
+
+ -- Shrouded KeyBag
+ PKCS8ShroudedKeyBag ::= EncryptedPrivateKeyInfo
+
+ -- CertBag
+ CertBag ::= SEQUENCE {
+     -- asn1ate: certId    BAG-TYPE.&id   ({CertTypes}),
+     -- asn1ate: certValue [0] EXPLICIT BAG-TYPE.&Type ({CertTypes}{@certId})
+     certId    OBJECT IDENTIFIER,
+     certValue [0] EXPLICIT ANY DEFINED BY certId
+ }
+
+ -- asn1ate: x509Certificate BAG-TYPE ::=
+ -- asn1ate:     {OCTET STRING IDENTIFIED BY {certTypes 1}}
+ -- asn1ate:     - - DER-encoded X.509 certificate stored in OCTET STRING
+ -- asn1ate: sdsiCertificate BAG-TYPE ::=
+ -- asn1ate:     {IA5String IDENTIFIED BY {certTypes 2}}
+ -- asn1ate:     - - Base64-encoded SDSI certificate stored in IA5String
+
+ -- asn1ate: CertTypes BAG-TYPE ::= {
+ -- asn1ate:     x509Certificate |
+ -- asn1ate:     sdsiCertificate,
+ -- asn1ate:     ... - - For future extensions
+ -- asn1ate: }
+
+ -- CRLBag
+ CRLBag ::= SEQUENCE {
+     --asn1ate: crlId     BAG-TYPE.&id ({CRLTypes}),
+     --asn1ate: crltValue [0] EXPLICIT BAG-TYPE.&Type ({CRLTypes}{@crlId})
+     --asn1ate TODO: Should this really be "crltValue" and not "crlValue"?!?
+     crlId     OBJECT IDENTIFIER,
+     crltValue [0] EXPLICIT ANY DEFINED BY crlId
+ }
+
+ -- asn1ate: x509CRL BAG-TYPE ::=
+ -- asn1ate:     {OCTET STRING IDENTIFIED BY {crlTypes 1}}
+ -- asn1ate:     - - DER-encoded X.509 CRL stored in OCTET STRING
+
+ -- asn1ate: CRLTypes BAG-TYPE ::= {
+ -- asn1ate:     x509CRL,
+ -- asn1ate:     ... - - For future extensions
+ -- asn1ate: }
+
+ -- Secret Bag
+ SecretBag ::= SEQUENCE {
+     -- asn1ate: secretTypeId  BAG-TYPE.&id ({SecretTypes}),
+     -- asn1ate: secretValue   [0] EXPLICIT BAG-TYPE.&Type ({SecretTypes}
+     -- asn1ate:                                            {@secretTypeId})
+     secretTypeId OBJECT IDENTIFIER,
+     secretValue  [0] EXPLICIT ANY DEFINED BY secretTypeId
+ }
+
+ -- asn1ate: SecretTypes BAG-TYPE ::= {
+ -- asn1ate:     ... - - For future extensions
+ -- asn1ate: }
+
+ -- ============================
+ -- Attributes
+ -- ============================
+
+ PKCS12Attribute ::= SEQUENCE {
+     -- asn1ate: attrId      ATTRIBUTE.&id ({PKCS12AttrSet}),
+     -- asn1ate: attrValues  SET OF ATTRIBUTE.&Type ({PKCS12AttrSet}{@attrId})
+     attrId     OBJECT IDENTIFIER,
+     attrValues SET OF ANY DEFINED BY attrId
+ } -- This type is compatible with the X.500 type 'Attribute'
+
+ -- asn1ate: PKCS12AttrSet ATTRIBUTE ::= {
+ -- asn1ate:     friendlyName |
+ -- asn1ate:     localKeyId,
+ -- asn1ate:     ... - - Other attributes are allowed
+ -- asn1ate: }
+
+ END

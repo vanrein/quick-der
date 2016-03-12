@@ -11,7 +11,9 @@
 
 PREFIX = /usr/local
 
-TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h
+TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h \
+	rfc2898.h rfc2315.h rfc5208.h rfc7292.h
+#DOWNWARD-SPIRAL-INTO-ITU# TARGETS += InformationFramework.h UsefulDefinitions.h
 
 ASN2QUICKDER_DIR = ../tool/asn1ate
 
@@ -21,7 +23,9 @@ ASN2QUICKDER_RUN = PYTHONPATH='$(ASN2QUICKDER_DIR)' $(ASN2QUICKDER_CMD)
 all: $(TARGETS) test
 
 test: $(TARGETS)
-	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && [ -r $h ] && gcc -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests' || echo Skipped compilation of skipped header files
+	rm -f quick-der
+	ln -s . quick-der
+	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && [ -r $h ] && gcc -I . -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests' || echo Skipped compilation of skipped header files
 
 %.h: %.asn1
 	@ [ -r $(ASN2QUICKDER_CMD) ] && $(ASN2QUICKDER_RUN) $< || echo Skipped ASN.1 header file generation for $<
