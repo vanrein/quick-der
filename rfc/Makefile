@@ -12,7 +12,8 @@
 PREFIX = /usr/local
 
 TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h \
-	rfc2898.h rfc2315.h rfc5208.h rfc7292.h
+	rfc2898.h rfc2315.h rfc5208.h rfc7292.h \
+	rfc2578.h
 #DOWNWARD-SPIRAL-INTO-ITU# TARGETS += InformationFramework.h UsefulDefinitions.h
 
 ASN2QUICKDER_DIR = ../tool/asn1ate
