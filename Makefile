@@ -1,5 +1,10 @@
+DESTDIR ?=
+PREFIX ?= /usr/local
+
 # SUBDIRS = lib asn2qder test rfc arpa2
 SUBDIRS = lib tool test rfc
+
+SUBMAKE=$(MAKE) PREFIX='$(PREFIX)' DESTDIR='$(DESTDIR)'
 
 all:
 	#
@@ -7,13 +12,13 @@ all:
 	#
 	# git submodule update --init
 	#
-	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Made all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' all &&) echo "Made all subdirectories"
 
 install:
-	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Installed all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' install &&) echo "Installed all subdirectories"
 
 uninstall:
-	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Uninstalled all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' uninstall &&) echo "Uninstalled all subdirectories"
 
 clean:
-	@ $(foreach d,$(SUBDIRS),$(MAKE) -C '$d' all &&) echo "Cleaned all subdirectories"
+	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' clean &&) echo "Cleaned all subdirectories"

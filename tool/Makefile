@@ -1,5 +1,3 @@
-PREFIX=/usr/local
-
 all:
 
 clean:
@@ -12,8 +10,8 @@ install:
 	#
 	# This tool will complain about DER errors -- but continue.
 	#
-	[ -r hexio/derdump.py ] && install -m 0755 hexio/derdump.py "$(PREFIX)/bin/derdump"
+	[ -r hexio/derdump.py ] && install -m 0755 hexio/derdump.py "$(DESTDIR)$(PREFIX)/bin/derdump"
 
 uninstall:
-	rm -f "$(PREFIX)/bin/derdump"
+	rm -f "$(DESTDIR)$(PREFIX)/bin/derdump"
 

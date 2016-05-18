@@ -2,21 +2,23 @@ OBJS = der_pack.o der_prepack.o der_unpack.o der_iterate.o der_walk.o der_skipen
 
 TARGETS = libquickder.a libquickder.so
 
-PREFIX = /usr/local
-
 CFLAGS=-Wall -Wextra -pedantic -Wstrict-prototypes -Wold-style-definition -Wwrite-strings -Wshadow -Wformat -Wformat-security -Wunreachable-code -Wmissing-prototypes
 
 all: $(TARGETS)
 
 install: $(TARGETS)
-	install $(TARGETS) "$(PREFIX)/lib"
-	mkdir -p "$(PREFIX)/include/quick-der"
-	install ../include/quick-der/api.h "$(PREFIX)/include/quick-der"
+	install $(TARGETS) '$(DESTDIR)$(PREFIX)/lib'
+	mkdir -p '$(DESTDIR)$(PREFIX)/include/quick-der'
+	install ../include/quick-der/api.h '$(DESTDIR)$(PREFIX)/include/quick-der'
+	mkdir -p '$(DESTDIR)$(PREFIX)/lib/pkgconfig'
+	( echo 'prefix=$(PREFIX)' ; echo 'exec_prefix=$${prefix}' ; echo 'includedir=$${prefix}/include' ; echo 'libdir=$${prefix}/lib' ; echo ; echo 'Name: quick-der' ; echo "Description: Quick \`n\' Easy DER library" ; echo 'Version: 0.0' ; echo 'URL: https://github.com/vanrein/quick-der' ; echo 'Cflags: -I$${includedir}' ; echo 'Libs: -L$${libdir} -lquickder' ) > '$(DESTDIR)$(PREFIX)/lib/pkgconfig/quick-der.pc'
 
 uninstall:
-	for f in $(TARGETS); do rm -f "$(PREFIX)/lib/$$f" ; done
-	rm -f "$(PREFIX)/include/quick-der/api.h"
-	rmdir --ignore-fail-on-non-empty "$(PREFIX)/include/quick-der"
+	for f in $(TARGETS); do rm -f "$(DESTDIR)$(PREFIX)/lib/$$f" ; done
+	rm -f '$(DESTDIR)$(PREFIX)/include/quick-der/api.h'
+	rmdir --ignore-fail-on-non-empty '$(DESTDIR)$(PREFIX)/include/quick-der'
+	rm -f '$(DESTDIR)$(PREFIX)/lib/pkgconfig/quick-der.pc'
+	rmdir --ignore-fail-on-non-empty '$(DESTDIR)$(PREFIX)/lib/pkgconfig'
 
 clean:
 	rm -f $(OBJS) $(TARGETS)

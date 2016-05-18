@@ -9,8 +9,6 @@
 #  - map ... to DER_PACK_OPTIONAL, DER_PACK_LEAVE -- and process accordingly
 #
 
-PREFIX = /usr/local
-
 TARGETS = # rfc3280.h rfc4120.h rfc4511.h rfc5280.h
 
 ASN2QUICKDER_DIR = ../tool/asn1ate
@@ -32,10 +30,10 @@ clean:
 anew: clean all
 
 install: all
-	@ mkdir -p $(PREFIX)/include/quick-der
-	@ [ -r $(ASN2QUICKDER_CMD) ] && $(foreach h,$(TARGETS),install '$(h)' '$(PREFIX)/include/quick-der' && ) echo Installed header files
+	@ mkdir -p $(DESTDIR)$(PREFIX)/include/quick-der
+	@ [ -r $(ASN2QUICKDER_CMD) ] && $(foreach h,$(TARGETS),install '$(h)' '$(DESTDIR)$(PREFIX)/include/quick-der' && ) echo Installed header files
 
 uninstall:
-	@ $(foreach h,$(TARGETS),rm -f '$(PREFIX)/include/quick-der/$(h)' && ) echo Removed header files
-	@ rmdir --ignore-fail-on-non-empty '$(PREFIX)/include/quick-der'
+	@ $(foreach h,$(TARGETS),rm -f '$(DESTDIR)$(PREFIX)/include/quick-der/$(h)' && ) echo Removed header files
+	@ rmdir --ignore-fail-on-non-empty '$(DESTDIR)$(PREFIX)/include/quick-der'
 
