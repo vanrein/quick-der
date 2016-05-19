@@ -22,3 +22,6 @@ uninstall:
 
 clean:
 	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' clean &&) echo "Cleaned all subdirectories"
+
+mount:
+	git submodule update --init
