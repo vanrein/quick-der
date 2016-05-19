@@ -23,24 +23,24 @@ parser specification file:
 Your source code dealing with DER should read the entire block, and pass it to
 the DER parser.  Initially, it would include:
 
-    #include <der/qparse.h>
+    #include <quick-der/api.h>
     #include "myderparser.h"
 
 and builing should include:
 
     gcc -o myparser.o myparser.c
-    gcc ... myderparser.o -lqder
+    gcc ... myderparser.o -lquickder
 
 You may be lucky, and find your favourite spec precompiled.  In that case, you
 can limit yourself to things like:
 
     #define RFC5280_PREFIX pkix_
-    #include <der/qparse.h>
+    #include <quick-der/api.h>
     #include <der/rfc5280.h>
 
 and link with simply:
 
-    gcc ... -lqder
+    gcc ... -lquickder
 
 
 ### Parsing DER structures
@@ -57,15 +57,15 @@ are accustomed to:
 
 Now, to invoke the parser, you setup a cursor describing the entire content,
 
-   dercursor_t thelot;
-   thelot.derptr = ...pointer-to-data...;
-   thelot.derlen = ...length-of-data...;
+    dercursor_t thelot;
+    thelot.derptr = ...pointer-to-data...;
+    thelot.derlen = ...length-of-data...;
 
 then you invoke the parser, providing it with storage space and the
 precompiled structure to follow while parsing:
 
-   struct pkix_Certificate crt;
-   int prsok = der_unpack (&thelot, asn1_pkix_Certificate, &crt, 1);
+    struct pkix_Certificate crt;
+    int prsok = der_unpack (&thelot, asn1_pkix_Certificate, &crt, 1);
 
 This will parse the DER-encoded data in `thelot` and store the various fields
 in `crt`, so it becomes available as individual cursor structures such as
