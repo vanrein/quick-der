@@ -27,7 +27,7 @@ the DER parser.  Initially, it would include:
 
 and builing should include:
 
-    gcc -c myparser.o myparser.c
+    gcc -c -o myparser.o myparser.c
     gcc ... myparser.o -lquickder
 
 Or when you have `pkg-config` installed, you could use
