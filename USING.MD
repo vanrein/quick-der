@@ -6,8 +6,6 @@
 > BER) encoded ASN.1 data really quickly.  It also aims to makes quick parsers,
 > by using shared data structures whenever possible.*
 
-**Note: This is a preview of features to come; for now, it is no promise, but merely a rough sketch of what is to come.**
-
 ## Outline of using this library
 
 Working with the quick DER library is really quick to learn.
@@ -15,10 +13,11 @@ Working with the quick DER library is really quick to learn.
 ### Preparing your build environment
 
 The first thing you do, is parse an ASN.1 specification that you may have gotten
-from any source -- for example, from an RFC.  You map it to a header file and a
+from any source.  You map it to a header file and a
 parser specification file:
 
-    qder_from_asn1 myspec.asn1 myderparser.c myderparser.h
+    asn2quickder myspec.asn1
+    # constructs myspec.h
 
 Your source code dealing with DER should read the entire block, and pass it to
 the DER parser.  Initially, it would include:
@@ -28,19 +27,27 @@ the DER parser.  Initially, it would include:
 
 and builing should include:
 
-    gcc -o myparser.o myparser.c
-    gcc ... myderparser.o -lquickder
+    gcc -c myparser.o myparser.c
+    gcc ... myparser.o -lquickder
 
-You may be lucky, and find your favourite spec precompiled.  In that case, you
-can limit yourself to things like:
+Or when you have `pkg-config` installed, you could use
 
-    #define RFC5280_PREFIX pkix_
+    gcc `pkg-config quick-der` -c -o myparser.o myparser.c
+    gcc ... myparser.o `pkg-config quick-der --libs`
+
+This path would be needed for your private ASN.1 specifications, but we do
+in fact strive to include header files for common standards, including RFCs,
+as well as ITU and ARPA2 specifications.  (If you need to do the work on any
+of these, please send us a patch to include it in future development packages
+of Quick DER!)  Specifications that have been included can be used simply as
+
     #include <quick-der/api.h>
-    #include <der/rfc5280.h>
+    #include <quick-der/rfc5280.h>
 
-and link with simply:
+and compile/link with:
 
-    gcc ... -lquickder
+    gcc `pkg-config quick-der --cflags` ...
+    gcc ... `pkg-config quick-der --libs`
 
 
 ### Parsing DER structures
@@ -52,8 +59,8 @@ are little structures with a pointer and a length.  Note that this means that
 strings are not NUL-terminated; printing them may be different than what you
 are accustomed to:
 
-    printf ("%s\n", derelem->ptr);                  // Unbounded string
-    printf ("%.*s\n", derelem->len, derelem->ptr);  // Perfect printing
+    printf ("%s\n", derelem->ptr);                  // BAD: Unbounded string
+    printf ("%.*s\n", derelem->len, derelem->ptr);  // GOOD:  Bounded print
 
 Now, to invoke the parser, you setup a cursor describing the entire content,
 
