@@ -9,6 +9,8 @@
 #  - map ... to DER_PACK_OPTIONAL, DER_PACK_LEAVE -- and process accordingly
 #
 
+CC ?= gcc
+
 TARGETS = # rfc3280.h rfc4120.h rfc4511.h rfc5280.h
 
 ASN2QUICKDER_DIR = ../tool/asn1ate
@@ -19,7 +21,7 @@ ASN2QUICKDER_RUN = PYTHONPATH='$(ASN2QUICKDER_DIR)' $(ASN2QUICKDER_CMD)
 all: $(TARGETS) test
 
 test: $(TARGETS)
-	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && gcc -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests'
+	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && $(CC) -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests'
 
 %.h: %.asn1
 	$(ASN2QUICKDER_RUN) $<

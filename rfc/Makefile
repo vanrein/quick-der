@@ -9,6 +9,8 @@
 #  - map ... to DER_PACK_OPTIONAL, DER_PACK_LEAVE -- and process accordingly
 #
 
+CC ?= gcc
+
 TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h \
 	rfc2898.h rfc2315.h rfc5208.h rfc7292.h \
 	rfc2578.h
@@ -22,7 +24,7 @@ all: $(TARGETS) test
 test: $(TARGETS)
 	rm -f quick-der
 	ln -s . quick-der
-	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && [ -r $h ] && gcc -I ../include -I . -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests' || echo Skipped compilation of skipped header files
+	@ $(foreach h,$(TARGETS),echo > '$(h:.h=.c)' '#include "$(h)"' && [ -r $h ] && $(CC) -I ../include -I . -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests' || echo Skipped compilation of skipped header files
 
 %.h: %.asn1
 	@ [ -r $(ASN2QUICKDER_CMD) ] && $(ASN2QUICKDER_RUN) $< || echo Skipped ASN.1 header file generation for $<

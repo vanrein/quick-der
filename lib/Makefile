@@ -4,6 +4,9 @@ TARGETS = libquickder.a libquickder.so
 
 CFLAGS=-Wall -Wextra -pedantic -Wstrict-prototypes -Wold-style-definition -Wwrite-strings -Wshadow -Wformat -Wformat-security -Wunreachable-code -Wmissing-prototypes
 
+CC ?= gcc
+AR ?= ar
+
 all: $(TARGETS)
 
 install: $(TARGETS)
@@ -24,14 +27,14 @@ clean:
 	rm -f $(OBJS) $(TARGETS)
 
 .c.o:
-	gcc -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
 
 libquickder.a: $(OBJS)
 	rm -rf "$@"
-	ar rc "$@" $(OBJS)
+	$(AR) rc "$@" $(OBJS)
 
 libquickder.so: $(OBJS)
-	gcc -I../include --shared $(CFLAGS) -o "$@" $(OBJS)
+	$(CC) -I../include --shared $(CFLAGS) -o "$@" $(OBJS)
 
 stats: $(OBJS)
 	@for o in *.o ; do objdump -h -j .text $$o | sed -e '/\.text/!d' -e 's/^.*\.text[ \t]*\([^ \t]*\).*/\1'" $${o%.o}/" ;done | while read sz fun ; do printf '%5d %s\n' 0x$$sz $$fun ; done
