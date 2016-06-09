@@ -19,9 +19,10 @@ LITERATE = RemotePKCS11.md RemotePKCS11.rst RemotePKCS11.html RemotePKCS11.epub 
 		CommunicationFilter.md
 TARGETS = $(HEADERS) $(LITERATE)
 
-ASN2QUICKDER_DIR = ../tool/asn1ate
+ASN2QUICKDER_DIR ?= ../tool/asn1ate
 
-ASN2QUICKDER = PYTHONPATH='$(ASN2QUICKDER_DIR)' $(ASN2QUICKDER_DIR)/asn1ate/asn2quickder.py
+ASN2QUICKDER_CMD ?= $(ASN2QUICKDER_DIR)/asn1ate/asn2quickder.py
+ASN2QUICKDER_RUN ?= PYTHONPATH='$(ASN2QUICKDER_DIR)' $(ASN2QUICKDER_CMD)
 
 ASNLITERATE = ../tool/asn1literate.py 
 
@@ -33,7 +34,7 @@ test: $(HEADERS)
 	@ $(foreach h,$(HEADERS),echo > '$(h:.h=.c)' '#include "$(h)"' && $(CC) -c '$(h:.h=.c)' && ) echo 'Passed all header compilation tests'
 
 %.h: %.asn1
-	$(ASN2QUICKDER) '$<' $(foreach f,$($(<:.asn1=_DEPS)),$f)
+	$(ASN2QUICKDER_RUN) '$<' $(foreach f,$($(<:.asn1=_DEPS)),$f)
 
 %.md: %.asn1
 	@ if grep -q '	' '$<' ; then echo 'Please remove tabs from $<, they mess up the layout' ; exit 1 ; fi
