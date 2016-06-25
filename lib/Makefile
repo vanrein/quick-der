@@ -4,7 +4,7 @@ TARGETS = libquickder.a libquickder.so
 
 CFLAGS=-Wall -Wextra -pedantic -Wstrict-prototypes -Wold-style-definition -Wwrite-strings -Wshadow -Wformat -Wformat-security -Wunreachable-code -Wmissing-prototypes
 
-DESTPATH=$(abspath $(basename $(DESTDIR))/$(basename $(PREFIX)))
+DESTPATH=$(abspath $(DESTDIR)/$(PREFIX))
 
 all: $(TARGETS)
 
