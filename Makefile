@@ -20,6 +20,8 @@ install:
 uninstall:
 	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' uninstall &&) echo "Uninstalled all subdirectories"
 
+$PHONY: clean
+
 clean:
 	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' clean &&) echo "Cleaned all subdirectories"
 

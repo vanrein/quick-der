@@ -4,21 +4,23 @@ TARGETS = libquickder.a libquickder.so
 
 CFLAGS=-Wall -Wextra -pedantic -Wstrict-prototypes -Wold-style-definition -Wwrite-strings -Wshadow -Wformat -Wformat-security -Wunreachable-code -Wmissing-prototypes
 
+DESTPATH=$(abspath $(basename $(DESTDIR))/$(basename $(PREFIX)))
+
 all: $(TARGETS)
 
 install: $(TARGETS)
-	install $(TARGETS) '$(DESTDIR)/$(PREFIX)/lib'
-	mkdir -p '$(DESTDIR)/$(PREFIX)/include/quick-der'
-	install ../include/quick-der/api.h '$(DESTDIR)$(PREFIX)/include/quick-der'
-	mkdir -p '$(DESTDIR)$/(PREFIX)/lib/pkgconfig'
-	( echo 'prefix=$(DESTDIR)$/(PREFIX)' ; echo 'exec_prefix=$${prefix}' ; echo 'includedir=$${prefix}/include' ; echo 'libdir=$${prefix}/lib' ; echo ; echo 'Name: quick-der' ; echo "Description: Quick \`n\' Easy DER library" ; echo 'Version: 0.0' ; echo 'URL: https://github.com/vanrein/quick-der' ; echo 'Cflags: -I$${includedir}' ; echo 'Libs: -L$${libdir} -lquickder' ) > '$(DESTDIR)/$(PREFIX)/lib/pkgconfig/quick-der.pc'
+	mkdir -p "$(DESTPATH)/include/quick-der"
+	mkdir -p "$(DESTPATH)/lib/pkgconfig"
+	install $(TARGETS) "$(DESTPATH)/lib"
+	install ../include/quick-der/api.h "$(DESTPATH)/include/quick-der"
+	( echo 'prefix=$(DESTPATH)' ; echo 'exec_prefix=$${prefix}' ; echo 'includedir=$${prefix}/include' ; echo 'libdir=$${prefix}/lib' ; echo ; echo 'Name: quick-der' ; echo "Description: Quick \`n\' Easy DER library" ; echo 'Version: 0.0' ; echo 'URL: https://github.com/vanrein/quick-der' ; echo 'Cflags: -I$${includedir}' ; echo 'Libs: -L$${libdir} -lquickder' ) > '$(DESTPATH)/lib/pkgconfig/quick-der.pc'
 
 uninstall:
-	for f in $(TARGETS); do rm -f "$(DESTDIR)/$(PREFIX)/lib/$$f" ; done
-	rm -f '$(DESTDIR)/$(PREFIX)/include/quick-der/api.h'
-	rmdir --ignore-fail-on-non-empty '$(DESTDIR)/$(PREFIX)/include/quick-der'
-	rm -f '$(DESTDIR)/$(PREFIX)/lib/pkgconfig/quick-der.pc'
-	rmdir --ignore-fail-on-non-empty '$(DESTDIR)/$(PREFIX)/lib/pkgconfig'
+	for f in $(TARGETS); do rm -f "$(DESTPATH)/lib/$$f" ; done
+	rm -f '$(DESTPATH)/include/quick-der/api.h'
+	rmdir --ignore-fail-on-non-empty '$(DESTPATH)/include/quick-der'
+	rm -f '$(DESTPATH)/lib/pkgconfig/quick-der.pc'
+	rmdir --ignore-fail-on-non-empty '$(DESTPATH)/lib/pkgconfig'
 
 .PHONY: clean	
 clean:
