@@ -1,10 +1,12 @@
 DESTDIR ?=
 PREFIX ?= /usr/local
 
+VERSION = 0.1-RC5 
+
 # SUBDIRS = lib asn2qder test rfc arpa2 itu
 SUBDIRS = lib tool test rfc
 
-SUBMAKE=$(MAKE) PREFIX='$(PREFIX)' DESTDIR='$(DESTDIR)'
+SUBMAKE=$(MAKE) PREFIX='$(PREFIX)' DESTDIR='$(DESTDIR)' VERSION = '$(VERSION)'
 
 all:
 	#

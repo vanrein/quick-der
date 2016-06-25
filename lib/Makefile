@@ -13,7 +13,7 @@ install: $(TARGETS)
 	mkdir -p "$(DESTPATH)/lib/pkgconfig"
 	install $(TARGETS) "$(DESTPATH)/lib"
 	install ../include/quick-der/api.h "$(DESTPATH)/include/quick-der"
-	( echo 'prefix=$(DESTPATH)' ; echo 'exec_prefix=$${prefix}' ; echo 'includedir=$${prefix}/include' ; echo 'libdir=$${prefix}/lib' ; echo ; echo 'Name: quick-der' ; echo "Description: Quick \`n\' Easy DER library" ; echo 'Version: 0.0' ; echo 'URL: https://github.com/vanrein/quick-der' ; echo 'Cflags: -I$${includedir}' ; echo 'Libs: -L$${libdir} -lquickder' ) > '$(DESTPATH)/lib/pkgconfig/quick-der.pc'
+	( echo 'prefix=$(DESTPATH)' ; echo 'exec_prefix=$${prefix}' ; echo 'includedir=$${prefix}/include' ; echo 'libdir=$${prefix}/lib' ; echo ; echo 'Name: quick-der' ; echo "Description: Quick \`n\' Easy DER library" ; echo 'Version: $(VERSION)' ; echo 'URL: https://github.com/vanrein/quick-der' ; echo 'Cflags: -I$${includedir}' ; echo 'Libs: -L$${libdir} -lquickder' ) > '$(DESTPATH)/lib/pkgconfig/quick-der.pc'
 
 uninstall:
 	for f in $(TARGETS); do rm -f "$(DESTPATH)/lib/$$f" ; done
