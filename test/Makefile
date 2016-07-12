@@ -11,7 +11,7 @@ clean:
 	for t in $(TESTS) ; do rm -f $$t $${t%.ok}.test ; done
 
 $(LIBDIR)/$(LIBQD):
-	make -C "$(LIBDIR)" "$(LIBQD)"
+	$(MAKE) -C "$(LIBDIR)" "$(LIBQD)"
 
 install:
 	@echo #
