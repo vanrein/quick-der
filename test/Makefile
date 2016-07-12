@@ -5,6 +5,8 @@ LIBQD = libquickder.a
 
 EXTRALIBS ?= 
 
+HOSTCC ?= $(CC)
+
 all: $(LIBDIR)/$(LIBQD) $(TESTS)
 
 clean:
