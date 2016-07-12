@@ -5,7 +5,7 @@ LIBQD = libquickder.a
 
 EXTRALIBS ?= 
 
-all: "$(LIBDIR)/$(LIBQD)" $(TESTS)
+all: $(LIBDIR)/$(LIBQD) $(TESTS)
 
 clean:
 	for t in $(TESTS) ; do rm -f $$t $${t%.ok}.test ; done
