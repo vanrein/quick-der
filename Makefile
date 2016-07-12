@@ -24,6 +24,8 @@ uninstall:
 
 $PHONY: clean
 
+anew: clean all
+
 clean:
 	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' clean &&) echo "Cleaned all subdirectories"
 

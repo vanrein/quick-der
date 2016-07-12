@@ -1,5 +1,7 @@
 #include <quick-der/api.h>
 
+#include <errno.h>
+
 
 /* Unpack a DER structure based on its ASN.1 description, mapped to DER_PACK_
  * instructions.  This includes handling of OPTIONAL/DEFAULT and CHOICE syntax.

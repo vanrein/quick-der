@@ -1,5 +1,7 @@
 #include <quick-der/api.h>
 
+#include <errno.h>
+
 
 /* Update a cursor expression by walking into a DER-encoded ASN.1 structure.
  * The return value is -1 on error, and errno will be set accordinly, and the

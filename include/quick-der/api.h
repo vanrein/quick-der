@@ -16,6 +16,11 @@
 #endif
 
 
+#ifndef EBADMSG
+#  define EBADMSG EBADF
+#endif
+
+
 /* Most of BER is included with these routines as well, but not the
  * indefinate-length method.  Also, there is no support for application,
  * contextual and private tags [31] and up.  What this means in practice,
