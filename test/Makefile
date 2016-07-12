@@ -3,7 +3,9 @@ TESTS = certio.ok # kxover.ok krb5ticket.ok
 LIBDIR = ../lib
 LIBQD = libquickder.a
 
-all: $(LIBDIR)/$(LIBQD) $(TESTS)
+EXTRALIBS ?= 
+
+all: "$(LIBDIR)/$(LIBQD)" $(TESTS)
 
 clean:
 	for t in $(TESTS) ; do rm -f $$t $${t%.ok}.test ; done
@@ -20,7 +22,7 @@ uninstall:
 
 
 %.test: %.c $(LIBDIR)/$(LIBQD)
-	gcc -I ../include -o "$@" "$<" "$(LIBDIR)/$(LIBQD)"
+	$(CC) -I ../include -o "$@" "$<" "$(LIBDIR)/$(LIBQD)" $(EXTRALIBS)
 
 %.ok: %.test
 	"./$<" && touch "$@"
