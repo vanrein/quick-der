@@ -22,7 +22,7 @@ uninstall:
 
 
 %.test: %.c $(LIBDIR)/$(LIBQD)
-	$(CC) -I ../include -o "$@" "$<" "$(LIBDIR)/$(LIBQD)" $(EXTRALIBS)
+	$(HOSTCC) -I ../include -o "$@" "$<" "$(LIBDIR)/$(LIBQD)" $(EXTRALIBS)
 
 %.ok: %.test
 	"./$<" && touch "$@"
