@@ -74,7 +74,7 @@ DPRINTF ("DEBUG: Entered recursive call der_pack_rec() with bufend=0x%016llx\n",
 	do {
 		// deref stxend; decrease the stored pointer; deref that pointer:
 		tag = cmd = syntax [-- *stxlen];
-		bitstr = (cmd == (DER_PACK_ENTER | DER_TAG_BITSTRING));;
+		bitstr = (cmd == (DER_PACK_ENTER | DER_TAG_BITSTRING));
 DPRINTF ("DEBUG: Command to pack_rec() is 0x%02x, collected length is %zd, offset is %zd\n", cmd, totlen, *offsetp);
 		// Note: DER_PACK_ANY ends up under DER_PACK_STORE below
 		if ((cmd == DER_PACK_CHOICE_BEGIN)
@@ -87,7 +87,7 @@ DPRINTF ("DEBUG: Choice|Optional command has no data\n");
 		} else if (cmd & DER_PACK_ENTER) {
 			// Ends current (recursive) der_pack_rec() for sub-part
 			// Continue below, where the <tag,elmlen> header is added
-			addhdr = 1;
+			addhdr = (totlen > 0) ?1 :0;
 			elmlen = totlen;
 			totlen = bitstr? 1: 0;
 DPRINTF ("DEBUG: Post-enter element, moved totlen %zd to element length\n", elmlen);
