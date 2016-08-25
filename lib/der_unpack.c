@@ -96,7 +96,7 @@ DPRINTF ("DEBUG: Next command up is 0x%02x with %d left\n", *walk, crs->derlen);
 		//
 		// Check if we have anything left to process at the DER cursor
 		if (crs->derlen < 2) {
-			if ((crs->derlen == 0) && optional) {
+			if ((crs->derlen == 0) && (optional || optout)) {
 				// Empty value is acceptable, skip ahead
 				if (*walk & DER_PACK_STORE) {
 					memset (outarray + (*outctr)++,
@@ -106,7 +106,7 @@ DPRINTF ("DEBUG: Next command up is 0x%02x with %d left\n", *walk, crs->derlen);
 					continue;
 				}
 			} else {
-DPRINTF ("ERROR: Message size is only %d\n", crs->derlen);
+DPRINTF ("ERROR: Message size is only %d and optional=%d, optout=%d\n", crs->derlen, optional, optout);
 				errno = EBADMSG;
 				return NULL;
 			}
@@ -162,12 +162,12 @@ DPRINTF ("DEBUG: Moreover, found a matching choice\n");
 DPRINTF ("DEBUG: Found a non-matching choice\n");
 			// No match, but CHOICE flag permits that while choosing
 			optoutsub = 1;	// suppress value copy for current elem
-		} else if (optional) {
-DPRINTF ("DEBUG: Mismatch forgiven because we're doing optional recognition\n");
+		} else if (optional || optout) {
+DPRINTF ("DEBUG: Mismatch forgiven because we're doing optional or optout recognition\n");
 			// No match, but OPTIONAL flag permits that once
 			optoutsub = 1;	// suppress value copy for current elem
 		} else {
-DPRINTF ("ERROR: Mismatch in neither CHOICE nor OPTIONAL decoding parts\n");
+DPRINTF ("ERROR: Mismatch in either CHOICE nor OPTIONAL decoding parts\n");
 			// No match and nothing helped to make that acceptable
 			errno = EBADMSG;
 			return NULL;
