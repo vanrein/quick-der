@@ -7,6 +7,8 @@ CFLAGS += -std=gnu11
 
 CC ?= gcc
 AR ?= ar
+
+PREFIX ?= /usr/local
 DESTPATH=$(abspath $(DESTDIR)/$(PREFIX))
 
 all: $(TARGETS)

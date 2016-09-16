@@ -19,23 +19,23 @@ static size_t der_pack_prepack (const derprep *derp, uint8_t **bufend) {
 	size_t totlen = 0;
 	size_t elmlen;
 	size_t cnt = derp->derlen_msb & ~DER_DERLEN_FLAG_CONSTRUCTED;
-	dercursor *crs = derp->derray;
+	dercursor *crs = derp->derray + cnt;
 	uint8_t *buf;
-	while (cnt-- > 0) {
+	while (crs--, cnt-- > 0) {
 		if (crs->derlen & DER_DERLEN_FLAG_CONSTRUCTED) {
-			elmlen = der_pack_prepack ((const derprep *) crs+cnt, bufend);
+			elmlen = der_pack_prepack ((const derprep *) crs, bufend);
 			if (elmlen == DER_DERLEN_ERROR) {
 				return DER_DERLEN_ERROR;
 			}
 		} else {
+			elmlen = crs->derlen;
 			if (bufend) {
 				buf = *bufend;
 				buf -= elmlen;
-				memcpy (buf, crs [cnt].derptr, elmlen);
+				memcpy (buf, crs->derptr, elmlen);
 DPRINTF ("DEBUG: Wrote %4d bytes to 0x%016llx\n", elmlen, buf);
 				*bufend = buf;
 			}
-			elmlen = crs->derlen;
 		}
 		totlen += elmlen;
 		if ((totlen | elmlen) & DER_DERLEN_FLAG_CONSTRUCTED) {
@@ -111,7 +111,7 @@ DPRINTF ("DEBUG: Updated offset to %zd, pointer is 0x%016llx\n", *offsetp, derne
 				elmlen = 0;
 				addhdr = 0;
 DPRINTF ("DEBUG: Consumed NULL entry at %zd, so elmlen set to 0\n", *offsetp);
-			} else if (derray->derlen & DER_DERLEN_FLAG_CONSTRUCTED) {
+			} else if (dernext->derlen & DER_DERLEN_FLAG_CONSTRUCTED) {
 				// Prepacked Constructed, non-NULL entry
 				elmlen = der_pack_prepack ((const derprep *) dernext, bufend);
 				if (elmlen == DER_DERLEN_ERROR) {
@@ -128,11 +128,11 @@ DPRINTF ("DEBUG: Fetched length from constructed, recursive element\n");
 DPRINTF ("DEBUG: Wrote %4d bytes to 0x%016llx\n", elmlen, buf);
 					*bufend = buf;
 				}
-				if ((tag == 0x08) || (tag == 0x0b)
-						|| (tag == 0x10) || (tag == 0x11)) {
-					tag |= 0x20;	// Constructed, even STORED
-				}
 DPRINTF ("DEBUG: Fetched length from primitive element\n");
+			}
+			if ((tag == 0x08) || (tag == 0x0b)
+					|| (tag == 0x10) || (tag == 0x11)) {
+				tag |= 0x20;	// Constructed, even STORED
 			}
 DPRINTF ("DEBUG: Stored element length set to %zd at offset %zd\n", elmlen, *offsetp);
 		}
