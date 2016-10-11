@@ -45,7 +45,7 @@ static const derwalk *der_unpack_rec (dercursor *crs, const derwalk *walk,
 	dercursor hdrcrs;
 	bool chosen = 0;
 	bool optoutsub = optout;
-DPRINTF ("DEBUG: Entering der_unpack_rec() at 0x%08llx\n", (intptr_t) walk);
+DPRINTF ("DEBUG: Entering der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
 	//
 	// Decide on the terminal code and parse until that value
 	if (choice) {
@@ -90,7 +90,7 @@ DPRINTF ("DEBUG: Making recursive call because of CHOICE_BEGIN\n");
 			}
 DPRINTF ("DEBUG: Ended recursive call because of CHOICE_END\n");
 			optional = 0; // any 1 was used up by recursive CHOICE
-DPRINTF ("DEBUG: Next command up is 0x%02x with %d left\n", *walk, crs->derlen);
+DPRINTF ("DEBUG: Next command up is 0x%02x with %zd left\n", *walk, crs->derlen);
 			continue;
 		}
 		//
@@ -106,7 +106,7 @@ DPRINTF ("DEBUG: Next command up is 0x%02x with %d left\n", *walk, crs->derlen);
 					continue;
 				}
 			} else {
-DPRINTF ("ERROR: Message size is only %d and optional=%d, optout=%d\n", crs->derlen, optional, optout);
+DPRINTF ("ERROR: Message size is only %zd and optional=%d, optout=%d\n", crs->derlen, optional, optout);
 				errno = EBADMSG;
 				return NULL;
 			}
@@ -129,7 +129,7 @@ DPRINTF ("ERROR: Message size is only %d and optional=%d, optout=%d\n", crs->der
 		// applies to the whole CHOICE instead of a single element).
 		// This assumes OPTION cannot occur immediately inside CHOICE.
 		cmd = *walk++;
-DPRINTF ("DEBUG: Instruction 0x%02x decodes 0x%02x size %d of %d\n", cmd, tag, len, hlen + len);
+DPRINTF ("DEBUG: Instruction 0x%02x decodes 0x%02x size %zd of %zd\n", cmd, tag, len, hlen + len);
 		if (chosen) {
 DPRINTF ("DEBUG: CHOICE was already made\n");
 			// Already matched CHOICE, so don't try matching anymore;
@@ -179,7 +179,9 @@ DPRINTF ("ERROR: Mismatch in either CHOICE nor OPTIONAL decoding parts\n");
 		// because that applied to the present tag.  The cursor passed
 		// is newcrs, which is then also updated and later copied to crs.
 		if (cmd & DER_PACK_ENTER) {
-			newcrs = hdrcrs;
+			if (!optoutsub) {
+				newcrs = hdrcrs;
+			}
 			if (cmd == (DER_PACK_ENTER | DER_TAG_BITSTRING)) {
 				if (*newcrs.derptr++ != 0x00) {
 					errno = EBADMSG;
@@ -187,7 +189,7 @@ DPRINTF ("ERROR: Mismatch in either CHOICE nor OPTIONAL decoding parts\n");
 				}
 				newcrs.derlen--;
 			}
-DPRINTF ("DEBUG: Making recursive call because of ENTER bit with rest %d\n", newcrs.derlen);
+DPRINTF ("DEBUG: Making recursive call because of ENTER bit with rest %zd\n", newcrs.derlen);
 			walk = der_unpack_rec (&newcrs, walk,
 					outarray, outctr,
 					0, 0, optoutsub);
@@ -211,7 +213,7 @@ DPRINTF ("DEBUG: Opting out of output value #%d, setting it to NULL cursor\n", *
 					sizeof (dercursor));
 		} else {
 			// We store the DER value found
-DPRINTF ("DEBUG: Storing output value #%d with %d bytes 0x%02x, 0x%02x, 0x%02x, ...\n", *outctr, crs->derlen, crs->derptr [0], crs->derptr [1], crs->derptr [2]);
+DPRINTF ("DEBUG: Storing output value #%d with %zd bytes 0x%02x, 0x%02x, 0x%02x, ...\n", *outctr, crs->derlen, crs->derptr [0], crs->derptr [1], crs->derptr [2]);
 			//TODO:COUNTDOWNLENGTHS// outarray [ (*outctr)++ ] = *crs;
 			if (cmd == DER_PACK_ANY) {
 				outarray [ (*outctr) ].derptr = crs->derptr;
@@ -234,9 +236,9 @@ DPRINTF ("DEBUG: Storing output value #%d with %d bytes 0x%02x, 0x%02x, 0x%02x, 
 		// Update the visible DER cursor, making it either go back to
 		// what we just tried to match or advance to the next DER element
 		*crs = newcrs;
-DPRINTF ("DEBUG: Considering another loop-around for 0x%02x on 0x%02x with %d left\n", terminal, *walk, crs->derlen);
+DPRINTF ("DEBUG: Considering another loop-around for 0x%02x on 0x%02x with %zd left\n", terminal, *walk, crs->derlen);
 	}
-DPRINTF ("DEBUG: Ended looping around for 0x%02x with %d left\n", terminal, crs->derlen);
+DPRINTF ("DEBUG: Ended looping around for 0x%02x with %zd left\n", terminal, crs->derlen);
 	//
 	// Skip past the detected terminal on the walk
 	walk++;
@@ -263,7 +265,7 @@ DPRINTF ("ERROR: Ended a CHOICE without choosing, even though it is not OPTIONAL
 #endif
 	//
 	// Properly ended with DER_PACK_LEAVE, so report success
-DPRINTF ("DEBUG: Leaving  der_unpack_rec() at 0x%08llx\n", (intptr_t) walk);
+DPRINTF ("DEBUG: Leaving  der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
 	return walk;
 }
 

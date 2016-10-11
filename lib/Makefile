@@ -2,6 +2,10 @@ OBJS = der_pack.o der_prepack.o der_unpack.o der_iterate.o der_walk.o der_skipen
 
 TARGETS = libquickder.a libquickder.so
 
+ifdef DEBUG
+CFLAGS += -O0 -ggdb3 -DDEBUG
+endif
+
 CFLAGS += -Wall -Wextra -pedantic -Wstrict-prototypes -Wold-style-definition -Wwrite-strings -Wshadow -Wformat -Wformat-security -Wunreachable-code -Wmissing-prototypes
 CFLAGS += -std=gnu11
 
