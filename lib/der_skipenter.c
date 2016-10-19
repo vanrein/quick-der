@@ -31,16 +31,21 @@ int der_enter (dercursor *crs) {
 	uint8_t tag;
 	uint8_t hlen;
 	size_t len;
-	if (der_header (crs, &tag, &len, &hlen)) {
-		crs->derptr = NULL;
-		crs->derlen = 0;
-		return -1;
-	} else {
+	if (der_header (crs, &tag, &len, &hlen) == 0) {
 		crs->derlen = len;
-		return 0;
+		if (tag == DER_TAG_BITSTRING) {
+			//UNUSED// hlen++;
+			crs->derlen--;
+			crs->derptr++;
+		}
+		if (len != (size_t) -1) {
+			return 0;
+		} else {
+			errno = EBADMSG;
+		}
 	}
-	if (tag == DER_TAG_BITSTRING) {
-		crs->derlen--;
-		crs->derptr++;
-	}
+	// we ran into an error
+	crs->derptr = NULL;
+	crs->derlen = 0;
+	return -1;
 }

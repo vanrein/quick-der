@@ -35,7 +35,31 @@ uninstall:
 clean:
 	rm -f $(OBJS) $(TARGETS)
 
-.c.o:
+#NOT-EVERYWHERE-SIGH# .c.o:
+#NOT-EVERYWHERE-SIGH# 	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_header.o: der_header.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_iterate.o: der_iterate.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_pack.o: der_pack.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_prepack.o: der_prepack.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_skipenter.o: der_skipenter.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_unpack.o: der_unpack.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+der_walk.o: der_walk.c
+	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
+
+quick_der.o: quick_der.c
 	$(CC) -fPIC $(CFLAGS) -c -I../include -o "$@" "$<"
 
 libquickder.a: $(OBJS)
