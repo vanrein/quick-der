@@ -4,7 +4,11 @@ PREFIX ?= /usr/local
 VERSION = 0.1-RC5
 
 # SUBDIRS = lib asn2qder test rfc arpa2 itu
+ifndef UNTESTED
 SUBDIRS = lib tool test rfc
+else
+SUBDIRS = lib tool      rfc
+endif
 
 SUBMAKE=$(MAKE) PREFIX='$(PREFIX)' DESTDIR='$(DESTDIR)' VERSION='$(VERSION)'
 
