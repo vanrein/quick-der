@@ -112,9 +112,9 @@ style.
 
 ## ASN.1 Compiler
 
-We have equiped a simple
-[ASN.1 Compiler](https://github.com/vanrein/asn2quickder)
-with a backend that generates both the overlay data structures and the
+We have provided a simple `asn2quickder` compiler based on
+[asn1ate](https://github.com/kimgr/asn1ate)
+to generate both the overlay data structures and the
 byte codes for `der_pack()` and `der_unpack()`.  For most everyday ASN.1
 this should suffice to produce a header file from an ASN.1 module.
 

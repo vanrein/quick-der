@@ -16,13 +16,12 @@ Quick DER.
   * Include files based on standards, such as RFCs.  The intention is to have
     a growing set of standards-based include files that can readily be included
     into a DER project for analysis with Quick-DER.  To build those, there
-    is a need to have an executable `asn2quickder` installed while building
+    is a need to have the library `asn1ate` installed while building
     Quick DER.
     You can find the tool in the
-    [asn2quickder](https://github.com/vanrein/asn2quickder)
-    webpage.  This tool is based on
     [asn1ate](https://github.com/kimgr/asn1ate)
-    and relies on [pyparsing](https://pypi.python.org/pypi/pyparsing).
+    webpage.
+    This tool relies on [pyparsing](https://pypi.python.org/pypi/pyparsing).
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
 

@@ -16,7 +16,8 @@ TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h \
 	rfc2578.h
 #DOWNWARD-SPIRAL-INTO-ITU# TARGETS += InformationFramework.h UsefulDefinitions.h
 
-ASN2QUICKDER_CMD ?= $(shell which asn2quickder)
+MAKEFILE_DIR = $(dir $(lastword $(MAKEFILE_LIST)))
+ASN2QUICKDER_CMD ?= $(MAKEFILE_DIR)/../tool/asn2quickder.py
 ASN2QUICKDER_RUN ?= $(ASN2QUICKDER_CMD)
 
 all: $(TARGETS) test
