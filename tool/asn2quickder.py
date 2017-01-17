@@ -95,7 +95,7 @@ class QuickDERgen():
             TaggedType: self.packTaggedType,
             SimpleType: self.packSimpleType,
             BitStringType: self.packSimpleType,
-            ValueListType: self.overlaySimpleType,
+            ValueListType: self.packSimpleType,
             SequenceType: self.packSequenceType,
             SetType: self.packSetType,
             ChoiceType: self.packChoiceType,
@@ -130,11 +130,15 @@ class QuickDERgen():
         self.writeln(' * For information on the code generator, see https://github.com/vanrein/asn2quickder')
         self.writeln(' *')
         self.writeln(' */')
-        self.writeln('')
-        self.writeln('')
+        self.writeln()
+        self.writeln()
+	self.writeln('#ifndef QUICK_DER_' + self.unit + '_H')
+	self.writeln('#define QUICK_DER_' + self.unit + '_H')
+        self.writeln()
+        self.writeln()
         self.writeln('#include <quick-der/api.h>')
-        self.writeln('')
-        self.writeln('')
+        self.writeln()
+        self.writeln()
         closer = ''
 	rmfns = set ()
         for rm in self.semamod.imports.symbols_imported.keys():
@@ -159,6 +163,9 @@ class QuickDERgen():
         self.write(closer)
 
     def generate_tail(self):
+	self.writeln()
+	self.writeln()
+	self.writeln('#endif /* QUICK_DER_' + self.unit + '_H */')
         self.writeln()
         self.writeln()
         self.writeln('/* asn2quickder output for ' + self.semamod.name + ' ends here */')
@@ -255,7 +262,7 @@ class QuickDERgen():
         self.writeln('struct {');
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                self.writeln('\t/* ...extensions... */')
+                self.writeln('\t/* ...ASN.1 extensions... */')
                 continue
             if isinstance(comp, ComponentType) and comp.components_of_type is not None:
                 self.writeln('\t/* TODO: COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
@@ -270,7 +277,7 @@ class QuickDERgen():
         self.write('DER_PACK_ENTER | DER_TAG_SEQUENCE')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                self.comma()
+                #TOOMUCH# self.comma()
                 self.write('/* ...ASN.1 extensions... */')
                 continue
             if comp.optional:
@@ -287,8 +294,8 @@ class QuickDERgen():
         self.write('DER_PACK_ENTER | DER_TAG_SET')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                self.comma()
-                self.write('/* ...extensions... */')
+                #TOOMUCH# self.comma()
+                self.write('/* ...ASN.1 extensions... */')
                 continue
             if comp.optional:
                 self.comma()
@@ -304,8 +311,8 @@ class QuickDERgen():
         self.write('DER_PACK_CHOICE_BEGIN')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                self.comma()
-                self.write('/* ...extensions... */')
+                #TOOMUCH# self.comma()
+                self.write('/* ...ASN.1 extensions... */')
                 continue
             if comp.type_decl is not None:
                 # TODO: None would be due to components_of_type

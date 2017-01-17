@@ -1,0 +1,21 @@
+
+RFC5805 DEFINITIONS
+IMPLICIT TAGS
+EXTENSIBILITY IMPLIED ::=
+
+      txnEndReq ::= SEQUENCE {
+           commit         BOOLEAN DEFAULT TRUE,
+           identifier     OCTET STRING }
+
+      txnEndRes ::= SEQUENCE {
+           messageID MessageID OPTIONAL,
+                -- msgid associated with non-success resultCode
+           updatesControls SEQUENCE OF updateControls SEQUENCE {
+                messageID MessageID,
+                     -- msgid associated with controls
+                controls  Controls
+           } OPTIONAL
+      }
+      -- where MessageID and Controls are as specified in RFC 4511
+
+END

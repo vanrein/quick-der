@@ -1,0 +1,17 @@
+
+RFC4351 DEFINITIONS
+IMPLICIT TAGS
+EXTENSIBILITY IMPLIED ::=
+
+BEGIN
+
+IMPORTS LDAPString
+FROM RFC4511;
+
+	-- asn1ate: start with capital
+        TurnValue ::= SEQUENCE {
+             mutual         BOOLEAN DEFAULT FALSE,
+             identifier     LDAPString
+        }
+
+END

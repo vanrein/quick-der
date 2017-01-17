@@ -1,0 +1,14 @@
+
+RFC3909 DEFINITIONS
+	IMPLICIT TAGS
+	EXTENSIBILITY IMPLIED ::=
+
+BEGIN
+
+      cancelRequestValue ::= SEQUENCE {
+          cancelID        MessageID
+                          -- MessageID is as defined in [RFC2251]
+      }
+
+END
+

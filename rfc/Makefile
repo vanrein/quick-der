@@ -13,7 +13,9 @@ CC ?= gcc
 
 TARGETS = rfc3280.h rfc4120.h rfc4511.h rfc5280.h \
 	rfc2898.h rfc2315.h rfc5208.h rfc7292.h \
-	rfc2578.h
+	rfc2578.h rfc3062.h rfc3909.h rfc4373.h \
+	rfc4531.h rfc5805.h
+
 #DOWNWARD-SPIRAL-INTO-ITU# TARGETS += InformationFramework.h UsefulDefinitions.h
 
 MAKEFILE_DIR = $(dir $(lastword $(MAKEFILE_LIST)))

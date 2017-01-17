@@ -1,0 +1,19 @@
+
+RFC3909 DEFINITIONS
+IMPLICIT TAGS
+EXTENSIBILITY IMPLIED ::=
+
+BEGIN
+
+IMPORTS MessageID
+FROM RFC4511;
+
+	-- asn1ate: cancelRequestValue -> CancelRequestValue
+      CancelRequestValue ::= SEQUENCE {
+          cancelID        MessageID
+			-- asn1ate: Upgraded ref to RFC4511
+                          -- MessageID is as defined in [RFC2251]
+      }
+
+END
+
