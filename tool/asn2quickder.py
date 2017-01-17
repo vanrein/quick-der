@@ -294,19 +294,28 @@ class QuickDERgen():
             self.write('DER_PACK_LEAVE')
 
     # Sequence, Set, Choice
-    def overlayConstructedType(self, node):
-        self.writeln('struct {');
+    def overlayConstructedType(self, node, naked=False):
+        self.writeln('/* NODE :: ' + str(dir(node)))
+        if not naked:
+            self.writeln('struct {');
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
                 self.writeln('\t/* ...ASN.1 extensions... */')
                 continue
             if isinstance(comp, ComponentType) and comp.components_of_type is not None:
-                self.writeln('\t/* TODO: COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
+                self.writeln('\t/* COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
+		self.writeln('//COMP :: ' + str(dir(comp)))
+		self.writeln('//TYPE_DECL == ' + str (comp.type_decl))
+		self.writeln('//COMPONENTS_OF_TYPE :: ' + str (dir (comp.components_of_type)))
+		self.writeln('//CHILDREN :: ' + str (dir (comp.components_of_type.children)))
+		self.writeln('//TODO// Not sure how to get to elements and inline them here')
+                #TODO:ARG1=???# self.overlayConstructedType (comp.components_of_type, naked=True)
                 continue
             self.write('\t')
             self.generate_overlay_node(comp.type_decl)
             self.writeln(' ' + tosym(comp.identifier) + '; // ' + str(comp.type_decl))
-        self.write('}')
+        if not naked:
+            self.write('}')
 
     def packSequenceType(self, node, implicit=False):
         if not implicit:
@@ -316,6 +325,11 @@ class QuickDERgen():
             if isinstance(comp, ExtensionMarker):
                 #TOOMUCH# self.comma()
                 self.write('/* ...ASN.1 extensions... */')
+                continue
+            if isinstance(comp, ComponentType) and comp.components_of_type is not None:
+                # Assuming COMPONENTS OF cannot be OPTIONAL, otherwise move this down
+                self.comma()
+                self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
             if comp.optional:
                 self.comma()
@@ -335,6 +349,11 @@ class QuickDERgen():
             if isinstance(comp, ExtensionMarker):
                 #TOOMUCH# self.comma()
                 self.write('/* ...ASN.1 extensions... */')
+                continue
+            if isinstance(comp, ComponentType) and comp.components_of_type is not None:
+                # Assuming COMPONENTS OF cannot be OPTIONAL, otherwise move this down
+                self.comma()
+                self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
             if comp.optional:
                 self.comma()
