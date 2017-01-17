@@ -347,6 +347,7 @@ class QuickDERgen():
             self.write('DER_PACK_LEAVE')
 
     def packChoiceType(self, node, implicit=False):
+	# IMPLICIT tags are invalid for a CHOICE type
         self.comma()
         self.write('DER_PACK_CHOICE_BEGIN')
         for comp in node.components:
@@ -356,13 +357,14 @@ class QuickDERgen():
                 continue
             if comp.type_decl is not None:
                 # TODO: None would be due to components_of_type
-                self.generate_pack_node(comp.type_decl, implicit=implicit)
+                self.generate_pack_node(comp.type_decl, implicit=False)
         self.comma()
         self.write('DER_PACK_CHOICE_END')
 
     def packSequenceOfType(self, node, implicit=False):
         self.comma()
         if implicit:
+            # Hope this is okay... ignore headers, don't unpack but store them
             self.write('DER_PACK_STORE | DER_TAG_ANY')
         else:
             self.write('DER_PACK_STORE | DER_TAG_SEQUENCE')
@@ -370,6 +372,7 @@ class QuickDERgen():
     def packSetOfType(self, node, implicit=False):
         self.comma()
         if implicit:
+            # Hope this is okay... ignore headers, don't unpack but store them
             self.write('DER_PACK_STORE | DER_TAG_ANY')
         else:
             self.write('DER_PACK_STORE | DER_TAG_SET')
