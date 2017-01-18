@@ -63,11 +63,9 @@ class QuickDERgen():
             DER_PACK_LEAVE
 
        #define DER_PACK_unit_SyntaxDeclSym \
-            DER_PACK_ENTER | ..., \
             DER_PACK_ENTER | DER_PACK_SEQUENCE, \
             DER_sub1 ..., \
             DER_sub2 ..., \
-            DER_PACK_LEAVE, \
             DER_PACK_LEAVE
 
        This makes implicit tags available over an additional symbol.
@@ -247,7 +245,7 @@ class QuickDERgen():
         #TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
         self.write('#define DER_PIMP_' + self.unit + '_' + tosym(node.type_name) + '(implicit_tag)')
         self.newcomma(', \\\n\t', ' \\\n\t')
-        self.generate_pack_node(node.type_decl, implicit=True, outer_tag='implicit_tag')
+        self.generate_pack_node(node.type_decl, implicit=False, outer_tag='implicit_tag')
         self.writeln()
         self.writeln()
         self.write('#define DER_PACK_' + self.unit + '_' + tosym(node.type_name))
