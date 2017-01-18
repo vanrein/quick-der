@@ -98,7 +98,7 @@ DPRINTF ("DEBUG: Next command up is 0x%02x with %zd left\n", *walk, crs->derlen)
 		if (crs->derlen < 2) {
 			if ((crs->derlen == 0) && (optional || optout)) {
 				// Empty value is acceptable, skip ahead
-				if (*walk & DER_PACK_STORE) {
+				if ((*walk & DER_PACK_MATCHBITS) == DER_PACK_STORE) {
 					memset (outarray + (*outctr)++,
 							0,
 							sizeof (dercursor));

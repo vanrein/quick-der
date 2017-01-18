@@ -35,12 +35,11 @@ int der_enter (dercursor *crs) {
 		crs->derptr = NULL;
 		crs->derlen = 0;
 		return -1;
-	} else {
-		crs->derlen = len;
-		return 0;
 	}
+	crs->derlen = len;
 	if (tag == DER_TAG_BITSTRING) {
 		crs->derlen--;
 		crs->derptr++;
 	}
+	return 0;
 }

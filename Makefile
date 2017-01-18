@@ -10,9 +10,12 @@ SUBMAKE=$(MAKE) PREFIX='$(PREFIX)' DESTDIR='$(DESTDIR)' VERSION='$(VERSION)'
 
 all:
 	#
-	# To incorporate subprojects with valuable add-ons, run:
+	# You will need the Python package asn1ate from
 	#
-	# git submodule update --init
+	# https://github.com/vanrein/asn2quickder
+	#
+	# This provides the ASN.1 language core for the asn2quickder compiler;
+	# we use it to produce header files from RFC's.
 	#
 	@ $(foreach d,$(SUBDIRS),$(SUBMAKE) -C '$d' all &&) echo "Made all subdirectories"
 
