@@ -17,6 +17,8 @@ DESTPATH=$(abspath $(DESTDIR)/$(PREFIX))
 
 all: $(TARGETS)
 
+anew: clean all
+
 install: $(TARGETS)
 	mkdir -p "$(DESTPATH)/include/quick-der"
 	mkdir -p "$(DESTPATH)/lib/pkgconfig"

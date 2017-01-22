@@ -391,6 +391,14 @@ int der_skip (dercursor *crs);
 int der_enter (dercursor *crs);
 
 
+/* Assuming that we are looking at a concatenation of DER elements, focus on
+ * the first one.  That is, chop off anything beyond the first element.
+ *
+ * This function returns -1 on error and sets errno; 0 on success.
+ */
+int der_focus (dercursor *crs);
+
+
 /* Unpack a structure, or possibly a sequence of structures.  The output
  * is stored in subsequent entries of outarray, whose size should be
  * precomputed to sufficient length.  The outarray will often be an

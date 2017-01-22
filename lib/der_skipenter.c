@@ -43,3 +43,21 @@ int der_enter (dercursor *crs) {
 	}
 	return 0;
 }
+
+/* Assuming that we are looking at a concatenation of DER elements, focus on
+ * the first one.  That is, chop off anything beyond the first element.
+ *
+ * This function returns -1 on error and sets errno; 0 on success.
+ */
+int der_focus (dercursor *crs) {
+	uint8_t tag;
+	uint8_t hlen;
+	size_t len;
+	if (der_header (crs, &tag, &len, &hlen)) {
+		crs->derptr = NULL;
+		crs->derlen = 0;
+		return -1;
+	}
+	crs->derlen = len;
+	return 0;
+}

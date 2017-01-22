@@ -130,10 +130,11 @@ DPRINTF ("ERROR: Message size is only %zd and optional=%d, optout=%d\n", crs->de
 		// This assumes OPTION cannot occur immediately inside CHOICE.
 		cmd = *walk++;
 DPRINTF ("DEBUG: Instruction 0x%02x decodes 0x%02x size %zd of %zd\n", cmd, tag, len, hlen + len);
-		if (chosen) {
-DPRINTF ("DEBUG: CHOICE was already made\n");
-			// Already matched CHOICE, so don't try matching anymore;
-			// we chase on with optout && optoutsub
+		if (chosen || optout) {
+DPRINTF ("DEBUG: CHOICE was already made, or OPTIONAL was activated into opt-out\n");
+			// Already matched CHOICE, or OPT-OUT is active,
+			// so don't try matching anymore;
+			// we chase on with optoutsub
 			optoutsub = 1;
 		} else if ((cmd == DER_PACK_ANY) || ((tag ^ cmd) & DER_PACK_MATCHBITS) == 0x00) {
 DPRINTF ("DEBUG: Found a match\n");
@@ -162,7 +163,7 @@ DPRINTF ("DEBUG: Moreover, found a matching choice\n");
 DPRINTF ("DEBUG: Found a non-matching choice\n");
 			// No match, but CHOICE flag permits that while choosing
 			optoutsub = 1;	// suppress value copy for current elem
-		} else if (optional || optout) {
+		} else if (optional) {
 DPRINTF ("DEBUG: Mismatch forgiven because we're doing optional or optout recognition\n");
 			// No match, but OPTIONAL flag permits that once
 			optoutsub = 1;	// suppress value copy for current elem
@@ -284,6 +285,7 @@ DPRINTF ("DEBUG: Leaving  der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
  * protection for foolish specifications (and they will often be generated
  * anyway).  This method additionally requires the first element in the
  * syntax to be flagged with DER_PACK_ENTER.  (TODO: Permit non-looped use?)
+ * TODO:WHY-REQUIRE-ENTER?!?
  *
  * The cursor will be updated by this call to point to the position
  * where unpacking stopped.  Refer to the return value to see if this is
@@ -295,10 +297,10 @@ DPRINTF ("DEBUG: Leaving  der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
 int der_unpack (dercursor *crs, const derwalk *syntax,
 			dercursor *outarray, int repeats) {
 	int outctr = 0;
-	if ((*syntax & DER_PACK_ENTER) == 0x00) {
-		errno = EBADMSG;
-		return -1;
-	}
+	//TODO:WHY// if ((*syntax & DER_PACK_ENTER) == 0x00) {
+		//TODO:WHY// errno = EBADMSG;
+		//TODO:WHY// return -1;
+	//TODO:WHY// }
 	while (repeats-- > 0) {
 		if (der_unpack_rec (crs, syntax,
 				outarray, &outctr,
