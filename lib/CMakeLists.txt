@@ -18,6 +18,15 @@ add_library (quickderStatic STATIC ${quickder_SRC})
 set_target_properties (quickderStatic
 	PROPERTIES OUTPUT_NAME quickder)
 
+# The shared lib is leading and carries the public header files on Apple
+# platforms. The static lib is installed too, and then all the header files
+# from the top-level include/ directory. For installing the headers, don't
+# need an extra quick-der/ level because that's retained in the file paths.
 install (TARGETS quickderShared
 	LIBRARY DESTINATION lib
 	PUBLIC_HEADER DESTINATION include/quick-der)
+install (TARGETS quickderStatic
+	ARCHIVE DESTINATION lib)
+install (DIRECTORY ../include/quick-der
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.h")
