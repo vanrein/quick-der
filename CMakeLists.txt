@@ -23,7 +23,7 @@ option (SPEC_ITU
 	"Build include files from ASN.1 fragments of ITU specs"
 	ON)
 option (SPEC_ARPA2
-	"Build inlucde files from ASN.1 specs for ARPA2 projects"
+	"Build include files from ASN.1 specs for ARPA2 projects"
 	ON)
 
 set(Quick-DER_MAJOR_VERSION 0)
@@ -48,6 +48,12 @@ endif()
 add_subdirectory(lib)
 if (SPEC_RFC)
 	add_subdirectory(rfc)
+endif()
+if (SPEC_ITU)
+	add_subdirectory(itu)
+endif()
+if (SPEC_ARPA2)
+	add_subdirectory(arpa2)
 endif()
 
 #
