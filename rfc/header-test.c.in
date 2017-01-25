@@ -1,0 +1,2 @@
+#include "@ASN1_HEADER_NAME@.h"
+int main() { return 0; }
