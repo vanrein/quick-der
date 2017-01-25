@@ -431,14 +431,14 @@ if len(sys.argv) < 2:
 
 mods = []
 for file in sys.argv [1:]:
-    print('Parsing', file)
+    print('Parsing "%s"' % file)
     with open(file, 'r') as asn1fh:
         asn1txt  = asn1fh.read()
         asn1tree = parser.parse_asn1(asn1txt)
-    print('Building semantic model for', file)
+    print('Building semantic model for "%s"' % file)
     asn1sem = build_semantic_model(asn1tree)
     mods.insert(0, asn1sem [0])
-    print('Realised semantic model for', file)
+    print('Realised semantic model for "%s"' % file)
 
 cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
 
