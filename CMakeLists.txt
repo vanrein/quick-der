@@ -41,30 +41,7 @@ endif()
 #
 # BUILDING
 #
-
-include_directories (include)
-
-add_library (quickderShared SHARED
-	lib/der_header.c
-	lib/der_iterate.c
-	lib/der_pack.c
-	lib/der_prepack.c
-	lib/der_skipenter.c
-	lib/der_unpack.c
-	lib/der_walk.c)
-set_target_properties (quickderShared
-	PROPERTIES OUTPUT_NAME quickder)
-
-add_library (quickderStatic STATIC
-	lib/der_header.c
-	lib/der_iterate.c
-	lib/der_pack.c
-	lib/der_prepack.c
-	lib/der_skipenter.c
-	lib/der_unpack.c
-	lib/der_walk.c)
-set_target_properties (quickderStatic
-	PROPERTIES OUTPUT_NAME quickder)
+add_subdirectory(lib)
 
 
 if (SPEC_RFC)
@@ -146,9 +123,6 @@ endforeach()
 # INSTALLING
 #
 
-install (TARGETS quickderShared
-	LIBRARY DESTINATION lib
-	PUBLIC_HEADER DESTINATION include/quick-der)
 
 #TODO:WHYNOT# install (TARGETS quickderStatic ${header_files}
 #TODO:WHYNOT# 	ARCHIVE DESTINATION lib
