@@ -5,9 +5,12 @@ project ("Quick_DER" C)
 
 cmake_minimum_required (VERSION 2.6 FATAL_ERROR)
 
-#TODO# Why?
-set (CMAKE_MACOSX_RPATH 0)
+set (CMAKE_MACOSX_RPATH 0)  # Don't use rpaths (but we don't build executables anyway)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
+include(MacroEnsureOutOfSourceBuild)
+
+macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory.")
 
 #
 # OPTIONS / BUILD SETTINGS
