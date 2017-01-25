@@ -294,7 +294,7 @@ class QuickDERgen():
            self.comma()
            self.write('DER_PACK_ENTER | ' + outer_tag)
         mytag = 'DER_TAG_' +(node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT:
+        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
             self.generate_pack_node(node.type_decl, implicit=False, outer_tag=mytag)
         else:
             self.comma()
@@ -310,7 +310,7 @@ class QuickDERgen():
         if not implicit:
              self.comma()
              self.write('DER_PACK_ENTER | DER_TAG_' +(node.class_name or 'CONTEXT') + '(' + node.class_number + ')')
-        implicit_sub = (self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT)
+        implicit_sub = (self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT)
         self.generate_pack_node(node.type_decl, implicit=implicit_sub)
         if not implicit:
             self.comma()
