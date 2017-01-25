@@ -17,5 +17,5 @@ add_asn1_headers(rfc-headers
 	rfc5208
 	rfc5280
 	rfc5805
-	rfc6960
+	# rfc6960
 	rfc7292)
