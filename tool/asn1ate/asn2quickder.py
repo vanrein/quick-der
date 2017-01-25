@@ -46,34 +46,11 @@ class QuickDERgen():
 
        #define DER_PACK_unit_SyntaxDeclSym \
             DER_PACK_ENTER | ..., \
-            DER_sub1..., \
-            DER_sub2..., \
-            DER_PACK_LEAVE
+            ... \
+            DER_PACK_LEAVE, \
+            DER_PACK_END
 
        this is a walking path for the der_pack() and der_unpack() instructions.
-
-       At a later point, we decided to split the definitions to be able to
-       support IMPLICIT TAGS (such as used with LDAP).  This is a matter of
-       separating out anything but the outisde element of a named definition:
-
-       #define DER_PIMP_unit_SyntaxDeclSym(implicit_tag) \
-            DER_PACK_ENTER | implicit_tag, \
-            DER_sub1..., \
-            DER_sub2..., \
-            DER_PACK_LEAVE
-
-       #define DER_PACK_unit_SyntaxDeclSym \
-            DER_PACK_ENTER | DER_PACK_SEQUENCE, \
-            DER_sub1 ..., \
-            DER_sub2 ..., \
-            DER_PACK_LEAVE
-
-       This makes implicit tags available over an additional symbol.
-       And of course, this form is now referenced when calling for it.
-
-       Note that packing paths do not have a closing DER_PACK_END, it is
-       easy to forget that but it really improves packer flexibility.
-
        In addition, there will be a struct for each of the symbols:
 
        struct unit_SyntaxDeclSym_overlay {
@@ -118,7 +95,7 @@ class QuickDERgen():
             TaggedType: self.packTaggedType,
             SimpleType: self.packSimpleType,
             BitStringType: self.packSimpleType,
-            ValueListType: self.packSimpleType,
+            ValueListType: self.overlaySimpleType,
             SequenceType: self.packSequenceType,
             SetType: self.packSetType,
             ChoiceType: self.packChoiceType,
@@ -153,15 +130,11 @@ class QuickDERgen():
         self.writeln(' * For information on the code generator, see https://github.com/vanrein/asn2quickder')
         self.writeln(' *')
         self.writeln(' */')
-        self.writeln()
-        self.writeln()
-	self.writeln('#ifndef QUICK_DER_' + self.unit + '_H')
-	self.writeln('#define QUICK_DER_' + self.unit + '_H')
-        self.writeln()
-        self.writeln()
+        self.writeln('')
+        self.writeln('')
         self.writeln('#include <quick-der/api.h>')
-        self.writeln()
-        self.writeln()
+        self.writeln('')
+        self.writeln('')
         closer = ''
 	rmfns = set ()
         for rm in self.semamod.imports.symbols_imported.keys():
@@ -181,16 +154,11 @@ class QuickDERgen():
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfn = tosym(rm.rsplit('.', 1) [0]).lower()
             for sym in self.semamod.imports.symbols_imported [rm]:
-		self.writeln('#define DER_PIMP_' + tosym(self.unit) + '_' + tosym(sym) + '(implicit_tag) DER_PIMP_' + tosym(rmfn) + '_' + tosym(sym) + '(implicit_tag)')
-                self.writeln()
                 self.writeln('#define DER_PACK_' + tosym(self.unit) + '_' + tosym(sym) + ' DER_PACK_' + tosym(rmfn) + '_' + tosym(sym) + '')
                 closer = '\n\n'
         self.write(closer)
 
     def generate_tail(self):
-	self.writeln()
-	self.writeln()
-	self.writeln('#endif /* QUICK_DER_' + self.unit + '_H */')
         self.writeln()
         self.writeln()
         self.writeln('/* asn2quickder output for ' + self.semamod.name + ' ends here */')
@@ -224,11 +192,10 @@ class QuickDERgen():
         else:
             raise Exception('No overlay generator for ' + str(tnm))
 
-    def generate_pack_node(self, node, **kwargs):
-        # kwargs usually captures implicit, outer_tag
+    def generate_pack_node(self, node):
         tnm = type(node)
         if tnm in self.pack_funmap:
-            self.pack_funmap [tnm](node, **kwargs)
+            self.pack_funmap [tnm](node)
         else:
             raise Exception('No pack generator for ' + str(tnm))
 
@@ -241,16 +208,10 @@ class QuickDERgen():
         self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
         self.writeln()
 
-    def packTypeAssignment(self, node, implicit=False):
-        #TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
-        self.write('#define DER_PIMP_' + self.unit + '_' + tosym(node.type_name) + '(implicit_tag)')
-        self.newcomma(', \\\n\t', ' \\\n\t')
-        self.generate_pack_node(node.type_decl, implicit=False, outer_tag='implicit_tag')
-        self.writeln()
-        self.writeln()
+    def packTypeAssignment(self, node):
         self.write('#define DER_PACK_' + self.unit + '_' + tosym(node.type_name))
         self.newcomma(', \\\n\t', ' \\\n\t')
-        self.generate_pack_node(node.type_decl, implicit=False)
+        self.generate_pack_node(node.type_decl)
         self.writeln()
         self.writeln()
 
@@ -258,26 +219,17 @@ class QuickDERgen():
         mod = node.module_name or self.unit
         self.write('DER_OVLY_' + tosym(mod) + '_' + tosym(node.type_name))
 
-    def packDefinedType(self, node, implicit=False, outer_tag=None):
-        # There should never be anything of interest in outer_tag
+    def packDefinedType(self, node):
         mod = node.module_name or self.unit
         self.comma()
-        if outer_tag is None:
-            tagging = 'DER_PACK_'
-            param = ''
-        else:
-            tagging = 'DER_PIMP_'
-            param = '(' + outer_tag + ')'
-        self.write(tagging + tosym(mod) + '_' + tosym(node.type_name) + param)
+        self.write('DER_PACK_' + tosym(mod) + '_' + tosym(node.type_name))
 
     def overlaySimpleType(self, node):
         self.write('dercursor')
 
-    def packSimpleType(self, node, implicit=False, outer_tag=None):
-        if outer_tag is None:
-            outer_tag = 'DER_TAG_' + node.type_name.replace(' ', '').upper()
+    def packSimpleType(self, node):
         self.comma()
-        self.write('DER_PACK_STORE | ' + outer_tag)
+        self.write('DER_PACK_STORE | DER_TAG_' + node.type_name.replace(' ', '').upper())
 
     def overlayTaggedType(self, node):
         # tag = str(node) 
@@ -289,134 +241,85 @@ class QuickDERgen():
         #     tag = tag + ' EXPLICIT'
         self.generate_overlay_node(node.type_decl)
 
-    def packTaggedType(self, node, implicit=False,outer_tag=None):
-        if outer_tag is not None:
-           self.comma()
-           self.write('DER_PACK_ENTER | ' + outer_tag)
-        mytag = 'DER_TAG_' +(node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
-            self.generate_pack_node(node.type_decl, implicit=False, outer_tag=mytag)
-        else:
-            self.comma()
-            self.write('DER_PACK_ENTER | ' + mytag)
-            self.generate_pack_node(node.type_decl, implicit=False)
-            self.comma()
-            self.write('DER_PACK_LEAVE')
-        if outer_tag is not None:
-           self.comma()
-           self.write('DER_PACK_LEAVE')
-
-    def packTaggedType_TODO(self, node, implicit=False):
-        if not implicit:
-             self.comma()
-             self.write('DER_PACK_ENTER | DER_TAG_' +(node.class_name or 'CONTEXT') + '(' + node.class_number + ')')
-        implicit_sub = (self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT)
-        self.generate_pack_node(node.type_decl, implicit=implicit_sub)
-        if not implicit:
-            self.comma()
-            self.write('DER_PACK_LEAVE')
+    def packTaggedType(self, node):
+        #TODO# Need to push down node.implicity == TagImplicity.IMPLICIT
+        #TODO# Need to process tag class
+        self.comma()
+        self.write('DER_PACK_ENTER | DER_TAG_' +(node.class_name or 'CONTEXT') + '(' + node.class_number + ')')
+        self.generate_pack_node(node.type_decl)
+        self.comma()
+        self.write('DER_PACK_LEAVE')
 
     # Sequence, Set, Choice
-    def overlayConstructedType(self, node, naked=False):
-        self.writeln('/* NODE :: ' + str(dir(node)) + ' */')
-        if not naked:
-            self.writeln('struct {');
+    def overlayConstructedType(self, node):
+        self.writeln('struct {');
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                self.writeln('\t/* ...ASN.1 extensions... */')
+                self.writeln('\t/* ...extensions... */')
                 continue
             if isinstance(comp, ComponentType) and comp.components_of_type is not None:
-                self.writeln('\t/* COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
-		self.writeln('//COMP :: ' + str(dir(comp)))
-		self.writeln('//TYPE_DECL == ' + str (comp.type_decl))
-		self.writeln('//COMPONENTS_OF_TYPE :: ' + str (dir (comp.components_of_type)))
-		self.writeln('//CHILDREN :: ' + str (dir (comp.components_of_type.children)))
-		self.writeln('//TODO// Not sure how to get to elements and inline them here')
-                #TODO:ARG1=???# self.overlayConstructedType (comp.components_of_type, naked=True)
+                self.writeln('\t/* TODO: COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
                 continue
             self.write('\t')
             self.generate_overlay_node(comp.type_decl)
             self.writeln(' ' + tosym(comp.identifier) + '; // ' + str(comp.type_decl))
-        if not naked:
-            self.write('}')
+        self.write('}')
 
-    def packSequenceType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
-        if not implicit:
-            self.comma()
-            self.write('DER_PACK_ENTER | ' + outer_tag)
+    def packSequenceType(self, node):
+        self.comma()
+        self.write('DER_PACK_ENTER | DER_TAG_SEQUENCE')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                #TOOMUCH# self.comma()
-                self.write('/* ...ASN.1 extensions... */')
-                continue
-            if isinstance(comp, ComponentType) and comp.components_of_type is not None:
-                # Assuming COMPONENTS OF cannot be OPTIONAL, otherwise move this down
                 self.comma()
-                self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
+                self.write('/* ...ASN.1 extensions... */')
                 continue
             if comp.optional:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
                 # TODO: None would be due to components_of_type
-                self.generate_pack_node(comp.type_decl, implicit=False)
-        if not implicit:
-            self.comma()
-            self.write('DER_PACK_LEAVE')
+                self.generate_pack_node(comp.type_decl)
+        self.comma()
+        self.write('DER_PACK_LEAVE')
 
-    def packSetType(self, node, implicit=False, outer_tag='DER_TAG_SET'):
-        if not implicit:
-            self.comma()
-            self.write('DER_PACK_ENTER | ' + outer_tag)
+    def packSetType(self, node):
+        self.comma()
+        self.write('DER_PACK_ENTER | DER_TAG_SET')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                #TOOMUCH# self.comma()
-                self.write('/* ...ASN.1 extensions... */')
-                continue
-            if isinstance(comp, ComponentType) and comp.components_of_type is not None:
-                # Assuming COMPONENTS OF cannot be OPTIONAL, otherwise move this down
                 self.comma()
-                self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
+                self.write('/* ...extensions... */')
                 continue
             if comp.optional:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
                 # TODO: None would be due to components_of_type
-                self.generate_pack_node(comp.type_decl, implicit=False)
-        if not implicit:
-            self.comma()
-            self.write('DER_PACK_LEAVE')
+                self.generate_pack_node(comp.type_decl)
+        self.comma()
+        self.write('DER_PACK_LEAVE')
 
-    def packChoiceType(self, node, implicit=False, outer_tag=None):
-	# IMPLICIT tags are invalid for a CHOICE type
-        # outer_tags must not be passed down here; will be added
-        if implicit or outer_tag is not None:
-            self.comma()
-            self.write('DER_PACK_ENTER | ' + outer_tag)
+    def packChoiceType(self, node):
         self.comma()
         self.write('DER_PACK_CHOICE_BEGIN')
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
-                #TOOMUCH# self.comma()
-                self.write('/* ...ASN.1 extensions... */')
+                self.comma()
+                self.write('/* ...extensions... */')
                 continue
             if comp.type_decl is not None:
                 # TODO: None would be due to components_of_type
-                self.generate_pack_node(comp.type_decl, implicit=False)
+                self.generate_pack_node(comp.type_decl)
         self.comma()
         self.write('DER_PACK_CHOICE_END')
-        if implicit or outer_tag is not None:
-            self.comma()
-            self.write('DER_PACK_LEAVE')
 
-    def packSequenceOfType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
+    def packSequenceOfType(self, node):
         self.comma()
-        self.write('DER_PACK_STORE | ' + outer_tag)
+        self.write('DER_PACK_STORE | DER_TAG_SEQUENCE')
 
-    def packSetOfType(self, node, implicit=False, outer_tag='DER_TAG_SET'):
+    def packSetOfType(self, node):
         self.comma()
-        self.write('DER_PACK_STORE | ' + outer_tag)
+        self.write('DER_PACK_STORE | DER_TAG_SEQUENCE')
 
 
 """The main program asn2quickder is called with one or more .asn1 files,
@@ -431,14 +334,14 @@ if len(sys.argv) < 2:
 
 mods = []
 for file in sys.argv [1:]:
-    print('Parsing "%s"' % file)
+    print('Parsing', file)
     with open(file, 'r') as asn1fh:
         asn1txt  = asn1fh.read()
         asn1tree = parser.parse_asn1(asn1txt)
-    print('Building semantic model for "%s"' % file)
+    print('Building semantic model for', file)
     asn1sem = build_semantic_model(asn1tree)
     mods.insert(0, asn1sem [0])
-    print('Realised semantic model for "%s"' % file)
+    print('Realised semantic model for', file)
 
 cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
 
