@@ -33,6 +33,8 @@ set(Quick-DER_VERSION
 	${Quick-DER_MAJOR_VERSION}.${Quick-DER_MINOR_VERSION}.${Quick-DER_PATCH_VERSION})
 
 
+enable_testing ()
+
 #
 # DEPENDENCIES
 #
@@ -55,48 +57,13 @@ endif()
 if (SPEC_ARPA2)
 	add_subdirectory(arpa2)
 endif()
-
-#
-# TESTS
-#
-enable_testing ()
-
-add_executable (certio.test
-	EXCLUDE_FROM_ALL
-	test/certio.c)
-target_link_libraries (certio.test
-	quickder)
-add_test (certio.ok
-	certio.test verisign.der)
-#TODO:WHYNOT# add_dependencies (certio.test certio.ok)
-#TODO:WHYNOT# add_dependencies (certio.ok certio.test)
-
-
-foreach (spec ${specs})
-	get_filename_component (specdir  ${spec} DIRECTORY)
-	get_filename_component (specname ${spec} NAME)
-	add_test (${specname}
-		COMMAND ${CMAKE_C_COMPILER} ${specname})
-endforeach()
-
-
-#
-# INSTALLING
-#
-
-
-#TODO:WHYNOT# install (TARGETS quickderStatic ${header_files}
-#TODO:WHYNOT# 	ARCHIVE DESTINATION lib
-#TODO:WHYNOT# 	PUBLIC_HEADER DESTINATION include/quick-der
-#TODO:WHYNOT# 	COMPONENT dev)
-
+add_subdirectory(test)
 
 #
 # PACKAGING
 #
 
-set (CPACK_BUNDLE_NAME, "Quick_DER")
-
+set (CPACK_BUNDLE_NAME, "Quick-DER")
 include (CPack)
 
 #
