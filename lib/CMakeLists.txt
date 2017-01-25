@@ -1,6 +1,11 @@
 # Build the Quick-DER library twice: once shared, once static.
 include_directories (../include)
 
+# Forward the CMake option to the compiler
+if (DEBUG)
+	add_definitions(-DDEBUG)
+endif()
+
 set(quickder_SRC 
 	der_header.c
 	der_iterate.c
