@@ -34,5 +34,9 @@ macro(add_asn1_headers _groupname)
 		add_asn1_header(${_header})
 		add_dependencies(${_groupname} ${_header}.h)
 	endforeach()
+	add_custom_target (symlink-include-${_groupname}
+		ln -s ${CMAKE_CURRENT_BINARY_DIR}  ${CMAKE_CURRENT_BINARY_DIR}/quick-der
+		COMMENT "Add symlink for <include/quick-der>.")
+	add_dependencies(${_groupname} symlink-include-${_groupname})
 endmacro()
 
