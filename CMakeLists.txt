@@ -1,15 +1,13 @@
 #
-# DECLARATIONS
+# CMAKE SETUP (version, build style)
 #
-project ("Quick_DER" C)
-
-cmake_minimum_required (VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required (VERSION 2.8 FATAL_ERROR)
+project ("Quick-DER" C)
 
 set (CMAKE_MACOSX_RPATH 0)  # Don't use rpaths (but we don't build executables anyway)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 include(MacroEnsureOutOfSourceBuild)
-
 macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory.")
 
 #
@@ -27,6 +25,12 @@ option (SPEC_ITU
 option (SPEC_ARPA2
 	"Build inlucde files from ASN.1 specs for ARPA2 projects"
 	ON)
+
+set(Quick-DER_MAJOR_VERSION 0)
+set(Quick-DER_MINOR_VERSION 1)
+set(Quick-DER_PATCH_VERSION 5)  # RC5, will move to 0.2 for release
+set(Quick-DER_VERSION
+	${Quick-DER_MAJOR_VERSION}.${Quick-DER_MINOR_VERSION}.${Quick-DER_PATCH_VERSION})
 
 
 #
@@ -138,9 +142,35 @@ set (CPACK_BUNDLE_NAME, "Quick_DER")
 
 include (CPack)
 
-
 #
-# FUNCTION LIBRARY
+# CMAKE CONFIGURATION FILES
 #
+# These make it simple to use find_package(Quick-DER) in other
+# projects, because Quick-DER can be found (and version information
+# obtained) automatically.
+#
+export(PACKAGE Quick-DER)
+# The CMake configuration files are written to different locations
+# depending on the host platform, since different conventions apply.
+if(WIN32 AND NOT CYGWIN)
+	set(DEF_INSTALL_CMAKE_DIR CMake)
+else()
+	set(DEF_INSTALL_CMAKE_DIR lib/cmake/Quick-DER)
+endif()
+set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH
+	"Installation directory for CMake files")
 
-
+# Calculate include/ relative to the installed place of the config file.
+file(RELATIVE_PATH REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}"
+	"${CMAKE_INSTALL_PREFIX}/include")
+set(CONF_INCLUDE_DIRS "\${Quick-DER_CMAKE_DIR}/${REL_INCLUDE_DIR}")
+# Substitute in real values for the placeholders in the .in files,
+# create the files in the build tree, and install them.
+configure_file(Quick-DERConfig.cmake.in
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfig.cmake" @ONLY)
+configure_file(Quick-DERConfigVersion.cmake.in
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfigVersion.cmake" @ONLY)
+install(FILES
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfig.cmake"
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfigVersion.cmake"
+  DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
