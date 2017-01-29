@@ -19,6 +19,9 @@ macro(add_asn1_header _headername)
 		${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
 		COMMENT "Build include file ${_headername}.h from ASN.1 spec"
 		SOURCES ${_headername}.asn1)
+	add_custom_command (OUTPUT ${_headername}.h
+		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
+		COMMENT "Build include file ${_headername}.h from ASN.1 spec")
 	set(ASN1_HEADER_NAME ${_headername})
 	configure_file(header-test.c.in
 		"${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c" @ONLY)
