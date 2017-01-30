@@ -11,35 +11,31 @@
 #    add_asn1_headers(my-headers rfc1 rfc2)
 #
 # This snippet requires files rfc1.asn1 and rfc2.asn1 to exist.
-#
-# Using these macros requires MacroAddTestBuilder as well.
 
 macro(add_asn1_header _headername)
-	add_custom_target (${_headername}.h
-		${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
-		COMMENT "Build include file ${_headername}.h from ASN.1 spec"
-		SOURCES ${_headername}.asn1)
-	add_custom_command (OUTPUT ${_headername}.h
+# Generate the header file in <quick-der/headername.h>
+# and install that header file to include/quick-der/headername.h.
+	add_custom_command (OUTPUT quick-der/${_headername}.h
 		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
+		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_headername}.h from ASN.1 spec")
-	set(ASN1_HEADER_NAME ${_headername})
-	configure_file(header-test.c.in
-		"${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c" @ONLY)
-	add_executable(${_headername}-test EXCLUDE_FROM_ALL ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c)
+	add_custom_target(${_headername}_asn1_h DEPENDS quick-der/${_headername}.h)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_headername}.h DESTINATION include/quick-der)
+# Also add a test that builds against that header
+	set(ASN1_HEADER_NAME quick-der/${_headername})
+	configure_file(header-test.c.in ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c @ONLY)
+	add_executable(${_headername}-test ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c)
 	target_include_directories(${_headername}-test PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
-	add_dependencies(build-tests ${_headername}-test)
+	add_dependencies(${_headername}-test ${_headername}_asn1_h)
 	add_test(${_headername}-test ${_headername}-test)
-	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.h DESTINATION include/quick-der)
 endmacro()
 
 macro(add_asn1_headers _groupname)
+	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quick-der)
 	foreach (_header ${ARGN})
 		add_asn1_header(${_header})
-		add_dependencies(${_groupname} ${_header}.h)
+		add_dependencies(${_groupname} ${_header}_asn1_h)
 	endforeach()
-	add_custom_target (symlink-include-${_groupname}
-		ln -fs ${CMAKE_CURRENT_BINARY_DIR}  ${CMAKE_CURRENT_BINARY_DIR}/quick-der
-		COMMENT "Add symlink for <include/quick-der>.")
-	add_dependencies(${_groupname} symlink-include-${_groupname})
 endmacro()
 
