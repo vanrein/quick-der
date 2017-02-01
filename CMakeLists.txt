@@ -9,6 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
 include(MacroEnsureOutOfSourceBuild)
 macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory.")
+include(MacroAddUninstallTarget)
+add_uninstall_target()
 
 #
 # OPTIONS / BUILD SETTINGS
