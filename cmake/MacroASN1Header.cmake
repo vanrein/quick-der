@@ -12,7 +12,7 @@
 #
 # This snippet requires files rfc1.asn1 and rfc2.asn1 to exist.
 
-macro(add_asn1_header _headername)
+macro(add_asn1_header _headername _groupname)
 # Generate the header file in <quick-der/headername.h>
 # and install that header file to include/quick-der/headername.h.
 	add_custom_command (OUTPUT quick-der/${_headername}.h
@@ -27,14 +27,14 @@ macro(add_asn1_header _headername)
 	configure_file(header-test.c.in ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c @ONLY)
 	add_executable(${_headername}-test ${CMAKE_CURRENT_BINARY_DIR}/${_headername}.c)
 	target_include_directories(${_headername}-test PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
-	add_dependencies(${_headername}-test ${_headername}_asn1_h)
+	add_dependencies(${_headername}-test ${_groupname})
 	add_test(${_headername}-test ${_headername}-test)
 endmacro()
 
 macro(add_asn1_headers _groupname)
 	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quick-der)
 	foreach (_header ${ARGN})
-		add_asn1_header(${_header})
+		add_asn1_header(${_header} ${_groupname})
 		add_dependencies(${_groupname} ${_header}_asn1_h)
 	endforeach()
 endmacro()
