@@ -59,6 +59,7 @@ endif()
 if (SPEC_ARPA2)
 	add_subdirectory(arpa2)
 endif()
+add_subdirectory(tool)
 add_subdirectory(test)
 
 #
