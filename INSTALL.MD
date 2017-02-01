@@ -4,15 +4,14 @@
 
 The basic installation that provides you with the library:
 
-    mkdir build
-    cd build
-    cmake ..
-    make all build-tests test
+    make           # Optional: make PREFIX=/my/path
     make install
 
-Other customary build targets include `clean`, `uninstall`.
+Other customary build targets include `test`, `clean` and `uninstall`.
 The (meta-) build system is CMake. You can use one of the
-CMake UIs for more detailed configuration.
+CMake UIs for more detailed configuration. Using just `make`,
+it creates a build environment, runs CMake, and builds a default
+configuration.
 
 There a few additional utilities that you may need to use alongside
 Quick DER.
@@ -24,7 +23,7 @@ Quick DER.
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
 
-  * A utility `derdump` that is dumps even *wrongly formatted* DER-encoded
+  * A utility `derdump` that dumps even *wrongly formatted* DER-encoded
     data.  This is extremely useful to ASN.1 developers, and there does not
     seem to be a comparable tool anywhere else (?)
     You can find the tool in the [hexio](https://github.com/vanrein/hexio)
