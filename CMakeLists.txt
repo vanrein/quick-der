@@ -97,7 +97,14 @@ configure_file(Quick-DERConfig.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfig.cmake" @ONLY)
 configure_file(Quick-DERConfigVersion.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfigVersion.cmake" @ONLY)
+configure_file(Quick-DER.pc.in
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DER.pc" @ONLY)
+
 install(FILES
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfig.cmake"
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DERConfigVersion.cmake"
   DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
+install(FILES 
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/Quick-DER.pc"
+  DESTINATION "lib/pkgconfig/")
+
