@@ -131,15 +131,15 @@ int main (int argc, char *argv []) {
 		perror ("Failed to find certificate set in KXOVER AS-Request");
 		exit (1);
 	case 0:
-		printf ("Parsing OK, found %zu bytes worth of certificate set data at 0x%016llx\n", crs.derlen, (uint64_t) crs.derptr);
+		printf ("Parsing OK, found %zu bytes worth of certificate set data at %p\n", crs.derlen, (void *) crs.derptr);
 		break;
 	default:
 		printf ("Parsing ended with %d bytes left in pattern\n", prsok);
 		exit (1);
 	}
-	printf ("Cursor is now at 0x%016llx spanning %zu\n", (uint64_t) crs.derptr, crs.derlen);
+	printf ("Cursor is now at %p spanning %zu\n", (void *) crs.derptr, crs.derlen);
 	if (der_iterate_first (&crs, &iter)) do {
-		printf ("Iterator now at 0x%016llx spanning %zu\n", (uint64_t) iter.derptr, iter.derlen);
+		printf ("Iterator now at %p spanning %zu\n", (void *) iter.derptr, iter.derlen);
 		printf ("Iterator tag,len is 0x%02x,0x%02x\n", iter.derptr [0], iter.derptr [1]);
 		switch (iter.derptr [0] & 0xdf) {
 		case DER_TAG_SEQUENCE:
