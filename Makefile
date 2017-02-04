@@ -14,7 +14,7 @@
 #
 PREFIX ?= /usr/local
 
-all: configure compile
+all: compile
 
 build-dir:
 	@mkdir -p build
@@ -23,6 +23,7 @@ configure: build-dir
 	( cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$(PREFIX) )
 
 compile: build-dir
+	test -f build/CMakeCache.txt || ( cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$(PREFIX) )
 	( cd build && $(MAKE) )
 	
 install: build-dir
