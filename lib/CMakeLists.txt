@@ -6,6 +6,8 @@ if (DEBUG)
 	add_definitions(-DDEBUG)
 endif()
 
+add_definitions(-Wall -Wextra -pedantic)
+
 set(quickder_SRC 
 	der_header.c
 	der_iterate.c
