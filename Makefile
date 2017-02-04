@@ -1,4 +1,17 @@
-DESTDIR ?=
+# Quick-DER
+#
+# This Makefile is just a stub: it invokes CMake, which in turn
+# generates Makefiles, and then uses those to make the project. 
+#
+# Useful Make parameters at this level are:
+#	PREFIX=/usr/local
+#
+# For anything else, do this:
+#
+#	make configure                 # Basic configure
+#	( cd build ; ccmake )          # CMake GUI for build configuration
+#	( cd build ; make install )    # Build and install
+#
 PREFIX ?= /usr/local
 
 all: configure compile
