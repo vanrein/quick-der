@@ -283,17 +283,17 @@ int main (int argc, char *argv []) {
 		der_walk (&rdn, path_rdn2value);
 		der_enter (&rdn); // Enter whatever DirectoryString it is
 		// printf ("RDNcursor #2 tag,len is 0x%02x,0x%02x", rdn.derptr [0], rdn.derptr [1]);
-		printf (" = \"%.*s\"\n", rdn.derlen, rdn.derptr);
+		printf (" = \"%.*s\"\n", (int)rdn.derlen, rdn.derptr);
 	} while (der_iterate_next (&iter));
 
 	crs = der_isnull (&certificate.tbsCertificate.validity.notBefore.utcTime)?
 		certificate.tbsCertificate.validity.notBefore.generalTime:
 		certificate.tbsCertificate.validity.notBefore.utcTime;
-	printf ("Validity.notBefore: %.*s\n", crs.derlen, crs.derptr);
+	printf ("Validity.notBefore: %.*s\n", (int)crs.derlen, crs.derptr);
 	crs = der_isnull (&certificate.tbsCertificate.validity.notAfter.utcTime)?
 		certificate.tbsCertificate.validity.notAfter.generalTime:
 		certificate.tbsCertificate.validity.notAfter.utcTime;
-	printf ("Validity.notAfter:  %.*s\n", crs.derlen, crs.derptr);
+	printf ("Validity.notAfter:  %.*s\n", (int)crs.derlen, crs.derptr);
 
 	crs = certificate.tbsCertificate.subject;
 	printf ("There are %d RDNs in the subject:\n", der_countelements (&crs));
@@ -308,7 +308,7 @@ int main (int argc, char *argv []) {
 		der_walk (&rdn, path_rdn2value);
 		der_enter (&rdn); // Enter whatever DirectoryString it is
 		// printf ("RDNcursor #2 tag,len is 0x%02x,0x%02x", rdn.derptr [0], rdn.derptr [1]);
-		printf (" = \"%.*s\"\n", rdn.derlen, rdn.derptr);
+		printf (" = \"%.*s\"\n", (int)rdn.derlen, rdn.derptr);
 	} while (der_iterate_next (&iter));
 
 	printf ("Subject Public Key AlgorithmIdentifier: ");
@@ -388,7 +388,7 @@ printf ("Extension size %zd bytes %02x %02x %02x %02x\n", ext.derlen, ext.derptr
 		// Construct the output certificate in a new buffer
 		uint8_t rebuildbuf [rebuildlen]; // Daring: dynamic stack allocation
 		der_pack (pack_Certificate, (dercursor *) &certificate, rebuildbuf + rebuildlen);
-		printf ("TOTAL: Wrote %4d bytes to 0x%016llx\n", rebuildlen, rebuildbuf);
+		printf ("TOTAL: Wrote %4d bytes to %p\n", (int)rebuildlen, (void *)rebuildbuf);
 		//
 		// Save the rebuilt certificate to the named file
 		otf = open (argv [2], O_RDWR | O_CREAT | O_TRUNC, 0644);
@@ -397,7 +397,7 @@ printf ("Extension size %zd bytes %02x %02x %02x %02x\n", ext.derlen, ext.derptr
 			exit (1);
 		}
 		if (write (otf, rebuildbuf, rebuildlen) != rebuildlen) {
-			fprintf (stderr, "Not all of the %d bytes have been written to %s\n", rebuildlen, argv [2]);
+			fprintf (stderr, "Not all of the %d bytes have been written to %s\n", (int)rebuildlen, argv [2]);
 			close (otf);
 			exit (1);
 		}
