@@ -37,3 +37,7 @@ uninstall: build-dir
 
 clean:
 	rm -rf build/
+
+package: compile
+	( cd build && $(MAKE) package )
+	

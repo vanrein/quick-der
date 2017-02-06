@@ -62,7 +62,9 @@ add_subdirectory(test)
 # PACKAGING
 #
 
-set (CPACK_BUNDLE_NAME, "Quick-DER")
+set (CPACK_PACKAGE_NAME "Quick-DER")
+set (CPACK_PACKAGE_VERSION ${Quick-DER_VERSION})
+set (CPACK_PACKAGE_VENDOR "ARPA2 Project")
 include (CPack)
 
 #
