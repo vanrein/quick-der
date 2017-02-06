@@ -11,6 +11,7 @@ include(MacroEnsureOutOfSourceBuild)
 macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory.")
 include(MacroAddUninstallTarget)
 add_uninstall_target()
+include(MacroGitVersionInfo)
 
 #
 # OPTIONS / BUILD SETTINGS
@@ -28,12 +29,7 @@ option (SPEC_ARPA2
 	"Build include files from ASN.1 specs for ARPA2 projects"
 	ON)
 
-set(Quick-DER_MAJOR_VERSION 0)
-set(Quick-DER_MINOR_VERSION 1)
-set(Quick-DER_PATCH_VERSION 5)  # RC5, will move to 0.2 for release
-set(Quick-DER_VERSION
-	${Quick-DER_MAJOR_VERSION}.${Quick-DER_MINOR_VERSION}.${Quick-DER_PATCH_VERSION})
-
+get_version_from_git(Quick-DER 0.1.5)
 
 enable_testing ()
 
