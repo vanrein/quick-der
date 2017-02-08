@@ -1,3 +1,7 @@
+# ADD_UNINSTALL_TARGET()
+#    Add custom target 'uninstall' that removes all the files
+#    installed by this build (not recommended by CMake devs though).
+#
 # Add an uninstall target, as described on the CMake wiki.
 # Include this file, then call add_uninstall_target().
 # Requires a top-level cmake/ directory containing this

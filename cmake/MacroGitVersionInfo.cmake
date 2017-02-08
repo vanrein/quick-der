@@ -1,3 +1,8 @@
+# GET_VERSION_FROM_GIT(<appname> <default>)
+#    Uses git tags to determine a version name and sets <appname>_VERSION 
+#    (along with split-out _MAJOR, _MINOR and _PATCHLEVEL variables). If
+#    git isn't available, use <default> for version information (which should
+#    be a string in the format M.m.p).
 #
 # Version Information
 #
@@ -19,6 +24,12 @@
 # After the macro invocation, Quick-DER_VERSION is set according
 # to the git tag or 0.1.5.
 #
+
+# Copyright 2017, Adriaan de Groot <groot@kde.org>
+#
+# Redistribution and use is allowed according to the terms of the two-clause BSD license.
+#    https://opensource.org/licenses/BSD-2-Clause
+#    SPDX short identifier: BSD-2-Clause
 
 macro(get_version_from_git _appname _default)
 	find_package (Git QUIET)

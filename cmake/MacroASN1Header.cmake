@@ -1,3 +1,8 @@
+# ADD_ASN1_HEADER(<headername> <groupname>)
+#    Add a target to generate <headername>.h from the corresponding
+#    ASN.1 file <headername>.asn1. The target is added as a dependency
+#	 to <groupname>, which may be an empty target.
+#
 # Generation of C header files from ASN.1 sources
 # via the asn2quickder tool. The macro add_asn1_headers()
 # is the main API entry: give it a target name (e.g.
@@ -6,11 +11,16 @@
 # and a list of names. Each name must name a .asn1 file
 # (without the extension).
 #
-#
 #    add_custom_target(my-headers ALL)
 #    add_asn1_headers(my-headers rfc1 rfc2)
 #
 # This snippet requires files rfc1.asn1 and rfc2.asn1 to exist.
+
+# Copyright 2017, Adriaan de Groot <groot@kde.org>
+#
+# Redistribution and use is allowed according to the terms of the two-clause BSD license.
+#    https://opensource.org/licenses/BSD-2-Clause
+#    SPDX short identifier: BSD-2-Clause
 
 macro(add_asn1_header _headername _groupname)
 # Generate the header file in <quick-der/headername.h>
