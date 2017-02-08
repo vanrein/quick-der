@@ -79,6 +79,6 @@ int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
 		}
 	}
 	*lenp = len;
-DPRINTF ("DEBUG: Header analysis: tag 0x%02x, hdrlen %d, len %d, rest %d\n", *tagp, *hlenp, *lenp, crs->derlen);
+DPRINTF ("DEBUG: Header analysis: tag 0x%02x, hdrlen %d, len %d, rest %d\n", *tagp, *hlenp, (int)*lenp, (int)crs->derlen);
 	return 0;
 }
