@@ -1,3 +1,7 @@
+# Template ConfigVersion file used by MacroCreateConfigFiles if
+# there is no package-specific file to use. File copied from
+# the CMake wiki.
+
 set(PACKAGE_VERSION "@_conf_version@")
  
 # Check whether the requested PACKAGE_FIND_VERSION is compatible

@@ -1,4 +1,6 @@
-# Configuration-files writing
+# CREATE_CONFIG_FILES(<packagename>)
+#    Call this macro to generate CMake and pkg-config configuration
+#    files from templates found in the top-level source directory.
 #
 # Most ARPA2-related components write configuration-information
 # files and install them. There are two flavors:
@@ -16,6 +18,12 @@
 # the cmake/ directory, since there is nothing particularly special
 # for that file (as opposed to the other files, which need to 
 # specify paths, dependencies, and other things).
+
+# Copyright 2017, Adriaan de Groot <groot@kde.org>
+#
+# Redistribution and use is allowed according to the terms of the two-clause BSD license.
+#    https://opensource.org/licenses/BSD-2-Clause
+#    SPDX short identifier: BSD-2-Clause
 
 macro (create_config_files _packagename)
 	export (PACKAGE ${_packagename})

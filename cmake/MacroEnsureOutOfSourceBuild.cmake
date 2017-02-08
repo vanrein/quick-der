@@ -1,4 +1,3 @@
-# - MACRO_ENSURE_OUT_OF_SOURCE_BUILD(<errorMessage>)
 # MACRO_ENSURE_OUT_OF_SOURCE_BUILD(<errorMessage>)
 #    Call this macro in your project if you want to enforce out-of-source builds.
 #    If an in-source build is detected, it will abort with the given error message.
