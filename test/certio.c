@@ -388,7 +388,7 @@ printf ("Extension size %zd bytes %02x %02x %02x %02x\n", ext.derlen, ext.derptr
 		// Construct the output certificate in a new buffer
 		uint8_t rebuildbuf [rebuildlen]; // Daring: dynamic stack allocation
 		der_pack (pack_Certificate, (dercursor *) &certificate, rebuildbuf + rebuildlen);
-		printf ("TOTAL: Wrote %4d bytes to %p\n", (int)rebuildlen, (void *)rebuildbuf);
+		printf ("TOTAL: Wrote %4zd bytes to 0x%016llx\n", rebuildlen, (unsigned long long) rebuildbuf);
 		//
 		// Save the rebuilt certificate to the named file
 		otf = open (argv [2], O_RDWR | O_CREAT | O_TRUNC, 0644);
@@ -397,7 +397,7 @@ printf ("Extension size %zd bytes %02x %02x %02x %02x\n", ext.derlen, ext.derptr
 			exit (1);
 		}
 		if (write (otf, rebuildbuf, rebuildlen) != rebuildlen) {
-			fprintf (stderr, "Not all of the %d bytes have been written to %s\n", (int)rebuildlen, argv [2]);
+			fprintf (stderr, "Not all of the %zd bytes have been written to %s\n", rebuildlen, argv [2]);
 			close (otf);
 			exit (1);
 		}
