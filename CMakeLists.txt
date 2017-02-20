@@ -1,7 +1,7 @@
 #
 # CMAKE SETUP (version, build style)
 #
-cmake_minimum_required (VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 project ("Quick-DER" C)
 
 set (CMAKE_MACOSX_RPATH 0)  # Don't use rpaths (but we don't build executables anyway)
@@ -30,7 +30,7 @@ option (SPEC_ARPA2
 	"Build include files from ASN.1 specs for ARPA2 projects"
 	ON)
 
-get_version_from_git (Quick-DER 0.1.5)
+get_version_from_git (Quick-DER 0.0.0)
 
 enable_testing ()
 
@@ -67,7 +67,9 @@ add_uninstall_target ()
 
 set (CPACK_PACKAGE_NAME "Quick-DER")
 set (CPACK_PACKAGE_VERSION ${Quick-DER_VERSION})
-set (CPACK_PACKAGE_VENDOR "ARPA2 Project")
+set (CPACK_PACKAGE_VENDOR "ARPA2.net")
+set (CPACK_PACKAGE_CONTACT "Rick van Rein <rick@openfortress.nl>")
+include (PackAllPossible)
 include (CPack)
 
 #
