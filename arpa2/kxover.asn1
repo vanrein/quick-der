@@ -47,7 +47,7 @@
 KXOVER DEFINITIONS ::= BEGIN
 
 IMPORTS PrincipalName, Realm, Authenticator, PA-DATA,
-       KerberosTime, Int32, UInt32 FROM RFC4120
+       KerberosTime, KerberosString, Int32, UInt32 FROM RFC4120
 
        Certificate, AlgorithmIdentifier, SubjectPublicKeyInfo,
        AuthorityKeyIdentifier FROM RFC5280;
@@ -156,11 +156,6 @@ KX-OFFER ::= SEQUENCE {
 }
 
 
--- ## Signed Data for KXOVER
-
--- The KX-TBSDATA describes the byte sequence that is subjected to digital
--- signing and validation thereof.
---
 -- In this structure:
 -- 
 --   * The `nonce` field holds a random value that should not be reused quickly.
@@ -194,6 +189,12 @@ KX-OFFER ::= SEQUENCE {
 --     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.1.1.3)
 -- 
 
+
+-- ## Signed Data for KXOVER
+--
+-- The `KX-TBSDATA` describes the byte sequence that is subjected to digital
+-- signing and validation thereof.
+
 KX-TBSDATA ::= SEQUENCE {
 
      -- Ensuring signature freshness / scattering:
@@ -201,17 +202,18 @@ KX-TBSDATA ::= SEQUENCE {
 
      -- Key description information:
         kvno            [1] KeyVersionNumber,
-        kxname          [2] PrincipalName,
-        key-exchange    [3] SubjectPublicKeyInfo,
+        kxname          [2] PrincipalNameKrbTgt,
+        kxrealm         [3] Realm,
+        key-exchange    [4] SubjectPublicKeyInfo,
 
      -- Timing information:
-        till            [4] KerberosTime,
+        till            [5] KerberosTime,
 
      -- Negotiation terms, each in preference order:
-        accept-etype    [5] SEQUENCE OF EncryptionType,
-        accept-group    [6] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
-        accept-sigalg   [7] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
-        accept-ca       [8] SEQUENCE OF AuthorityKeyIdentifier OPTIONAL
+        accept-etype    [6] SEQUENCE OF EncryptionType,
+        accept-group    [7] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
+        accept-sigalg   [8] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
+        accept-ca       [9] SEQUENCE OF AuthorityKeyIdentifier OPTIONAL
 }
 
 -- The fields of this structure are defined as follows:
@@ -237,11 +239,11 @@ KX-TBSDATA ::= SEQUENCE {
 --     MUST NOT setup the key in their internal databases.
 --
 --   * The `kxname` is the desired principal name to setup with this exchange.
---     It MUST be of the form `krbtgt/SERVICE.REALM@CLIENT.REALM` where the
---     `SERVICE.REALM` and `CLIENT.REALM` are placeholders for what their names
---     suggest.  The realm names will be validated against the certificates and
---     DNS, as specified below.  The value of `kxname` set in the `KX-REQ` and
---     `KX-REP` MUST match.
+--     With the `kxrealm` it MUST be `krbtgt/SERVICE.REALM@CLIENT.REALM`, where
+--     the `SERVICE.REALM` and `CLIENT.REALM` are placeholders for what their
+--     names suggest.  The realm names will be validated against the
+--     certificates and DNS, as specified below.  The values of `kxname` and
+--     `kxrealm` set in the `KX-REQ` and `KX-REP` MUST match.
 -- 
 --   * The `key-exchange` holds a public key meant to establish Forward Secrecy.
 --     For now this is constrained to Elliptic-Curve Diffie-Hellman keys such as
@@ -318,11 +320,11 @@ KX-TBSDATA ::= SEQUENCE {
 -- The data to be hashed is the DER encoding of the `KXOVER-KEY-INFO` structure
 -- defined below.
 
-
 KXOVER-KEY-INFO ::= SEQUENCE {
         kxover-name     [0] IA5String --("KXOVER")--,   -- fixed string "KXOVER"
         seq-nr          [1] INTEGER --(1..)--,          -- hash index counter 1+
-        kxname          [2] PrincipalName,              -- from KX-PA-TBSDATA
+        kxname          [2] PrincipalNameKrbTgt,        -- from KX-PA-TBSDATA
+        kxrealm         [3] Realm,                      -- from KX-PA-TBSDATA
         till            [3] KerberosTime,               -- from KX-PA-TBSDATA
         kvno            [4] KeyVersionNumber,           -- from KX-PA-TBSDATA
         etype           [5] EncryptionType,             -- from KX-PA-TBSDATA
@@ -352,7 +354,8 @@ KXOVER-KEY-INFO ::= SEQUENCE {
 -- more specifically, of the `shared-key` contained in it.  A prefix from this
 -- sequence is taken to provide the targeted encryption type, as mentioned in
 -- the `etype` field, with a raw symmetric key.  This key will be inserted on
--- both the client's KDC and the service's KDC with its name set to `kxname`.
+-- both the client's KDC and the service's KDC with its name set to `kxname`
+-- and `kxrealm`.
 
 
 -- ## Key Rollover between KDCs
@@ -386,10 +389,10 @@ KXOVER-KEY-INFO ::= SEQUENCE {
 --   * The certificate holds a *realm set* name to claim its realm names; this
 --     MUST contain the `CLIENT.NAME` part of the `kxname` when the certificate
 --     is used to sign for a `KX-REQ`; and it MUST contain the `SERVICE.NAME`
---     part of the `kxname` when the certificate is used to sign for a `KX-REP`.
---     Note that it is possible for additional realms to be contained, which is
---     quite acceptable, and only presence of the realm from the `kxname` is
---     assured.
+--     part of the `kxrealm` when the certificate is used to sign for a
+--     `KX-REP`.  Note that it is possible for additional realms to be
+--     contained, which is quite acceptable, and only presence of the realm
+--     from the `kxname` is assured.
 --
 --   * The certificate holds an Extended Key Usage OIDs as defined in
 --     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.2.1.12)
@@ -500,6 +503,21 @@ id-kxover-princ-client OBJECT IDENTIFIER ::= {
 --     alternative paths of establishing the desired certainty.  When just one
 --     such path succeeds, the evaluated KDC is approved.
 
+
+-- ## PrincipelName parsing variant
+
+-- To simplify parsing, this specification specialises the `PrincipalName`
+-- syntax to the `PrincipalNameKrbTgt` form.  There is no other use for this
+-- but to simplify the parsing procedure, and have more of it done by the
+-- packer/unpacker of [Quick DER](https://github.com/vanrein/quick-der).
+
+PrincipalNameKrbTgt ::= SEQUENCE {
+        name-type   [0] INTEGER (2),
+        name-string [1] SEQUENCE {
+                service-name GeneralString ("krbtgt"),
+                other-realm  KerberosString
+        }
+}
 
 
 END
