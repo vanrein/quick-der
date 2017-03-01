@@ -33,7 +33,7 @@ static size_t der_pack_prepack (const derprep *derp, uint8_t **bufend) {
 				buf = *bufend;
 				buf -= elmlen;
 				memcpy (buf, crs->derptr, elmlen);
-DPRINTF ("DEBUG: Wrote %4d bytes to 0x%016llx\n", elmlen, buf);
+DPRINTF ("DEBUG: Wrote %4d bytes to %p\n", (int)elmlen, (void *)buf);
 				*bufend = buf;
 			}
 		}
@@ -70,7 +70,7 @@ static size_t der_pack_rec (const derwalk *syntax, int *stxlen,
 	uint8_t *buf;
 	uint8_t lenlen;
 	const dercursor *dernext;
-DPRINTF ("DEBUG: Entered recursive call der_pack_rec() with bufend=0x%016llx\n", bufend? *bufend: 0);
+DPRINTF ("DEBUG: Entered recursive call der_pack_rec() with bufend=%p\n", (void *)(bufend? *bufend: 0));
 	do {
 		// deref stxend; decrease the stored pointer; deref that pointer:
 		tag = cmd = syntax [-- *stxlen];
@@ -105,7 +105,7 @@ DPRINTF ("DEBUG: Recursive element length set to %zd\n", elmlen);
 			// Consume one array element, even if it will be NULL
 			(*offsetp)--;
 			dernext = derray + *offsetp;	// offset may have changed
-DPRINTF ("DEBUG: Updated offset to %zd, pointer is 0x%016llx\n", *offsetp, dernext);
+DPRINTF ("DEBUG: Updated offset to %zd, pointer is %p\n", *offsetp, (void *)dernext);
 			if (der_isnull (dernext)) {
 				// Do not pack this entry, DEFAULT or CHOICE
 				elmlen = 0;
@@ -125,7 +125,7 @@ DPRINTF ("DEBUG: Fetched length from constructed, recursive element\n");
 					buf = *bufend;
 					buf -= elmlen;
 					memcpy (buf, dernext->derptr, elmlen);
-DPRINTF ("DEBUG: Wrote %4d bytes to 0x%016llx\n", elmlen, buf);
+DPRINTF ("DEBUG: Wrote %4d bytes to %p\n", (int)elmlen, (void *)buf);
 					*bufend = buf;
 				}
 DPRINTF ("DEBUG: Fetched length from primitive element\n");
@@ -158,7 +158,7 @@ DPRINTF ("DEBUG: Stored element length set to %zd at offset %zd\n", elmlen, *off
 				* -- buf = (elmlen >= 0x80)? (lenlen|0x80): elmlen;
 				* -- buf = tag;
 				* bufend = buf;
-DPRINTF ("DEBUG: Wrote %4d bytes to 0x%016llx\n", 2 + lenlen, buf);
+DPRINTF ("DEBUG: Wrote %4d bytes to %p\n", 2 + lenlen, (void *)buf);
 			}
 			elmlen += 2 + lenlen;
 		}
@@ -170,7 +170,7 @@ DPRINTF ("DEBUG: Adding %zd to length %zd, collected length is %zd\n", elmlen, t
 	// Special cases: DER_PACK_OPTIONAL has had the cmd value reset to 0x00
 	// Note: The while loop terminates *after* processing the ENTER cmd
 	} while (((cmd & DER_PACK_ENTER) == 0x00) && (*stxlen > 0));
-DPRINTF ("DEBUG: Leaving recursive call der_pack_rec() with bufend=0x%016llx\n", bufend? *bufend: 0);
+DPRINTF ("DEBUG: Leaving recursive call der_pack_rec() with bufend=%p\n", (void *)(bufend? *bufend: 0));
 	return totlen;
 }
 
