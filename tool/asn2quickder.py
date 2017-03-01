@@ -328,7 +328,6 @@ class QuickDERgen():
 
     # Sequence, Set, Choice
     def overlayConstructedType(self, node, naked=False):
-        self.writeln('/* NODE :: ' + str(dir(node)) + ' */')
         if not naked:
             self.writeln('struct {');
         for comp in node.components:
