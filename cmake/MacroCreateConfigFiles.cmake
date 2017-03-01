@@ -12,7 +12,8 @@
 # by using named template files for all three output files.
 # Pass a package name (e.g. "Quick-DER") to the macro, and
 # the source files (e.g. <file>.in for the files named above
-# will be taken from the top-level source directory.
+# will be taken from the top-level contrib/{cmake,pkgconfig} 
+# source directories.
 #
 # As an (un)special case, the ConfigVersion file may be taken from
 # the cmake/ directory, since there is nothing particularly special
@@ -40,12 +41,15 @@ macro (create_config_files _packagename)
 	# Calculate include/ relative to the installed place of the config file.
 	file (RELATIVE_PATH REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}"
 		"${CMAKE_INSTALL_PREFIX}/include")
+	file (RELATIVE_PATH REL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${INSTALL_CMAKE_DIR}"
+		"${CMAKE_INSTALL_PREFIX}/lib")	
 	set (CONF_INCLUDE_DIRS "\${${_packagename}_CMAKE_DIR}/${REL_INCLUDE_DIR}")
+	set (CONF_LIB_DIRS "\${${_packagename}_CMAKE_DIR}/${REL_LIB_DIR}")
 	# Substitute in real values for the placeholders in the .in files,
 	# create the files in the build tree, and install them.
 	configure_file (${PROJECT_SOURCE_DIR}/contrib/cmake/${_packagename}Config.cmake.in
 		"${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${_packagename}Config.cmake" @ONLY)
-	set (_conf_version_filename ${PROJECT_SOURCE_DIR}/${_packagename}ConfigVersion.cmake.in)
+	set (_conf_version_filename ${PROJECT_SOURCE_DIR}/contrib/cmake/${_packagename}ConfigVersion.cmake.in)
 	if (NOT EXISTS ${_conf_version_filename})
 		# (un)special-case: use the generic version-checking file,
 		# assume ${_packagename}_VERSION exists and copy that to

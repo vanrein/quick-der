@@ -5,6 +5,10 @@
  
 # Compute paths
 get_filename_component(Quick-DER_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+set(Quick-DER_LIB_DIRS "@CONF_LIB_DIRS@")
 set(Quick-DER_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
  
-set(Quick-DER_LIBRARIES quickder)
+set(Quick-DER_LIBRARIES -L${Quick-DER_LIB_DIRS} quickder)
+set(Quick-DER_STATIC_LIBRARIES ${Quick-DER_LIB_DIRS}/libquickder.a)
+
