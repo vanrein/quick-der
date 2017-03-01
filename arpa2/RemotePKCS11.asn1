@@ -1,0 +1,1424 @@
+-- # ASN.1 message syntax for Remote PKCS #11
+-- 
+-- > *Having an ASN.1 model for PKCS #11 calls and returns is useful for remote
+-- > access to PKCS #11 repositories.  The transport can be handled orthogonally,
+-- > and the issues of encoding, encryption and authentication can be resolved at
+-- > that layer.  This document limits itself to the method of mapping (current
+-- > and future) PKCS #11 versions to ASN.1 notation.*
+-- 
+-- From: Rick van Rein `<rick@openfortress.nl>`
+
+
+-- Document version: 0.1 (document history is at the end of the document)
+
+
+RemotePKCS11 DEFINITIONS ::= BEGIN
+
+
+-- These definitions are intended as a reversible packaging format for PKCS #11
+-- function calls, so they may be passed over a network connection.  This
+-- enables Remote PKCS #11, hence the name of this module.
+--
+-- This specification renames PKCS #11 symbols like `CK_xxx` to ASN.1 names
+-- `ACK-xxx` to avoid namespace clashes, as well as to accommodate ASN.1's
+-- inability to express underscores in identifiers, while supporting dashes.
+--
+-- Below, we shall not specify ASN.1 symbols for data values defined by
+-- PKCS #11.  Instead, we shall rely on the general translation scheme for
+-- data to carry such defined values into their ASN.1 counterparts, and back.
+-- 
+-- The purpose of this messaging format is to support "hosted PKCS #11", which
+-- can support all sorts of user classes; power users benefit from being able
+-- to point to a PKCS #11 token under their own control from any location,
+-- while relatively bland end users benefit from having their PKCS #11 token
+-- managed by a knowledgeable party who is paid to manage it well.
+
+
+-- ## Primitive Data Types
+--
+-- The primitive data types used by ASN.1 are manually mapped.  Forms suitable for
+-- the formation of arrays or strings are already mapped accordingly, but constrained
+-- in size.  When we need an array, we can lift this constraint or set it to
+-- a higher value to obtain the most natural representation.
+
+ACK-BYTE ::= OCTET STRING (SIZE(1))
+ACK-CHAR ::= IA5String    (SIZE(1))
+
+-- UTF8 characters can span 1 up to 6 bytes in memory, so it might be assumed
+-- that the type has a less stringent size restriction.  In PKCS #11 however,
+-- the `CK_UTF8CHAR` type is used as a building block for a string, and it
+-- translates to a `CK_BYTE`, so we shall do the same here.
+
+ACK-UTF8CHAR ::= UTF8String (SIZE(1))
+
+-- For the remaining primitive types, it is less useful to map them to a
+-- string-ready format, so we map it as directly as possible to the
+-- corresponding ASN.1 type.
+--
+-- This is a limitation to the extensibility of this specification, as it
+-- constrains numeric information to 32-bit values.  This is very useful
+-- in terms of implementations however, and is therefore repeated below.
+-- Ifever the PKCS #11 specification migrates to 64-bit values as its
+-- lowest common denominator, then there will almost certainly be more
+-- changes, and a new specification for the ASN.1 syntax will then be
+-- called for anyway.  Given that we have a `version` field for every
+-- `TransportMessage`, these things are actually possible.
+
+ACK-BBOOL ::= BOOLEAN
+ACK-ULONG ::= INTEGER (0..4294967295)
+ACK-LONG  ::= INTEGER (-2147483648..2147483647)
+
+-- Flags are defined in PKCS #11 as covering at least 32 bits; we have much
+-- more freedom in ASN.1, and will therefore specify a `BIT STRING` to hold
+-- the various flag values.  Note that we number bits starting from 0 but
+-- otherwise rely on the encoding to poor it into transportable bytes.
+
+ACK-FLAGS ::= BIT STRING
+
+
+--
+-- ## Pointers and Arrays
+--
+-- Pointers in PKCS #11 are used to represent arrays, as well as writeable regions
+-- of memory.  In both cases we can find the size of the pointed-at data in the
+-- context, or it is fixed because only a single variable is written to.
+--
+-- Instead of sending pointers, in the ASN.1 syntax we will transfer the data
+-- pointed at, but only where it is sensible in the direction in which it is
+-- communicated.  For instance, a pointer to an output value will not be sent
+-- as part of a function call, but it will be included in the returned result.
+--
+-- Pointers can in some applications be set to `NULL_PTR` to represent the user's
+-- denial of certain data, or the denial of a receiving slot for function data.
+-- This will be transmitted explicitly as an ASN.1 `NULL` structure.
+--
+
+ACK-BYTE-ARRAY     ::= OCTET STRING
+ACK-CHAR-ARRAY     ::= IA5String
+ACK-UTF8CHAR-ARRAY ::= UTF8String
+ACK-ULONG-ARRAY    ::= SEQUENCE OF ACK-ULONG
+
+-- "Void arrays" are a special form; they are used to point to opaque memory,
+-- which usually means that a size is given elsewhere, so it could also be said
+-- to present a byte memory.  We use the `OCTET STRING` type to represent the
+-- contained information below.  It depends on the application what precisely
+-- is stored in that field; it might be literal data or further typing; indeed,
+-- further typing is advantageous for compatible processing.
+
+-- The "void array array" is only useful as a pointer to an array of pointers
+-- whose types are unknown.  We therefore implement it as a `SEQUENCE` of such
+-- pointers.
+
+ACK-OPAQUE       ::= OCTET STRING
+ACK-OPAQUE-ARRAY ::= SEQUENCE OF ACK-OPAQUE
+
+-- The following definitions relate to types defined below, which are turned
+-- into arrays by have a `SEQUENCE OF` these types.
+
+ACK-SLOT-ID-ARRAY        ::= SEQUENCE OF ACK-SLOT-ID
+ACK-OBJECT-HANDLE-ARRAY  ::= SEQUENCE OF ACK-OBJECT-HANDLE
+ACK-ATTRIBUTE-ARRAY      ::= SEQUENCE OF ACK-ATTRIBUTE
+ACK-MECHANISM-TYPE-ARRAY ::= SEQUENCE OF ACK-ULONG
+
+
+-- ## Slots, Tokens and Sessions
+--
+-- The structures describing slots, tokens and sessions in terms of PKCS #11 are
+-- fairly straightforward translations based on the aforementioned primitive
+-- types and their possible extenions to longer arrays.
+
+
+ACK-VERSION ::= SEQUENCE {
+        major ACK-BYTE,
+        minor ACK-BYTE
+}
+
+ACK-INFO ::= SEQUENCE {
+        cryptokiVersion    ACK-VERSION,
+        manufacturerID     UTF8String (SIZE(32)),
+        flags              ACK-FLAGS,
+        libraryDescription UTF8String (SIZE(32)),
+        libraryVersion     ACK-VERSION
+}
+
+ACK-SLOT-ID ::= ACK-ULONG
+
+ACK-SLOT-INFO ::= SEQUENCE {
+        slotDescription UTF8String (SIZE(64)),
+        manufacturerID  UTF8String (SIZE(32)),
+        flags           ACK-FLAGS,
+        hardwareVersion ACK-VERSION,
+        firmwareVersion ACK-VERSION
+}
+
+ACK-TOKEN-INFO ::= SEQUENCE {
+        label                UTF8String (SIZE(32)),
+        manufacturerID       UTF8String (SIZE(32)),
+        model                UTF8String (SIZE(16)),
+        serialNumber         UTF8String (SIZE(16)),
+        flags                ACK-FLAGS,
+        ulMaxSessionCount    ACK-ULONG,
+        ulSessionCount       ACK-ULONG,
+        ulMaxRwSessionCount  ACK-ULONG,
+        ulRwSessionCount     ACK-ULONG,
+        ulMaxPinLen          ACK-ULONG,
+        ulMinPinLen          ACK-ULONG,
+        ulTotalPublicMemory  ACK-ULONG,
+        ulFreePublicMemory   ACK-ULONG,
+        ulTotalPrivateMemory ACK-ULONG,
+        ulFreePritvateMemory ACK-ULONG,
+        hardwareVersion      ACK-VERSION,
+        firmwareVersion      ACK-VERSION,
+        utcTime              IA5String (SIZE(16))
+}
+
+ACK-SESSION-HANDLE ::= ACK-ULONG
+ACK-USER-TYPE      ::= ACK-ULONG
+ACK-STATE          ::= ACK-ULONG
+
+ACK-SESSION-INFO ::= SEQUENCE {
+        slotID        ACK-SLOT-ID,
+        state         ACK-STATE,
+        flags         ACK-FLAGS,
+        ulDeviceError ACK-ULONG
+}
+
+
+-- ## Objects, Attributes and Mechanisms
+--
+-- A series of simple type definitions for object handles derive directly
+-- from their primitive types.
+
+ACK-OBJECT-HANDLE             ::= ACK-ULONG
+ACK-OBJECT-CLASS              ::= ACK-ULONG
+ACK-HW-FEATURE-TYPE           ::= ACK-ULONG
+ACK-KEY-TYPE                  ::= ACK-ULONG
+ACK-CERTIFICATE-TYPE          ::= ACK-ULONG
+ACK-CERTIFICATE-CATEGORY      ::= ACK-ULONG
+ACK-JAVA-MIDP-SECURITY-DOMAIN ::= ACK-ULONG
+
+
+-- Attribute handling is more interesting, because it involves arrays that
+-- hold pointers, and the data involved may travel in one direction only.
+--
+-- Usually, when a function involves attributes, the general structure
+-- must be sent without the actual data it points to.  The value of the
+-- general structure in `C_GetAttributes()` is that it indicates which
+-- tags are expected and how much length is available to each of them.
+-- Since the actual data is setup with pointers, the aforementioned
+-- exceptional choices are available to them:
+--
+--   * `null` to indicate that the user supplied `NULL_PTR`
+--   * no value at all to indicate that the user did not supply `NULL_PTR`, but that
+--     the data travel direction caused us to suppress sending the data.
+--
+-- This results in the following definitions.
+
+ACK-ATTRIBUTE-TYPE ::= ACK-ULONG
+
+ACK-ATTRIBUTE ::= SEQUENCE {
+        type       ACK-ATTRIBUTE-TYPE,
+        pValue     CHOICE {
+                       null NULL,
+                       data ACK-OPAQUE
+                   } OPTIONAL,
+        ulValueLen ACK-ULONG
+}
+
+ACK-DATE ::= SEQUENCE {
+        year  IA5String (SIZE(4)),
+        month IA5String (SIZE(2)),
+        day   IA5String (SIZE(2))
+}
+
+
+-- Mechanisms are similar to attributes; they too may carry data through a pointer
+-- that may be set to `NULL_PTR` by the application.  But when not set to `NULL_PTR`
+-- the data will always be sent, because this is part of a call and not a structure
+-- to be filled by the PKCS #11 library; it is in fact never returned, nor could
+-- it be.
+
+ACK-MECHANISM-TYPE ::= ACK-ULONG
+
+ACK-MECHANISM ::= SEQUENCE {
+        mechanism      ACK-MECHANISM-TYPE,
+        pParameter     CHOICE {
+                           null NULL,
+                           data ACK-OPAQUE },
+        ulParameterLen ACK-ULONG
+}
+
+ACK-MECHANISM-INFO ::= SEQUENCE {
+        ulMinKeySize ACK-ULONG,
+        ulMaxKeySize ACK-ULONG,
+        flags        ACK-FLAGS
+}
+
+
+-- ## Special Library Functions
+-- 
+-- There are a few aspects where PKCS #11 deals with functions at a meta-level.
+-- These need to be mapped somehow into ASN.1 structures as well, and this is
+-- less straightforward to do.
+
+
+-- The `CK_FUNCTION_LIST` type in PKCS #11 is not much use when passed over
+-- a wire, *except* for the presence information on each of the functions.
+-- To accommodate that, the `ACK-FUNCTION-lIST` type presents a `BIT STRING`
+-- where the bit for a function's `OperationCode` is set.
+-- Note that we will count bits in `BIT STRING` types from 0
+-- but otherwise rely on the mechanisms of the encoding to deliver the
+-- bits in the proper order.
+
+ACK-FUNCTION-LIST ::= SEQUENCE {
+        version      ACK-VERSION,
+        functionlist BIT STRING
+}
+
+-- A few callback types and functions are defined to handle
+-- Mutexes.  It is left to implementations if they prefer to handle locks
+-- locally while retaining the facilities that would be brought by the
+-- mutex facility.
+
+ACK-C-INITIALIZE-ARGS ::= SEQUENCE {
+        createMutex  CHOICE {
+                         null    NULL,   -- function not provided
+                         present BOOLEAN(TRUE) },
+        destroyMutex CHOICE {
+                         null    NULL,   -- function not provided
+                         present BOOLEAN(TRUE) },
+        lockMutex    CHOICE {
+                         null    NULL,   -- function not provided
+                         present BOOLEAN(TRUE) },
+        unlockMutex  CHOICE {
+                         null    NULL,   -- function not provided
+                         present BOOLEAN(TRUE) },
+        flags        ACK-FLAGS,
+        pReserved    NULL,
+        ...
+}
+
+ACK-NOTIFICATION ::= ACK-ULONG
+
+
+-- ## Function Calls and Returns
+--
+-- Below, all functions of PKCS #11 are spelled out, and a transport header
+-- is added.  By spelling out the specifics of each call, we gain the best
+-- possible support from a validating ASN.1 parser, because most everything
+-- related to parameterisation is written out in grammar.  Furthermore, the
+-- PKCS #11 API is highly stable in this respect, so it is not a grand
+-- liability in terms of future-proofing this syntax.
+--
+-- The translation itself is mostly monotonous:
+--
+--  * parameter parsing is made consistent with contextual tags with the
+--    parameter number; returned values (to be stored behind pointers) are
+--    numbered in the same manner.
+--  * when a parameter may be set to `NULL_PTR` by the caller, there is an
+--    explicit `NULL` variety in the syntax for the parameter.
+--  * there is a choice for sending `NULL` in attributes' pointers to data
+--    regions and in mechanisms' pointers to parameters.
+--  * when a parameter is not included in the information sent, then it
+--    indicates that it has no value to supply it; this is a matter of
+--    interpreting the explanation of a function to determine which of the
+--    parameters are meant for input, output or both; the result however,
+--    is (usually) static and is therefore incorporated into the syntax
+--    so we can rely on ASN.1 parsing to validate this.
+--  * call returns always contain an `ACK-RV` value to encode the return
+--    code standardised in PKCS #11.
+--  * calls may have no parameters to be submitted; this would lead to an
+--    empty `SEQUENCE` in ASN.1, which is not a permitted construct; we
+--    solve this by specifying `empty NULL OPTIONAL`; senders SHOULD NOT
+--    include this value and recipients SHOULD NOT interpret it.
+--
+-- Function calls are transported with a request ID that is repeated in the
+-- return value.  This request ID is used to pair a call to its return, and
+-- some transports may find it helpful to recognise resends.  Conceptually,
+-- there may never be more than one function being called according to *any*
+-- component in the network, sharing the same request ID.  The request ID is
+-- an opaque type.
+
+
+
+-- We define the PKCS #11 definition for the well-checked return value.
+-- As stated before, there is no use in describing
+-- ASN.1 value assignments for the `CKR_` return values, because existing
+-- definitions and a bidirectional mapping between PKCS #11 and ASN.1 together
+-- do that quite clearly.
+
+ACK-RV ::= ACK-ULONG
+
+
+-- Below, we specify each of the PKCS #11 functions individually.  The
+-- translation is almost boring, so direct as it is.  This is intentional,
+-- and should help with future extensions of the function list.
+-- Most functions need no explanation, only `C_Initialize()` and
+-- `C_Finalize()` have a few built-in precautions that call for an
+-- extensible model.
+--
+
+-- The `pInitArgs` are supplied to `C_Initialize()` as an opaque structure,
+-- and is subsequently explained in the text with a casting instruction.
+-- This marks it as a point of possible future extension.  This extension
+-- has been enabled in the definition of `ACK-C-INITIALIZE-ARGS` and is
+-- additionally supported through entirely different alternatives below.
+
+C-Initialize-Call ::= SEQUENCE {
+        pInitArgs [0] CHOICE {
+                          null NULL,
+                          data [0] ACK-C-INITIALIZE-ARGS,
+                          ... }
+}
+
+C-Initialize-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        pInitArgs [0] ANY OPTIONAL
+}
+
+-- The `pReserved` parameter to `C_Finalize()` must presently be set to `NULL_PTR`
+-- but it is a handle for future extension.
+
+C-Finalize-Call ::= SEQUENCE {
+        pReserved [0] CHOICE {
+                          null NULL,
+                          ... }
+}
+
+C-Finalize-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pReserverd [0] ANY OPTIONAL
+}
+
+C-GetInfo-Call ::= SEQUENCE {
+        empty NULL OPTIONAL  -- SHOULD NOT be sent, SHOULD NOT be interpreted
+}
+
+C-GetInfo-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pInfo  [0] ACK-INFO
+}
+
+C-GetFunctionList-Call ::= SEQUENCE {
+        empty NULL OPTIONAL  -- SHOULD NOT be sent, SHOULD NOT be interpreted
+}
+
+C-GetFunctionList-Return ::= SEQUENCE {
+        retval             ACK-RV,
+        ppFunctionList [0] ACK-FUNCTION-LIST
+}
+
+C-GetSlotList-Call ::= SEQUENCE {
+        tokenPresent [0] ACK-BBOOL,
+        pSlotList    [1] CHOICE {
+                             null NULL
+                         } OPTIONAL,
+        pulCount     [2] ACK-ULONG
+}
+
+C-GetSlotList-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        pSlotList [1] CHOICE {
+                          null NULL,
+                          data ACK-SLOT-ID-ARRAY
+                      } OPTIONAL,
+        pulCount  [2] ACK-ULONG
+}
+
+C-GetSlotInfo-Call ::= SEQUENCE {
+        slotID [0] ACK-SLOT-ID
+}
+
+C-GetSlotInfo-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pInfo  [1] ACK-SLOT-INFO
+}
+
+C-GetTokenInfo-Call ::= SEQUENCE {
+        slotID [0] ACK-SLOT-ID
+}
+
+C-GetTokenInfo-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pInfo  [1] ACK-TOKEN-INFO
+}
+
+C-WaitForSlotEvent-Call ::= SEQUENCE {
+        flags     [0] ACK-FLAGS,
+        pReserved [2] NULL OPTIONAL
+}
+
+C-WaitForSlotEvent-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        pSlot     [1] ACK-SLOT-ID,
+        pReserved [2] NULL OPTIONAL
+}
+
+C-GetMechanismList-Call ::= SEQUENCE {
+        slotID         [0] ACK-SLOT-ID,
+        pMechanismList [1] CHOICE {
+                               null NULL
+                           } OPTIONAL,
+        pulCount       [2] ACK-ULONG
+}
+
+C-GetMechanismList-Return ::= SEQUENCE {
+        retval             ACK-RV,
+        pMechanismList [1] CHOICE {
+                               null NULL,
+                               data ACK-MECHANISM-TYPE-ARRAY },
+        pulCount       [2] ACK-ULONG
+}
+
+C-MechanismInfo-Call ::= SEQUENCE {
+        slotID [0] ACK-SLOT-ID,
+        type   [1] ACK-MECHANISM-TYPE
+}
+
+C-MechanismInfo-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pInfo  [2] ACK-MECHANISM-INFO
+}
+
+C-InitToken-Call ::= SEQUENCE {
+        slotID   [0] ACK-SLOT-ID,
+        pPin     [1] UTF8String,
+        ulPinLen [2] ACK-ULONG,
+        pLabel   [3] UTF8String (SIZE(32))
+}
+
+C-InitToken-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-InitPIN-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        pPin     [1] ACK-UTF8CHAR-ARRAY,
+        ulPinLen [2] ACK-ULONG
+}
+
+C-InitPIN-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-SetPIN-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        pOldPin  [1] ACK-UTF8CHAR-ARRAY,
+        ulOldLen [2] ACK-ULONG,
+        pNewPin  [3] ACK-UTF8CHAR-ARRAY,
+        ulNewPin [4] ACK-ULONG
+}
+
+C-SetPIN-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-OpenSession-Call ::= SEQUENCE {
+        slotID       [0] ACK-SLOT-ID,
+        flags        [1] ACK-FLAGS,
+        pApplication [2] CHOICE {
+                             null   NULL,
+                             opaque ANY },            -- literal copy in C-Notify-Call
+        notify       [3] CHOICE {
+                             null    NULL,
+                             present BOOLEAN(TRUE) }  -- signal callback availability
+}
+
+C-OpenSession-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        phSession [4] ACK-SESSION-HANDLE
+}
+
+C-CloseSession-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-CloseSession-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-CloseAllSessions-Call ::= SEQUENCE {
+        slotID [0] ACK-SLOT-ID
+}
+
+C-CloseAllSessions-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-GetSessionInfo-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-GetSessionInfo-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pInfo  [1] ACK-SESSION-INFO
+}
+
+C-GetOperationState-Call ::= SEQUENCE {
+        hSession             [0] ACK-SESSION-HANDLE,
+        pulOperationStateLen [2] ACK-ULONG
+}
+
+C-GetOperationState-Return ::= SEQUENCE {
+        retval                   ACK-RV,
+        pOperationState      [1] ACK-BYTE-ARRAY,
+        pulOperationStateLen [2] ACK-ULONG
+}
+
+C-SetOperationState-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pOperationState     [1] ACK-BYTE-ARRAY,
+        ulOperationStateLen [2] ACK-ULONG,
+        hEncryptionKey      [3] ACK-OBJECT-HANDLE,
+        hAuthenticationKey  [4] ACK-OBJECT-HANDLE
+}
+
+C-SetOperationState-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Login-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        userType [1] ACK-USER-TYPE,
+        pPin     [2] ACK-UTF8CHAR-ARRAY,
+        ulPinLen [3] ACK-ULONG
+}
+
+C-Login-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Logout-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-Logout-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-CreateObject-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pTemplate [1] ACK-ATTRIBUTE-ARRAY,
+        ulCount   [2] ACK-ULONG
+}
+
+C-CreateObject-Return ::= SEQUENCE {
+        retval       ACK-RV,
+        phObject [3] ACK-OBJECT-HANDLE
+}
+
+C-CopyObject-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        hObject   [1] ACK-OBJECT-HANDLE,
+        pTemplate [2] ACK-ATTRIBUTE-ARRAY,
+        ulCount   [3] ACK-ULONG
+}
+
+C-CopyObject-Return ::= SEQUENCE {
+        retval       ACK-RV,
+        phObject [4] ACK-OBJECT-HANDLE
+}
+
+C-DestroyObject-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        hObject  [1] ACK-OBJECT-HANDLE
+}
+
+C-DestroyObject-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-GetObjectSize-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        hObject  [1] ACK-OBJECT-HANDLE
+}
+
+C-GetObjectSize-Return ::= SEQUENCE {
+        retval      ACK-RV,
+        pulSize [2] ACK-ULONG
+}
+
+C-GetAttributeValue-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        hObject   [1] ACK-OBJECT-HANDLE,
+        pTemplate [2] ACK-ATTRIBUTE-ARRAY,
+        ulCount   [3] ACK-ULONG
+}
+
+C-GetAttributeValue-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        pTemplate [2] ACK-ATTRIBUTE-ARRAY
+}
+
+C-SetAttributeValue-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        hObject   [1] ACK-OBJECT-HANDLE,
+        pTemplate [2] ACK-ATTRIBUTE-ARRAY,
+        ulCount   [3] ACK-ULONG
+}
+
+C-SetAttributeValue-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-FindObjectsInit-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pTemplate [1] ACK-ATTRIBUTE-ARRAY,
+        ulCount   [2] ACK-ULONG
+}
+
+C-FindObjectsInit-Return ::= SEQUENCE {
+        retval        ACK-RV,
+        pTemplate [1] ACK-ATTRIBUTE-ARRAY
+}
+
+C-FindObjects-Call ::= SEQUENCE {
+        hSession         [0] ACK-SESSION-HANDLE,
+        ulMaxObjectCount [2] ACK-ULONG
+}
+
+C-FindObjects-Return ::= SEQUENCE {
+        retval             ACK-RV,
+        phObject       [1] ACK-OBJECT-HANDLE-ARRAY,
+        pulObjectCount [3] ACK-ULONG
+}
+
+C-FindObjectsFinal-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-FindObjectsFinal-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-EncryptInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
+}
+
+C-EncryptInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Encrypt-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pData               [1] ACK-BYTE-ARRAY,
+        ulDataLen           [2] ACK-ULONG,
+        pulEncryptedDataLen [4] ACK-ULONG
+}
+
+C-Encrypt-Return ::= SEQUENCE {
+        retval                  ACK-RV,
+        pEncryptedData      [3] ACK-BYTE-ARRAY,
+        pulEncryptedDataLen [4] ACK-ULONG
+}
+
+C-EncryptUpdate-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pPart               [1] ACK-BYTE-ARRAY,
+        ulPartLen           [2] ACK-ULONG,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-EncryptUpdate-Return ::= SEQUENCE {
+        retval                  ACK-RV,
+        pEncryptedPart      [3] ACK-BYTE-ARRAY,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-EncryptFinal-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pulEncryptedDataLen [2] ACK-ULONG
+}
+
+C-EncryptFinal-Return ::= SEQUENCE {
+        retval                  ACK-RV,
+        pEncryptedData      [3] ACK-BYTE-ARRAY,
+        pulEncryptedDataLen [4] ACK-ULONG
+}
+
+C-DecryptInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
+}
+
+C-DecryptInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Decrypt-Call ::= SEQUENCE {
+        hSession           [0] ACK-SESSION-HANDLE,
+        pEncryptedData     [1] ACK-BYTE-ARRAY,
+        ulEncryptedDataLen [2] ACK-ULONG,
+        pulDataLen         [4] ACK-ULONG
+}
+
+C-Decrypt-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pData      [3] ACK-BYTE-ARRAY,
+        pulDataLen [4] ACK-ULONG
+}
+
+C-DecryptUpdate-Call ::= SEQUENCE {
+        hSession           [0] ACK-SESSION-HANDLE,
+        pEncryptedPart     [1] ACK-BYTE-ARRAY,
+        ulEncryptedPartLen [2] ACK-ULONG,
+        pulPartLen         [4] ACK-ULONG
+}
+
+C-DecryptUpdate-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pPart      [3] ACK-BYTE-ARRAY,
+        pulPartLen [4] ACK-ULONG
+}
+
+C-DecryptFinal-Call ::= SEQUENCE {
+        hSession       [0] ACK-SESSION-HANDLE,
+        pulLastPartLen [2] ACK-ULONG
+}
+
+C-DecryptFinal-Return ::= SEQUENCE {
+        retval             ACK-RV,
+        pLastPart      [3] ACK-BYTE-ARRAY,
+        pulLastPartLen [4] ACK-ULONG
+}
+
+C-DigestInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM
+}
+
+C-DigestInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Digest-Call ::= SEQUENCE {
+        hSession     [0] ACK-SESSION-HANDLE,
+        pData        [1] ACK-BYTE-ARRAY,
+        ulDataLen    [2] ACK-ULONG,
+        pulDigestLen [4] ACK-ULONG
+}
+
+C-Digest-Return ::= SEQUENCE {
+        retval           ACK-RV,
+        pDigest      [3] ACK-BYTE-ARRAY,
+        pulDigestLen [4] ACK-ULONG
+}
+
+C-DigestUpdate-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pPart     [1] ACK-BYTE-ARRAY,
+        ulPartLen [2] ACK-ULONG
+}
+
+C-DigestUpdate-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-DigestKey-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE,
+        hKey     [1] ACK-OBJECT-HANDLE
+}
+
+C-DigestKey-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-DigestFinal-Call ::= SEQUENCE {
+        hSession     [0] ACK-SESSION-HANDLE,
+        pulDigestLen [2] ACK-ULONG
+}
+
+C-DigestFinal-Return ::= SEQUENCE {
+        retval           ACK-RV,
+        pDigest      [1] ACK-BYTE-ARRAY,
+        pulDigestLen [2] ACK-ULONG
+}
+
+C-SignInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
+}
+
+C-SignInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Sign-Call ::= SEQUENCE {
+        hSession        [0] ACK-SESSION-HANDLE,
+        pData           [1] ACK-BYTE-ARRAY,
+        ulDataLen       [2] ACK-ULONG,
+        pulSignatureLen [4] ACK-ULONG
+}
+
+C-Sign-Return ::= SEQUENCE {
+        retval              ACK-RV,
+        pSignature      [3] ACK-BYTE-ARRAY,
+        pulSignatureLen [4] ACK-ULONG
+}
+
+C-SignUpdate-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pPart     [1] ACK-BYTE-ARRAY,
+        ulPartLen [2] ACK-ULONG
+}
+
+C-SignUpdate-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-SignFinal-Call ::= SEQUENCE {
+        hSession        [0] ACK-SESSION-HANDLE,
+        pulSignatureLen [2] ACK-ULONG
+}
+
+C-SignFinal-Return ::= SEQUENCE {
+        retval              ACK-RV,
+        pSignature      [1] ACK-BYTE-ARRAY,
+        pulSignatureLen [2] ACK-ULONG
+}
+
+C-SignRecoverInit-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-SignRecoverInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-SignRecover-Call ::= SEQUENCE {
+        hSession        [0] ACK-SESSION-HANDLE,
+        pData           [1] ACK-BYTE-ARRAY,
+        ulDataLen       [2] ACK-ULONG,
+        pulSignatureLen [4] ACK-ULONG
+}
+
+C-SignRecover-Return ::= SEQUENCE {
+        retval              ACK-RV,
+        pSignature      [3] ACK-BYTE-ARRAY,
+        pulSignatureLen [4] ACK-ULONG
+}
+
+C-VerifyInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
+}
+
+C-VerifyInit-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-Verify-Call ::= SEQUENCE {
+        hSession       [0] ACK-SESSION-HANDLE,
+        pData          [1] ACK-BYTE-ARRAY,
+        ulDataLen      [2] ACK-ULONG,
+        pSignature     [3] ACK-BYTE-ARRAY,
+        ulSignatureLen [4] ACK-ULONG
+}
+
+C-Verify-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-VerifyUpdate-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pPart     [1] ACK-BYTE-ARRAY,
+        ulPartLen [2] ACK-ULONG
+}
+
+C-VerifyUpdate-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-VerifyFinal-Call ::= SEQUENCE {
+        hSession       [0] ACK-SESSION-HANDLE,
+        pSignature     [1] ACK-BYTE-ARRAY,
+        ulSignatureLen [2] ACK-ULONG
+}
+
+C-VerifyFinal-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-VerifyRecover-Call ::= SEQUENCE {
+        hSession       [0] ACK-SESSION-HANDLE,
+        pSignature     [1] ACK-BYTE-ARRAY,
+        ulSignatureLen [2] ACK-ULONG,
+        pulDataLen     [4] ACK-ULONG
+}
+
+C-VerifyRecover-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pData      [3] ACK-BYTE-ARRAY,
+        pulDataLen [4] ACK-ULONG
+}
+
+C-DigestEncryptUpdate-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pPart               [1] ACK-BYTE-ARRAY,
+        ulPartLen           [2] ACK-ULONG,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-DigestEncryptUpdate-Return ::= SEQUENCE {
+        retval                  ACK-RV,
+        pEncryptedPart      [3] ACK-BYTE-ARRAY,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-DecryptDigestUpdate-Call ::= SEQUENCE {
+        hSession           [0] ACK-SESSION-HANDLE,
+        pEncryptedPart     [1] ACK-BYTE-ARRAY,
+        ulEncryptedPartLen [2] ACK-ULONG,
+        pulPartLen         [4] ACK-ULONG
+}
+
+C-DecryptDigestUpdate-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pPart      [3] ACK-BYTE-ARRAY,
+        pulPartLen [4] ACK-ULONG
+}
+
+C-SignEncryptUpdate-Call ::= SEQUENCE {
+        hSession            [0] ACK-SESSION-HANDLE,
+        pPart               [1] ACK-BYTE-ARRAY,
+        ulPartLen           [2] ACK-ULONG,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-SignEncryptUpdate-Return ::= SEQUENCE {
+        retval                  ACK-RV,
+        pEncryptedPart      [3] ACK-BYTE-ARRAY,
+        pulEncryptedPartLen [4] ACK-ULONG
+}
+
+C-DecryptVerifyUpdate-Call ::= SEQUENCE {
+        hSession           [0] ACK-SESSION-HANDLE,
+        pEncryptedPart     [1] ACK-BYTE-ARRAY,
+        ulEncryptedPartLen [2] ACK-ULONG,
+        pulPartLen         [4] ACK-ULONG
+}
+
+C-DecryptVerifyUpdate-Return ::= SEQUENCE {
+        retval         ACK-RV,
+        pPart      [3] ACK-BYTE-ARRAY,
+        pulPartLen [4] ACK-ULONG
+}
+
+C-GenerateKey-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        pTemplate  [2] ACK-ATTRIBUTE-ARRAY,
+        ulCount    [3] ACK-ULONG
+}
+
+C-GenerateKey-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        phKey  [4] ACK-OBJECT-HANDLE
+}
+
+C-GenerateKeyPair-Call ::= SEQUENCE {
+        hSession                   [0] ACK-SESSION-HANDLE,
+        pMechanism                 [1] ACK-MECHANISM,
+        pPublicKeyTemplate         [2] ACK-ATTRIBUTE-ARRAY,
+        ulPublicKeyAttributeCount  [3] ACK-ULONG,
+        pPrivateKeyTemplate        [4] ACK-ATTRIBUTE-ARRAY,
+        ulPrivateKeyAttributeCount [5] ACK-ULONG
+}
+
+C-GenerateKeyPair-Return ::= SEQUENCE {
+        retval           ACK-RV,
+        phPublicKey  [6] ACK-OBJECT-HANDLE,
+        phPrivateKey [7] ACK-OBJECT-HANDLE
+}
+
+C-WrapKey-Call ::= SEQUENCE {
+        hSession         [0] ACK-SESSION-HANDLE,
+        pMechanism       [1] ACK-MECHANISM,
+        hWrappingKey     [2] ACK-OBJECT-HANDLE,
+        hKey             [3] ACK-OBJECT-HANDLE,
+        pulWrappedKeyLen [5] ACK-ULONG
+}
+
+C-WrapKey-Return ::= SEQUENCE {
+        retval               ACK-RV,
+        pWrappedKey      [4] ACK-BYTE-ARRAY,
+        pulWrappedKeyLen [5] ACK-ULONG
+}
+
+C-UnwrapKey-Call ::= SEQUENCE {
+        hSession         [0] ACK-SESSION-HANDLE,
+        pMechanism       [1] ACK-MECHANISM,
+        hUnwrappingKey   [2] ACK-OBJECT-HANDLE,
+        hWrappedKey      [3] ACK-OBJECT-HANDLE,
+        ulWrappedKeyLen  [4] ACK-ULONG,
+        pTemplate        [5] ACK-ATTRIBUTE-ARRAY,
+        ulAttributeCount [6] ACK-ULONG
+}
+
+C-UnwrapKey-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        phKey  [7] ACK-OBJECT-HANDLE
+}
+
+C-DeriveKey-Call ::= SEQUENCE {
+        hSession         [0] ACK-SESSION-HANDLE,
+        pMechanism       [1] ACK-MECHANISM,
+        hBaseKey         [2] ACK-OBJECT-HANDLE,
+        pTemplate        [3] ACK-ATTRIBUTE-ARRAY,
+        ulAttributeCount [4] ACK-ULONG
+}
+
+C-DeriveKey-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        phKey  [5] ACK-OBJECT-HANDLE
+}
+
+C-SeedRandom-Call ::= SEQUENCE {
+        hSession  [0] ACK-SESSION-HANDLE,
+        pSeed     [1] ACK-BYTE-ARRAY,
+        ulSeedLen [2] ACK-ULONG
+}
+
+C-SeedRandom-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-GenerateRandom-Call ::= SEQUENCE {
+        hSession    [0] ACK-SESSION-HANDLE,
+        ulRandomLen [2] ACK-ULONG
+}
+
+C-GenerateRandom-Return ::= SEQUENCE {
+        retval     ACK-RV,
+        pSeed  [1] ACK-BYTE-ARRAY
+}
+
+C-GetFunctionStatus-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-GetFunctionStatus-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-CancelFunction-Call ::= SEQUENCE {
+        hSession [0] ACK-SESSION-HANDLE
+}
+
+C-CancelFunction-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+-- When an error condition is returned in the `retval` field of a `...-Return`
+-- message, then the remaining fields MAY be filled arbitrarily within the
+-- syntactical constraints, and SHOULD NOT be processed by the receiving side,
+-- in any way not required by the PKCS #11 specification.
+
+
+-- ## Notifications from PKCS #11 to Application
+--
+-- There is no difference between notifiers and PKCS #11 calls, except for
+--
+--   * they travel in the opposite direction
+--   * they come from another function space
+--
+-- In the definitions below, this is addressed by separating the normal calls
+-- from notifications.  The structures however, are the same.
+--
+-- The callbacks for mutexes are considered local to each peer, so they are
+-- not considered callbacks.  This may change later on, and then we will add
+-- more callbacks following the same scheme; numbers have already been reserved.
+-- What remains is the single notifier callback function ACK-NOTIFY.
+
+C-Notify-Call ::= SEQUENCE {
+        hSession     [0] ACK-SESSION-HANDLE,
+        event        [1] ACK-NOTIFICATION,
+        pApplication [2] ANY  -- literal copy from C-OpenSession-Call.pApplication
+}
+
+C-Notify-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+        
+-- We also define call and return structures for mutex locks, but remark that
+-- these might be locally wrapped by a sufficiently clever implementation.
+
+C-CreateMutex-Call ::= SEQUENCE {
+        empty NULL OPTIONAL  -- SHOULD NOT be sent, SHOULD NOT be interpreted
+}
+
+C-CreateMutex-Return ::= SEQUENCE {
+        retval      ACK-RV,
+        ppMutex [0] ACK-OPAQUE  -- to be literally reproduced in C-...Mutex-Call
+}
+
+C-DestroyMutex-Call ::= SEQUENCE {
+        pMutex [0] ACK-OPAQUE   -- literally reproduced from C-CreateMutex-Return
+}
+
+C-DestroyMutex-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-LockMutex-Call ::= SEQUENCE {
+        pMutex [0] ACK-OPAQUE   -- literally reproduced from C-CreateMutex-Return
+}
+
+C-LockMutex-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+C-UnlockMutex-Call ::= SEQUENCE {
+        pMutex [0] ACK-OPAQUE   -- literally reproduced from C-CreateMutex-Return
+}
+
+C-UnlockMutex-Return ::= SEQUENCE {
+        retval ACK-RV
+}
+
+
+-- ## Transport Messages
+--
+-- Based on the individual definitions in the foregoing, we can now define the
+-- overall structure for messages as they are exchanged for the remote
+-- procedure calls of PKCS #11 through ASN.1 encodings:
+
+TransportMessage ::= SEQUENCE {
+        version     ACK-VERSION,    -- this specification's version
+        transportID OCTET STRING,   -- opaque, defined by transport mechanism
+        requestID   OCTET STRING,   -- opaque, defined by the caller
+        payload     CHOICE {
+                        call   RemoteProcedureCall,
+                        called RemoteProcedureReturn,
+                        notify RemoteNotificationCall,
+                        noted  RemoteNotificationReturn,
+                        ...
+                     },
+        ...
+}
+
+-- We explicitly distinguish between the four forms of call and return messages,
+-- in order to respect their individual identity spaces (`Procedure` versus
+-- `Notification`) and their initiator/responder variation (`Call` versus `Return`).
+-- We might learn some of this from the traffic itself, but prefer to have a clean
+-- overview already at the transport level.
+
+-- The `opdata` and `notedata` fields below are all set to `ANY` to stop all
+-- ASN.1 parsers from processing the data.  This enables a transport layer to
+-- first do its work without diving into all the complexity of further data,
+-- so as to support more distinctive error reporting in case of syntax errors.
+-- Oh, and of course we prefer not to feed the entire variation of all possible
+-- PKCS #11 calls and returns into a parser, which may be inefficient on some
+-- implementations.
+
+RemoteProcedureCall ::= [APPLICATION 1] SEQUENCE {
+        opcode OperationCode,
+        opdata ANY  -- C-...-Call AS DEFINED BY opcode opc-...
+}
+
+RemoteProcedureReturn ::= [APPLICATION 2] SEQUENCE {
+        opcode OperationCode,
+        opdata ANY  -- C-...-Return AS DEFINED BY opcode opc-...
+}
+
+RemoteNotificationCall ::= [APPLICATION 3] SEQUENCE {
+        notecode NotifierCode,
+        notedata ANY  -- C-...-Call AS DEFINED BY notecode cb-...
+}
+
+RemoteNotificationReturn ::= [APPLICATION 4] SEQUENCE {
+        notecode NotifierCode,
+        notedata ANY  -- C-...-Return AS DEFINED BY notecode cb-...
+}
+
+-- Below, we define the values for the `opcode` field in `RemoteProcedureCall`
+-- and `RemoteProcedureReturn` fields.  They are used to switch to the right
+-- sender or recipient.  Note that the pair `<OperationCode,RequestID>` is
+-- the formal identifier that binds a `C-...-Return` to a `C-...-Call` but
+-- nothing prevents implementations from generating `RequestID` values that
+-- are unique all by themselves; such implementations SHOULD then validate
+-- that they receive the proper `OperationCode` in their return.
+
+OperationCode ::= ENUMERATED {
+        opc-Initialize-Tag(0),
+        opc-Finalize-Tag(1),
+        opc-GetInfo-Tag(2),
+        opc-GetFunctionList-Tag(3),
+        opc-GetSlotList-Tag(4),
+        opc-GetSlotInfo-Tag(5),
+        opc-GetTokenInfo-Tag(6),
+        opc-GetMechanismList(7),
+        opc-GetMechanismInfo(8),
+        opc-InitToken(9),
+        opc-InitPIN(10),
+        opc-SetPIN(11),
+        opc-OpenSession(12),
+        opc-CloseSession(13),
+        opc-CloseAllSessions(14),
+        opc-GetSessionInfo(15),
+        opc-GetOperationState(16),
+        opc-SetOperationState(17),
+        opc-Login(18),
+        opc-Logout(19),
+        opc-CreateObject(20),
+        opc-CopyObject(21),
+        opc-DestroyObject(22),
+        opc-GetObjectSize(23),
+        opc-GetAttributeValue(24),
+        opc-SetAttributeValue(25),
+        opc-FindObjectsInit(26),
+        opc-FindObjects(27),
+        opc-FindObjectsFinal(28),
+        opc-EncryptInit(29),
+        opc-Encrypt(30),
+        opc-EncryptUpdate(31),
+        opc-EncryptFinal(32),
+        opc-DecryptInit(33),
+        opc-Decrypt(34),
+        opc-DecryptUpdate(35),
+        opc-DecryptFinal(36),
+        opc-DigestInit(37),
+        opc-Digest(38),
+        opc-DigestUpdate(39),
+        opc-DigestKey(40),
+        opc-DigestFinal(41),
+        opc-SignInit(42),
+        opc-Sign(43),
+        opc-SignUpdate(44),
+        opc-SignFinal(45),
+        opc-SignRecoverInit(46),
+        opc-SignRecover(47),
+        opc-VerifyInit(48),
+        opc-Verify(49),
+        opc-VerifyUpdate(50),
+        opc-VerifyFinal(51),
+        opc-VerifyRecoverInit(52),
+        opc-VerifyRecover(53),
+        opc-DigestEncryptUpdate(54),
+        opc-DecryptDigestUpdate(55),
+        opc-SignEncryptUpdate(56),
+        opc-DecryptVerifyUpdate(57),
+        opc-GenerateKey(58),
+        opc-GenerateKeyPair(59),
+        opc-WrapKey(60),
+        opc-UnwrapKey(61),
+        opc-DeriveKey(62),
+        opc-SeedRandom(63),
+        opc-GenerateRandom(64),
+        opc-GetFunctionStatus(65),
+        opc-CancelFunction(66),
+        opc-WaitForSlotEvent(67)
+}
+
+-- Below, we define the values for the `notecode` field in `RemoteNotificationCall`
+-- and `RemoteNotificationReturn` fields.  They are used to switch to the right
+-- sender or recipient.  Note that the pair `<OperationCode,RequestID>` is
+-- the formal identifier that binds a `C-...-Return` to a `C-...-Call` but
+-- nothing prevents implementations from generating `RequestID` values that
+-- are unique all by themselves; such implementations SHOULD then validate
+-- that they receive the proper `OperationCode` in their return.
+
+NotifierCode ::= ENUMERATED {
+        cb-Notify(0),
+        cb-CreateMutex(1),
+        cb-DestroyMutex(2),
+        cb-LockMutex(3),
+        cb-UnlockMutex(4)
+}
+
+
+--
+-- End of Remote PKCS #11 messaging format
+--
+
+END
+
+--
+-- The remainder of this document is informative / non-normative.
+--
+
+-- ## Encoding and Transporting ASN.1
+--
+-- The syntax above defines how the various aspects of the PKCS #11 API are
+-- translated to and from ASN.1 and this enables repote procedure calls.
+-- Things that have not been established are encodings and transports to use.
+--
+-- Encoding can be done in any way that seems worthy.  Given the ASN.1 syntax
+-- and suitable tools, it is even possible to translate between encodings.
+-- The most attractive encoding would seem to be DER, in light of its broad
+-- use for cryptographic data structures, including the certificates that
+-- are often handled by PKCS #11 tokens.  Some interfaces may however prefer
+-- XML, and so the XER encoding, if they want to pass the ASN.1 messages as
+-- part of a larger XML format, such as a SOAP request.  As far as this spec
+-- goes, that is an implementation choice.
+--
+-- As for the transport over which ASN.1 is transmitted, it should be clear
+-- that encryption is really helpful in protecting things like PINs and
+-- possibly other semi-sensitive material that might be exchanged.  Again,
+-- this spec leaves this open as an implementation choice.
+--
+-- One thing worth mentioning however, is the possibility of selecting a
+-- PKCS #11 token on a server based on the transport layer.  If the user
+-- authenticates, then it is possible to make a pre-selection of tokens
+-- to be presented to the client.  When the mechanism used is
+-- cryptographically sound, such as an X.509 certificate, an OpenPGP key,
+-- a PAKE like SRP, or a Kerberos5 Ticket, then it is even possible to
+-- reduce the value of the PIN that otherwise takes care of the entire
+-- security.  With Remote PKCS #11 there is less facilitation of the
+-- need to hold a physical device, which is good to compensate for by
+-- insisting on such stronger addition credentials.
+--
+-- For those interested, we intend to transport Remote PKCS #11 over GSS-API,
+-- using Kerberos5 authentication and encryption, and pass that over a suitable
+-- transport.  For users without Kerberos, we intend to employ PAKE mechanisms
+-- such as SRP over (D)TLS so as to create a password-protected transit.  Our
+-- preferred transport is SCTP (possibly over UDP) for its reliable- delivery
+-- combined with multiplexing capabilities; we may fallback on TCP with
+-- 4-byte big-endian size prefixes to the chunks sent though.
+
+-- ## Using Kerberos service tickets and PKCS #11 URIs
+--
+-- When Remote PKCS #11 is protected by Kerberos, it is necessary to define a
+-- service name.  The basic form that we propose is
+--
+--     pkcs11/host.fqdn@REALM
+--
+-- Where the `host.fqdn` must be setup in the context being used, and the
+-- `REALM` defaults to the user's login realm, but possibly overridden by
+-- explicit configuration, and/or renamed through canonicalization by the KDC.
+--
+-- We also define an extended form for the service name, where additional
+-- levels are added to the name to zoom in on some service-defined path:
+--
+--     pkcs11/host.fqdn/sub/subsub@REALM
+--
+-- This form cannot be automatically deduced and must therefore always be
+-- configured automatically.
+--
+-- The selection of a token, and finding information on it, are easily
+-- configurable with the `pkcs11:` [URI format](https://tools.ietf.org/html/rfc7512)
+-- but the location of the host is not part of this scheme.  The user will
+-- have to configure this when he sets up a Remote PKCS #11 library.
+--
+
+--
+-- ## Document history:
+--
+-- **Version 0.0**
+--
+--  * Finished by Rick van Rein on 4-3-2016
+--  * Posted locally for review by PKCS #11 peer experts
+--
+-- **Version 0.1**
+--
+--  * Started assigning version numbers
+--  * Added a `version` field in the `TransportMessage`
+--  * Added extensibility provisions in the `TransportMessage`
+--  * Added notes about Kerberos and `pkcs11:` URIs
+--  * Proposed a service name to use in Kerberos tickets for Remote PKCS #11
+--
