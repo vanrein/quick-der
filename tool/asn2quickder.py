@@ -91,7 +91,7 @@ class QuickDERgen():
     def __init__(self, semamod, outfn, refmods):
         self.semamod = semamod
         self.refmods = refmods
-	self.unit, outext = os.path.splitext (outfn)
+        self.unit, outext = os.path.splitext (outfn)
         if outext == '.h':
             raise Exception('File cannot overwrite itself -- use another extension than .h for input files')
         self.outfile = open(self.unit + '.h', 'w')
@@ -126,6 +126,7 @@ class QuickDERgen():
             SetOfType: self.packSetOfType,
             ComponentType: self.packSimpleType,  #TODO#
         }
+        self.issued_typedefs = {}  # typedef b a adds a: b to this dict, to weed out dups
 
     def write(self, txt):
         self.outfile.write(txt)
@@ -155,18 +156,18 @@ class QuickDERgen():
         self.writeln(' */')
         self.writeln()
         self.writeln()
-	self.writeln('#ifndef QUICK_DER_' + self.unit + '_H')
-	self.writeln('#define QUICK_DER_' + self.unit + '_H')
+        self.writeln('#ifndef QUICK_DER_' + self.unit + '_H')
+        self.writeln('#define QUICK_DER_' + self.unit + '_H')
         self.writeln()
         self.writeln()
         self.writeln('#include <quick-der/api.h>')
         self.writeln()
         self.writeln()
         closer = ''
-	rmfns = set ()
+        rmfns = set ()
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfns.add (tosym(rm.rsplit('.', 1) [0]).lower())
-	for rmfn in rmfns:
+        for rmfn in rmfns:
             self.writeln('#include <quick-der/' + rmfn + '.h>')
             closer = '\n\n'
         self.write(closer)
@@ -181,16 +182,16 @@ class QuickDERgen():
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfn = tosym(rm.rsplit('.', 1) [0]).lower()
             for sym in self.semamod.imports.symbols_imported [rm]:
-		self.writeln('#define DER_PIMP_' + tosym(self.unit) + '_' + tosym(sym) + '(implicit_tag) DER_PIMP_' + tosym(rmfn) + '_' + tosym(sym) + '(implicit_tag)')
+                self.writeln('#define DER_PIMP_' + tosym(self.unit) + '_' + tosym(sym) + '(implicit_tag) DER_PIMP_' + tosym(rmfn) + '_' + tosym(sym) + '(implicit_tag)')
                 self.writeln()
                 self.writeln('#define DER_PACK_' + tosym(self.unit) + '_' + tosym(sym) + ' DER_PACK_' + tosym(rmfn) + '_' + tosym(sym) + '')
                 closer = '\n\n'
         self.write(closer)
 
     def generate_tail(self):
-	self.writeln()
-	self.writeln()
-	self.writeln('#endif /* QUICK_DER_' + self.unit + '_H */')
+        self.writeln()
+        self.writeln()
+        self.writeln('#endif /* QUICK_DER_' + self.unit + '_H */')
         self.writeln()
         self.writeln()
         self.writeln('/* asn2quickder output for ' + self.semamod.name + ' ends here */')
@@ -236,10 +237,19 @@ class QuickDERgen():
         pass
 
     def overlayTypeAssignment(self, node):
-        self.write('typedef ')
-        self.generate_overlay_node(node.type_decl)
-        self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
-        self.writeln()
+        # Issue each typedef b a only once, because -- even if you
+        # use the same b, a each time -- type-redefinition is a C11
+        # feature, which isn't what we want.
+        key = (self.unit, tosym(node.type_name))
+        if key not in self.issued_typedefs:
+            self.issued_typedefs[key] = str(node.type_decl)
+            self.write('typedef ')
+            self.generate_overlay_node(node.type_decl)
+            self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
+            self.writeln()
+        else:
+            if self.issued_typedefs[key] != str(node.type_decl):
+                raise TypeError("Redefinition of type %s." % key[1])
 
     def packTypeAssignment(self, node, implicit=False):
         #TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
@@ -318,7 +328,6 @@ class QuickDERgen():
 
     # Sequence, Set, Choice
     def overlayConstructedType(self, node, naked=False):
-        self.writeln('/* NODE :: ' + str(dir(node)) + ' */')
         if not naked:
             self.writeln('struct {');
         for comp in node.components:
@@ -327,11 +336,11 @@ class QuickDERgen():
                 continue
             if isinstance(comp, ComponentType) and comp.components_of_type is not None:
                 self.writeln('\t/* COMPONENTS OF TYPE ' + str(comp.components_of_type) + ' */')
-		self.writeln('//COMP :: ' + str(dir(comp)))
-		self.writeln('//TYPE_DECL == ' + str (comp.type_decl))
-		self.writeln('//COMPONENTS_OF_TYPE :: ' + str (dir (comp.components_of_type)))
-		self.writeln('//CHILDREN :: ' + str (dir (comp.components_of_type.children)))
-		self.writeln('//TODO// Not sure how to get to elements and inline them here')
+                self.writeln('//COMP :: ' + str(dir(comp)))
+                self.writeln('//TYPE_DECL == ' + str (comp.type_decl))
+                self.writeln('//COMPONENTS_OF_TYPE :: ' + str (dir (comp.components_of_type)))
+                self.writeln('//CHILDREN :: ' + str (dir (comp.components_of_type.children)))
+                self.writeln('//TODO// Not sure how to get to elements and inline them here')
                 #TODO:ARG1=???# self.overlayConstructedType (comp.components_of_type, naked=True)
                 continue
             self.write('\t')
@@ -389,7 +398,7 @@ class QuickDERgen():
             self.write('DER_PACK_LEAVE')
 
     def packChoiceType(self, node, implicit=False, outer_tag=None):
-	# IMPLICIT tags are invalid for a CHOICE type
+        # IMPLICIT tags are invalid for a CHOICE type
         # outer_tags must not be passed down here; will be added
         if implicit or outer_tag is not None:
             self.comma()
