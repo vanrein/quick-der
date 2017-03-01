@@ -126,6 +126,7 @@ class QuickDERgen():
             SetOfType: self.packSetOfType,
             ComponentType: self.packSimpleType,  #TODO#
         }
+        self.issued_typedefs = {}  # typedef b a adds a: b to this dict, to weed out dups
 
     def write(self, txt):
         self.outfile.write(txt)
@@ -236,10 +237,19 @@ class QuickDERgen():
         pass
 
     def overlayTypeAssignment(self, node):
-        self.write('typedef ')
-        self.generate_overlay_node(node.type_decl)
-        self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
-        self.writeln()
+        # Issue each typedef b a only once, because -- even if you
+        # use the same b, a each time -- type-redefinition is a C11
+        # feature, which isn't what we want.
+        key = (self.unit, tosym(node.type_name))
+        if key not in self.issued_typedefs:
+            self.issued_typedefs[key] = str(node.type_decl)
+            self.write('typedef ')
+            self.generate_overlay_node(node.type_decl)
+            self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
+            self.writeln()
+        else:
+            if self.issued_typedefs[key] != str(node.type_decl):
+                raise TypeError("Redefinition of type %s." % key[1])
 
     def packTypeAssignment(self, node, implicit=False):
         #TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
