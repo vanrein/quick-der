@@ -15,6 +15,19 @@
 #    add_asn1_headers(my-headers rfc1 rfc2)
 #
 # This snippet requires files rfc1.asn1 and rfc2.asn1 to exist.
+#
+# In addition, generation of MD text files from ASN.1
+# sources via the asn1literate tool.  The macro
+# add_asn1_documents() works in a similar fashion to
+# produce Markdown documents from suitable ASN.1 input;
+# plain ASN.1 input is still suitable, but will simply
+# map to an all-code file, interpreting comments as
+# Markdown.
+#
+#    add_custom_target(my-documents ALL)
+#    add_asn1_documents(my-documents spec1 spec2)
+#
+# This snippet requires files spec1.asn1 and spec2.asn1 to exist.
 
 # Copyright 2017, Adriaan de Groot <groot@kde.org>
 #
@@ -46,6 +59,24 @@ macro(add_asn1_headers _groupname)
 	foreach (_header ${ARGN})
 		add_asn1_header(${_header} ${_groupname})
 		add_dependencies(${_groupname} ${_header}_asn1_h)
+	endforeach()
+endmacro()
+
+macro(add_asn1_document _docname _groupname)
+	add_custom_command (OUTPUT doc/${_docname}.md
+		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn1literate.py ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1
+		WORKING_DIRECTORY doc
+		COMMENT "Build markdown text file ${_docname}.md from ASN.1 spec")
+	add_custom_target(${_docname}_asn1_md DEPENDS doc/${_docname}.md)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/doc/${_docname}.md DESTINATION share/doc/quick-der)
+endmacro()
+
+macro(add_asn1_documents _groupname)
+	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc)
+	foreach (_document ${ARGN})
+		add_asn1_document(${_document} ${_groupname})
+		add_dependencies(${_groupname} ${_document}_asn1_md)
 	endforeach()
 endmacro()
 

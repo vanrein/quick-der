@@ -10,3 +10,9 @@ add_asn1_headers(arpa2-headers
 	)
 
 add_dependencies(arpa2-headers rfc-headers)
+add_custom_target(arpa2-docs ALL)
+add_asn1_documents(arpa2-docs
+	kxover
+	RemotePKCS11
+	)
+  
