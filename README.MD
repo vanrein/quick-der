@@ -159,3 +159,11 @@ And of course, there are many useful things we may do with this library:
   * **Miniature LDAP services.** These can help you centralise your data storage under own control; for instance, your PGP key ring or your vCard collection are good canidadates for sharing locally.
   * **Remote PKCS #11.** The main issue in doing this well is proper encapsulation, but with Quick and Easy DER, and the emphasis of both on security and well-defined sizes, it appears to be a perfect match to wrap PKCS #11 arguments in DER structures.
 
+## Packaging
+
+Quick-DER uses CMake as (meta)buildsystem and can create installable
+packages with CPack. An installed Quick-DER package includes both
+CMake and pkg-config configuration files so that Quick-DER can easily
+be discovered by the buildsystem of Quick-DER users.
+
+The configuration file templates can be found in `contrib/`

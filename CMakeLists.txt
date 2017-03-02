@@ -11,6 +11,7 @@ include (MacroEnsureOutOfSourceBuild)
 include (MacroAddUninstallTarget)
 include (MacroGitVersionInfo)
 include (MacroCreateConfigFiles)
+include (CMakeDependentOption)
 
 macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory.")
 
@@ -26,9 +27,10 @@ option (SPEC_RFC
 option (SPEC_ITU
 	"Build include files from ASN.1 fragments of ITU specs"
 	ON)
-option (SPEC_ARPA2
+CMAKE_DEPENDENT_OPTION(SPEC_ARPA2
 	"Build include files from ASN.1 specs for ARPA2 projects"
-	ON)
+	ON
+	"SPEC_RFC" OFF)
 
 get_version_from_git (Quick-DER 0.0.0)
 
