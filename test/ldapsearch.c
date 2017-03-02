@@ -99,14 +99,14 @@ char *load_file(const char *filename, ssize_t *filesize)
 int ldapdecode(const char *message, ssize_t message_size)
 {
 	dercursor crs;
-	crs.derptr = message;
+	crs.derptr = (char *) message;
 	crs.derlen = message_size;
 
 	DER_OVLY_rfc4511_LDAPMessage rq;
 	memset(&rq, 0, sizeof(rq));
-	dercursor rq_walk[] = { DER_PACK_rfc4511_LDAPMessage };
+	const derwalk rq_walk[] = { DER_PACK_rfc4511_LDAPMessage, DER_PACK_END };
 
-	int r = der_unpack(&crs, rq_walk, &rq, 1);
+	int r = der_unpack(&crs, rq_walk, (dercursor *) &rq, 1);
 	if (r < 0)
 	{
 		return r;
