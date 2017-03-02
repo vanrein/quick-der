@@ -249,7 +249,7 @@ DPRINTF ("DEBUG: Ended looping around for 0x%02x with %zd left\n", terminal, crs
 	// details surrounding OPTIONALs, which are not of influence on
 	// the CHOICE being subjected to a local OPTIONAL prefix.
 	// Note that the choice flag is cleared as soon as it matches.
-	if (choice && (!chosen) && (!optional)) {
+	if (choice && (!chosen) && (!optional) && (!optout)) {
 DPRINTF ("ERROR: Ended a CHOICE without choosing, even though it is not OPTIONAL\n");
 		errno = EBADMSG;
 		return NULL;
