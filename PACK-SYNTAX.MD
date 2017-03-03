@@ -163,7 +163,7 @@ of the walking path is responsible for proper nesting, also with respect to
 
 Finally, the forms `ANY` and `ANY DEFINED BY` are used in ASN.1 to describe
 wildcard typing.  These have no representation in DER either, but at the
-point where it comes across the `DER_PACK_STORE | DER_PACK_ANY` instruction,
+point where it comes across the `DER_PACK_ANY` instruction,
 it will match anything, and store the result in the output array of
 `dercursor`.  The stored result is special however, in that it includes the
 entire DER structure including tag and length bytes.  This is because you

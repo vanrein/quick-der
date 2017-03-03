@@ -264,7 +264,7 @@ ACK-MECHANISM-INFO ::= SEQUENCE {
 
 -- The `CK_FUNCTION_LIST` type in PKCS #11 is not much use when passed over
 -- a wire, *except* for the presence information on each of the functions.
--- To accommodate that, the `ACK-FUNCTION-lIST` type presents a `BIT STRING`
+-- To accommodate that, the `ACK-FUNCTION-LIST` type presents a `BIT STRING`
 -- where the bit for a function's `OperationCode` is set.
 -- Note that we will count bits in `BIT STRING` types from 0
 -- but otherwise rely on the mechanisms of the encoding to deliver the

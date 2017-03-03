@@ -285,7 +285,13 @@ class QuickDERgen():
 
     def packSimpleType(self, node, implicit=False, outer_tag=None):
         if outer_tag is None:
-            outer_tag = 'DER_TAG_' + node.type_name.replace(' ', '').upper()
+            simptp = node.type_name.replace(' ', '').upper()
+            if simptp == 'ANY':
+                # exceptional syntax, just the instruction DER_PACK_ANY
+                self.comma ()
+                self.write ('DER_PACK_ANY')
+                return
+            outer_tag = 'DER_TAG_' + simptp
         self.comma()
         self.write('DER_PACK_STORE | ' + outer_tag)
 

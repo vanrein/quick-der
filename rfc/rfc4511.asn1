@@ -241,7 +241,8 @@
              sizeLimit       INTEGER (0 ..  maxInt),
              timeLimit       INTEGER (0 ..  maxInt),
              typesOnly       BOOLEAN,
-             filter          Filter,
+             --inconsistent breakdown filter          Filter,
+             filter          ANY,
              attributes      AttributeSelection }
 
         AttributeSelection ::= SEQUENCE OF selector LDAPString

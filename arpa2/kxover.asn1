@@ -519,5 +519,8 @@ PrincipalNameKrbTgt ::= SEQUENCE {
         }
 }
 
+--
+-- This ends the formal definitions:
+--
 
 END
