@@ -8,7 +8,8 @@ endif()
 
 add_definitions(-Wall -Wextra -pedantic)
 
-set(quickder_SRC 
+set(quickder_SRC
+	der_data.c
 	der_header.c
 	der_iterate.c
 	der_pack.c
