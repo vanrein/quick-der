@@ -141,8 +141,29 @@ int ldapdecode(uint8_t *message, ssize_t message_size)
 	{
 		return r;
 	}
+	if (message_size != (crs.derptr - message))
+	{
+		fprintf(stderr,"! Message was not completely consumed: %d bytes left.", (int) (crs.derptr - message));
+		return -1;
+	}
 
 	fprintf(stdout, ".. Got message ID %p %d\n", (void *)rq.messageID.derptr, (int)rq.messageID.derlen);
+	if (!rq.messageID.derptr || (rq.messageID.derlen > 4) || (rq.messageID.derlen < 1))
+	{
+		fprintf(stderr, "! Unusual message ID length.\n");
+		return -1;
+	}
+
+	int32_t messageID;
+	if (!der_get_int32(rq.messageID, &messageID))
+	{
+		fprintf(stdout, ".. Get message ID=%d\n", messageID);
+	}
+	else
+	{
+		fprintf(stderr, "! Unpacking message ID failed.\n");
+		return -1;
+	}
 	fprintf(stdout, ".. Message cursor %p -> %p, %d bytes used.\n", message, crs.derptr, (int) (crs.derptr - message));
 	return r;
 }

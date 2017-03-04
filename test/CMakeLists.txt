@@ -15,3 +15,10 @@ target_link_libraries(ldap.test
 	quickderStatic)
 add_test (ldap.test
 	ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request.bin)
+
+add_executable (der_data.test
+	der_data.c)
+target_link_libraries(der_data.test
+	quickderStatic)
+add_test (der_data.test
+	der_data.test)

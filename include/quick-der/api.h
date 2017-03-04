@@ -476,7 +476,7 @@ int der_countelements (dercursor *container);
  *
  * The der_pack() routine is based on the same DER_PACK_ syntax descriptions
  * used by der_unpack(), so it is straightforward to unpack a structure, make
- * some modifications and pack its new incarnation.  
+ * some modifications and pack its new incarnation.
  *
  * One point of concern is the DER_STORE_ structure.  This can both be used
  * for Primitive types and for Constructed types such as SEQUENCE OF and
@@ -558,5 +558,28 @@ size_t der_pack (const derwalk *syntax, const dercursor *derray,
  */
 void der_prepack (dercursor *derray, size_t arraycount, derarray *target);
 
+
+
+/* PACKING AND UNPACKING DATA
+ *
+ * A cursor points to a particular sequence of bytes, but those data-bytes
+ * are still encoded. The convenience functions for packing and unpacking
+ * turn those data bytes into regular C types (or vice-versa).
+ */
+
+/* Unpack a single integer. The integer value is stored in *valp, while
+ * success is indicated through the return value: 0 for success, -1 if
+ * the value cannot be represented in a 32-bit integer.
+ *
+ * On failure, the value stored in *valp is unchanged.
+ *
+ * It is legal to pass a NULL valp, in which case the return value tells
+ * you if the integer could be represented (or not). The DER cursor must
+//  * be valid and point to valid memory.
+ */
+int der_get_int32 (dercursor cursor, int32_t *valp);
+
+/* Unpack a single unsigned integer. See also der_get_int32(). */
+int der_get_uint32 (dercursor cursor, uint32_t *valp);
 
 #endif /* QUICK_DER_H */
