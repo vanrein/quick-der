@@ -264,6 +264,7 @@
 	     -- SET OF which contains exactly one entry as the direct
 	     -- notation of [2] Filter, but the infinite unfolding is
 	     -- broken; in fact this makes not behave similar to and/or.
+	     -- TODO: IS THIS TRUE? LDAP ALREADY ASSUMES IMPLICIT TAGS!
 	     --
 	     -- Take note that Quick DER does not validate the size
 	     -- constraint, but any sane implementation is likely to

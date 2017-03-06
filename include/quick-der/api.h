@@ -54,7 +54,7 @@ typedef struct dercursor {
  */
 
 typedef struct derarray {
-	dercursor *derray;
+	union dernode *derray;
 	size_t dercnt;
 } derarray;
 
@@ -91,7 +91,6 @@ typedef union dernode {
 	derarray info;
 	derarray prep;
 } dernode;
-
 
 
 /* WRITING GOOD DER TARVERSAL PATHS.
@@ -159,7 +158,7 @@ typedef union dernode {
  * by using shared data, and that ought to improve efficiency rather dramatically.
  */
 
-typedef const uint8_t derwalk;
+typedef uint8_t derwalk;
 
 /* Special markers for instructions on a walking path */
 #define DER_WALK_END 0x00
@@ -229,6 +228,25 @@ typedef const uint8_t derwalk;
 #define DER_TAG_APPLICATION(n) (0x40 | (n))
 #define DER_TAG_CONTEXT(n) (0x80 | (n))
 #define DER_TAG_PRIVATE(n) (0xc0 | (n))
+
+
+/* DEFINITION GENERATOR MACROS
+ *
+ * These macros instantiate the various definitions in the header file
+ * under a standard name.  Use DECLARE in header files and forward defs,
+ * and use DEFINE to instantiate a mod.tp to a definition.
+ */
+#define DER_PIMP_DECLARE(mod,tp) extern const derwalk DER_PIMP_##mod##_##tp [];
+#define DER_PACK_DECLARE(mod,tp) extern const derwalk DER_PACK_##mod##_##tp [];
+#define DER_PSUB_DECLARE(mod,tp) extern const struct psub_somestruct DER_PSUB_##mod##_##tp [];
+
+#define DER_PIMP_DEFINE(mod,tp) const derwalk DER_PIMP_##mod##_##tp [] = { \
+	DER_PIMP_##mod##_##tp, \
+	DER_PACK_END };
+#define DER_PACK_DEFINE(mod,tp) const derwalk DER_PACK_##mod##_##tp [] = { \
+	DER_PACK_##mod##_##tp, \
+	DER_PACK_END };
+#define DER_PSUB_DEFINE(mod,tp) DEFINE_DER_PSUB_##mod##_##tp
 
 
 /* PARSING AN ENTIRE STRUCTURE

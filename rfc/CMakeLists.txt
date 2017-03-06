@@ -1,8 +1,11 @@
 # Conversion of ASN.1 specs to convenient header files
 include(MacroASN1Header)
 
+set_asn2quickder_options(-I ${CMAKE_SOURCE_DIR}/rfc)
+
 add_custom_target(rfc-headers ALL)
 add_asn1_headers(rfc-headers
+	rfc1422
 	rfc2315
 	rfc2578
 	rfc2898

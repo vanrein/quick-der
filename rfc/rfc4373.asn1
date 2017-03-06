@@ -4,7 +4,7 @@ IMPLICIT TAGS
 EXTENSIBILITY IMPLIED ::=
 BEGIN
 
-IMPORTS LDAPOID, LDAPResult, LDAPDN, LDAPString, Referral,
+IMPORTS LDAPOID, LDAPResult, LDAPDN, LDAPString, Referral, Controls,
 	AddRequest, ModifyRequest, DelRequest, ModifyDNRequest
 FROM RFC4511;
 

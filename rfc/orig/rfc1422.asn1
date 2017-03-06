@@ -1,0 +1,37 @@
+   Certificate ::= SIGNED SEQUENCE{
+           version [0]     Version DEFAULT v1988,
+           serialNumber    CertificateSerialNumber,
+           signature       AlgorithmIdentifier,
+           issuer          Name,
+           validity        Validity,
+           subject         Name,
+           subjectPublicKeyInfo    SubjectPublicKeyInfo}
+
+   Version ::=     INTEGER {v1988(0)}
+
+   CertificateSerialNumber ::=     INTEGER
+
+   Validity ::=    SEQUENCE{
+           notBefore       UTCTime,
+           notAfter        UTCTime}
+
+   SubjectPublicKeyInfo ::=        SEQUENCE{
+           algorithm               AlgorithmIdentifier,
+           subjectPublicKey        BIT STRING}
+
+
+   AlgorithmIdentifier ::= SEQUENCE{
+           algorithm       OBJECT IDENTIFIER,
+           parameters      ANY DEFINED BY algorithm OPTIONAL}
+
+   CertificateRevocationList ::= SIGNED SEQUENCE{
+           signature       AlgorithmIdentifier,
+           issuer          Name,
+           lastUpdate      UTCTime,
+           nextUpdate      UTCTime,
+           revokedCertificates
+                           SEQUENCE OF CRLEntry OPTIONAL}
+
+   CRLEntry ::= SEQUENCE{
+           userCertificate SerialNumber,
+           revocationDate UTCTime}

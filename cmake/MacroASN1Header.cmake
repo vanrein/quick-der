@@ -12,6 +12,7 @@
 # (without the extension).
 #
 #    add_custom_target(my-headers ALL)
+#    set_asn2quickder_options(-I incdir1 -I incdir2)
 #    add_asn1_headers(my-headers rfc1 rfc2)
 #
 # This snippet requires files rfc1.asn1 and rfc2.asn1 to exist.
@@ -39,7 +40,7 @@ macro(add_asn1_header _headername _groupname)
 # Generate the header file in <quick-der/headername.h>
 # and install that header file to include/quick-der/headername.h.
 	add_custom_command (OUTPUT quick-der/${_headername}.h
-		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
+		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${asn1header_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_headername}.asn1
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_headername}.h from ASN.1 spec")
@@ -80,3 +81,6 @@ macro(add_asn1_documents _groupname)
 	endforeach()
 endmacro()
 
+macro(set_asn2quickder_options)
+	set (asn1header_asn2quickder_options ${ARGN})
+endmacro()

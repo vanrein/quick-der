@@ -63,13 +63,18 @@ BEGIN
    RelativeDistinguishedName ::=
      SET SIZE (1..MAX) OF AttributeTypeAndValue
 
-   AttributeTypeAndValue ::= SEQUENCE {
+   Attribute ::= SEQUENCE {
      type     AttributeType,
-     value    AttributeValue }
+     values   SET OF AttributeValue }
+	-- at least one value is required
 
    AttributeType ::= OBJECT IDENTIFIER
 
    AttributeValue ::= ANY -- DEFINED BY AttributeType
+
+   AttributeTypeAndValue ::= SEQUENCE {
+     type     AttributeType,
+     value    AttributeValue }
 
    DirectoryString ::= CHOICE {
          teletexString           TeletexString (SIZE (1..MAX)),

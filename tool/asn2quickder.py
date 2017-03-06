@@ -10,7 +10,7 @@
 # a very big thank you to Schneider Electric Buildings AB for helping to
 # make this program possible!
 #
-# Copyright (c) 2016 OpenFortress B.V. and InternetWide.org
+# Copyright (c) 2016-2017 OpenFortress B.V. and InternetWide.org
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 import sys
 import os.path
+import getopt
 
 from asn1ate import parser
 from asn1ate.sema import * 
@@ -98,7 +99,7 @@ class QuickDERgen():
         # Setup function maps
         self.overlay_funmap = {
             DefinedType: self.overlayDefinedType,
-            ValueAssignment: self.ignore_node,
+            ValueAssignment: self.overlayValueAssignment,
             TypeAssignment: self.overlayTypeAssignment,
             TaggedType: self.overlayTaggedType,
             SimpleType: self.overlaySimpleType,
@@ -107,13 +108,13 @@ class QuickDERgen():
             SequenceType: self.overlayConstructedType,
             SetType: self.overlayConstructedType,
             ChoiceType: self.overlayConstructedType,
-            SequenceOfType: self.overlaySimpleType,    # var sized
-            SetOfType: self.overlaySimpleType,         # var sized
+            SequenceOfType: self.overlayRepeatingStructureType,
+            SetOfType: self.overlayRepeatingStructureType,
             ComponentType: self.overlaySimpleType,  #TODO#
         }
         self.pack_funmap = {
             DefinedType: self.packDefinedType,
-            ValueAssignment: self.ignore_node,
+            ValueAssignment: self.packValueAssignment,
             TypeAssignment: self.packTypeAssignment,
             TaggedType: self.packTaggedType,
             SimpleType: self.packSimpleType,
@@ -125,6 +126,21 @@ class QuickDERgen():
             SequenceOfType: self.packSequenceOfType,
             SetOfType: self.packSetOfType,
             ComponentType: self.packSimpleType,  #TODO#
+        }
+        self.psub_funmap = {
+            DefinedType: self.psubDefinedType,
+            ValueAssignment: self.psubValueAssignment,
+            TypeAssignment: self.psubTypeAssignment,
+            TaggedType: self.psubTaggedType,
+            SimpleType: self.psubSimpleType,
+            BitStringType: self.psubSimpleType,
+            ValueListType: self.psubSimpleType,
+            SequenceType: self.psubConstructedType,
+            SetType: self.psubConstructedType,
+            ChoiceType: self.psubConstructedType,
+            SequenceOfType: self.psubRepeatingStructureType,
+            SetOfType: self.psubRepeatingStructureType,
+            ComponentType: self.psubSimpleType,  #TODO#
         }
         self.issued_typedefs = {}  # typedef b a adds a: b to this dict, to weed out dups
 
@@ -141,6 +157,13 @@ class QuickDERgen():
     def comma(self):
         self.write(self.comma0)
         self.comma0 = self.comma1
+
+    def getcomma(self):
+        return (self.comma1, self.comma0)
+
+    def setcomma(self, (comma1,comma0)):
+        self.comma1 = comma1
+        self.comma0 = comma0
 
     def close(self):
         self.outfile.close()
@@ -218,6 +241,37 @@ class QuickDERgen():
                 else:
                     raise Exception('No pack generator for ' + str(tnm))
 
+    def generate_psub(self):
+        self.writeln()
+        self.writeln()
+        self.writeln('/* Recursive parser-sub definitions in support of SEQUENCE OF and SET OF */')
+        self.writeln()
+        for assigncompos in dependency_sort(self.semamod.assignments):
+            for assign in assigncompos:
+                tnm = type(assign)
+                if tnm in self.psub_funmap:
+		    #TODO:DEBUG# print 'Recursive call for', tnm
+                    self.psub_funmap [tnm](assign, None, None, True)
+		    #TODO:DEBUG# print 'Recursion done for', tnm
+                else:
+                    raise Exception('No psub generator for ' + str(tnm))
+
+    def generate_psub_sub(self, node, subtriples, tp, fld):
+        if fld is None:
+            fld = ''
+        else:
+            fld = '_' + fld
+        #OLD:TEST:TODO# mod = node.module_name or self.unit
+        mod = self.unit
+        self.comma ()
+        self.writeln ('const struct psub_somestruct DER_PSUB_' + mod + '_' + tp + fld + ' [] = { \\')
+        for (idx, pck, sub) in subtriples:
+            self.writeln ('\t\t{ ' + str (idx) + ', \\')
+            self.writeln ('\t\t  ' + pck + ', \\')
+            self.writeln ('\t\t  ' + sub + ' }, \\')
+        self.writeln ('\t\t{ 0, NULL, NULL } \\')
+        self.write ('\t}')
+
     def generate_overlay_node(self, node):
         tnm = type(node)
         if tnm in self.overlay_funmap:
@@ -233,8 +287,22 @@ class QuickDERgen():
         else:
             raise Exception('No pack generator for ' + str(tnm))
 
-    def ignore_node(self, node):
+    def generate_psub_node(self, node, tp, fld, prim):
+        tnm = type(node)
+	#TODO:DEBUG# print 'generate_psub_node() CALLED ON', tnm
+        if tnm in self.psub_funmap:
+            return self.psub_funmap [tnm](node, tp, fld, prim)
+        else:
+            raise Exception('No psub generator for ' + str(tnm))
+
+    def overlayValueAssignment(self, node):
         pass
+
+    def packValueAssignment(self, node):
+        pass
+
+    def psubValueAssignment(self, node, tp, fld, prim):
+        return []
 
     def overlayTypeAssignment(self, node):
         # Issue each typedef b a only once, because -- even if you
@@ -264,6 +332,16 @@ class QuickDERgen():
         self.writeln()
         self.writeln()
 
+    def psubTypeAssignment(self, node, tp, fld, prim):
+        # In lieu of typing context, fld is None
+	self.newcomma ('; \\\n\t', '#define DEFINE_DER_PSUB_' + self.unit + '_' + tosym (node.type_name) + ' \\\n\t')
+	subtriples = self.generate_psub_node (node.type_decl, tosym(node.type_name), '0', prim)
+	#TODO:DEBUG# print 'SUBTRIPLES =', subtriples
+	if subtriples != []:
+		self.generate_psub_sub (node.type_decl, subtriples, tosym(node.type_name), None)
+		self.write ('\n\n')
+        return []
+
     def overlayDefinedType(self, node):
         mod = node.module_name or self.unit
         self.write('DER_OVLY_' + tosym(mod) + '_' + tosym(node.type_name))
@@ -280,6 +358,39 @@ class QuickDERgen():
             param = '(' + outer_tag + ')'
         self.write(tagging + tosym(mod) + '_' + tosym(node.type_name) + param)
 
+    def psubDefinedType(self, node, tp, fld, prim):
+	#TODO:DEBUG# print 'DefinedType type:', node.type_name, '::', type (node.type_name)
+	modnm = node.module_name
+	#TODO:DEBUG# print 'AFTER modnm = node.module_name', modnm
+	if modnm is None:
+	    syms = self.semamod.imports.symbols_imported
+	    #TODO:DEBUG# print 'SYMS.KEYS() =', syms.keys ()
+	    for mod in syms.keys ():
+		if node.type_name in syms [mod]:
+		    modnm = mod.lower ()
+		    #TODO:DEBUG# print 'AFTER modnm = mod.lower ()', modnm
+		    break
+	if modnm is None:
+	    #NOT_IN_GENERAL# modnm = node.module_name
+	    modnm = self.unit.lower ()
+	    #TODO:DEBUG# print 'AFTER modnm = self.unit.lower ()', modnm
+	    #TODO:DEBUG# print 'MODNM =', modnm, '::', type (modnm)
+	#TODO:DEBUG# print 'Referenced module:', modnm, '::', type (modnm)
+	#TODO:DEBUG# print 'Searching case-insensitively in:', self.refmods.keys ()
+	if not self.refmods.has_key (modnm):
+	    raise Exception ('Module name "%s" not found' % modnm)
+	thetype = self.refmods [modnm].user_types () [node.type_name]
+	#TODO:DEBUG# print 'References:', thetype, '::', type (thetype)
+	popunit = self.unit
+	popsema = self.semamod
+	self.unit = modnm
+	self.semamod = self.refmods [modnm]
+        subtuples = self.generate_psub_node (thetype, node.type_name, fld, prim)
+	self.semamod = popsema
+	self.unit = popunit
+	#TODO:DEBUG# print 'SUBTUPLES =', subtuples
+	return subtuples
+
     def overlaySimpleType(self, node):
         self.write('dercursor')
 
@@ -294,6 +405,9 @@ class QuickDERgen():
             outer_tag = 'DER_TAG_' + simptp
         self.comma()
         self.write('DER_PACK_STORE | ' + outer_tag)
+
+    def psubSimpleType(self, node, tp, fld, prim):
+        return []
 
     def overlayTaggedType(self, node):
         # tag = str(node) 
@@ -332,6 +446,9 @@ class QuickDERgen():
             self.comma()
             self.write('DER_PACK_LEAVE')
 
+    def psubTaggedType(self, node, tp, fld, prim):
+        return self.generate_psub_node(node.type_decl, tp, fld, prim)
+
     # Sequence, Set, Choice
     def overlayConstructedType(self, node, naked=False):
         if not naked:
@@ -354,6 +471,36 @@ class QuickDERgen():
             self.writeln(' ' + tosym(comp.identifier) + '; // ' + str(comp.type_decl))
         if not naked:
             self.write('}')
+
+    # Sequence, Set, Choice
+    def psubConstructedType(self, node, tp, fld, prim):
+        # Iterate over field names, recursively retrieving triples;
+        # add the field's offset to each of the triples, for its holding field
+        ovly = 'DER_OVLY_' + self.unit + '_' + tp
+	#TODO:DEBUG# print 'OVERLAY =', ovly
+        comptriples = []
+        for comp in node.components:
+	    if isinstance (comp, ExtensionMarker):
+		continue
+            subfld = comp.identifier
+	    #TODO:DEBUG# print ('subfld is ' + subfld)
+	    #TODO:DEBUG# print ('Generating PSUB node for ' + str (comp.type_decl.type_name))
+            subtriples = self.generate_psub_node (comp.type_decl, tp, subfld, prim)
+	    #TODO:DEBUG# print ('Generated  PSUB node for ' + str (comp.type_decl.type_name))
+	    #TODO:DEBUG# print ('triples are ' + str (subtriples))
+	    if subfld != '0':
+		ofs = 'offsetof(' + ovly + ',' + subfld + ')/sizeof(dercursor)'
+	    else:
+		ofs = '0'
+            for (idx,pck,psb) in subtriples:
+		#TODO:DEBUG# print 'DEALING WITH', pck
+                if str (idx) == '0':
+                    idx = ofs
+                else:
+                    idx = ofs + ' + ' + str (idx)
+                comptriples.append ( (idx, pck, psb) )
+	#TODO:DEBUG# print 'psubConstructedType() RETURNS COMPONENT TRIPLES', comptriples
+        return comptriples
 
     def packSequenceType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
         if not implicit:
@@ -425,6 +572,53 @@ class QuickDERgen():
             self.comma()
             self.write('DER_PACK_LEAVE')
 
+    # Sequence Of, Set Of
+    def overlayRepeatingStructureType(self, node):
+        self.write('dernode')
+
+    # Sequence Of, Set Of
+    def psubRepeatingStructureType(self, node, tp, fld, prim):
+	if prim:
+            # 1. produce derwalk for the nested field
+	    #TODO:DEBUG# print 'FIRST STEP OF psubRepeatingStructureType()'
+	    elem_type = node.type_decl
+            if isinstance (elem_type, NamedType):
+                # We can ignore node.identifier...
+                if fld == '0':
+                    # ...but in lieu of any name, why not, if it makes rfc4511 cool!
+		    pass #TODO:BUG:NEED_0_FOR_OFFSETOF# fld = elem_type.identifier
+		    fld = elem_type.identifier
+                elem_type = elem_type.type_decl
+            self.comma ()
+            self.write ('const derwalk DER_PACK_' + self.unit + '_' + tp + '_' + fld + ' [] = {')
+            surround_comma = self.getcomma ()
+            self.newcomma (', \\\n\t\t', ' \\\n\t\t')
+            self.generate_pack_node (elem_type, implicit=False)
+	    self.comma ()
+            self.write ('DER_PACK_END }')
+            self.setcomma (surround_comma)
+            # 2. retrieve subtriples for the nested field
+	    #TODO:DEBUG# print 'SECOND STEP OF psubRepeatingStructureType()'
+	    #TODO:DEBUG# print 'PROVIDED', tp
+            subtriples = self.generate_psub_node (elem_type, tp, fld, False)
+            # 3. produce triple structure definition for the nested field
+	    #TODO:DEBUG# print 'THIRD STEP OF psubRepeatingStructureType()'
+            self.generate_psub_sub (node, subtriples, tp, fld)
+	else:
+	    pass #TODO:DEBUG# print 'FIRST,SECOND,THIRD STEP OF psubRepeatingStructureType() SKIPPED: SECONDARY'
+        # 4. return a fresh triple structure defining this repeating field
+	#TODO:DEBUG# print 'FOURTH STEP OF psubRepeatingStructureType()'
+        nam = self.unit + '_' + tp
+	if fld != '0':
+            #TODO# Maybe need to set 0, as this is also added by psubStructuredType
+            #TODO# idx = 'offsetof(DER_OVLY_' + nam + ',' + fld + ')/sizeof(dercursor)'
+	    idx = '0'
+	else:
+	    idx = '0'
+        pck = 'DER_PACK_' + nam + '_' + fld
+        psb = 'DER_PSUB_' + nam + '_' + fld
+        return [ (idx,pck,psb) ]
+
     def packSequenceOfType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
         self.comma()
         self.write('DER_PACK_STORE | ' + outer_tag)
@@ -440,26 +634,63 @@ class QuickDERgen():
 """
 
 if len(sys.argv) < 2:
-    sys.stderr.write('Usage: %s main[.asn1] dependency[.asn1]...\n'
+    sys.stderr.write('Usage: %s [-I incdir] ... main.asn1 [dependency.asn1] ...\n'
         % sys.argv [0])
     sys.exit(1)
 
-mods = []
-for file in sys.argv [1:]:
-    print('Parsing "%s"' % file)
+defmods = {}
+refmods = {}
+incdirs = []
+(opts,restargs) = getopt.getopt (sys.argv [1:], 'I:')
+for (opt,optarg) in opts:
+	if opt != '-I':
+		sys.stderr.write ('Usage: ' + sys.argv [0] + ' [-I incdir] ... main.asn1 [dependency.asn1] ...\n')
+		sys.exit (1)
+	incdirs.append (optarg)
+incdirs.append (os.path.curdir)
+for file in restargs:
+    modnm = os.path.basename (file).lower ()
+    #TODO:DEBUG# print('Parsing ASN.1 syntaxdef for "%s"' % modnm)
     with open(file, 'r') as asn1fh:
         asn1txt  = asn1fh.read()
         asn1tree = parser.parse_asn1(asn1txt)
-    print('Building semantic model for "%s"' % file)
+    #TODO:DEBUG# print('Building semantic model for "%s"' % modnm)
     asn1sem = build_semantic_model(asn1tree)
-    mods.insert(0, asn1sem [0])
-    print('Realised semantic model for "%s"' % file)
+    defmods [os.path.basename (file)    ] = asn1sem [0]
+    refmods [os.path.splitext (modnm)[0]] = asn1sem [0]
+    #TODO:DEBUG# print('Realised semantic model for "%s"' % modnm)
 
-cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
-
-cogen.generate_head()
-cogen.generate_overlay()
-cogen.generate_pack()
-cogen.generate_tail()
-
-cogen.close()
+imports = refmods.keys ()
+while imports != []:
+    dm = refmods [imports.pop ().lower ()]
+    for rm in dm.imports.symbols_imported.keys ():
+	rm = rm.lower ()
+	if not refmods.has_key (rm):
+	    #TODO:DEBUG# print ('Importing ASN.1 include for "%s"' % rm)
+	    modfh = None
+	    for incdir in incdirs:
+		try:
+		    modfh = open (incdir + os.path.sep + rm + '.asn1', 'r')
+		    break
+		except IOError:
+		    continue
+	    if modfh is None:
+		raise Exception ('No include file "%s.asn1" found' % rm)
+	    asn1txt = modfh.read()
+	    asn1tree = parser.parse_asn1(asn1txt)
+	    #TODO:DEBUG# print ('Building semantic model for "%s"' % rm)
+	    asn1sem = build_semantic_model(asn1tree)
+	    refmods [rm] = asn1sem [0]
+	    imports.append (rm)
+	    #TODO:DEBUG# print('Realised semantic model for "%s"' % rm)
+# cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
+for modnm in defmods.keys ():
+    #TODO:DEBUG# print ('Generating include file for "%s"' % modnm)
+    cogen = QuickDERgen(defmods [modnm], modnm, refmods)
+    cogen.generate_head()
+    cogen.generate_overlay()
+    cogen.generate_pack()
+    cogen.generate_psub()
+    cogen.generate_tail()
+    cogen.close()
+    #TODO:DEBUG# print ('Ready with include file for "%s"' % modnm)

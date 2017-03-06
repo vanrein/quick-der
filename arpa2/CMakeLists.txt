@@ -3,6 +3,8 @@ include(MacroASN1Header)
 
 include_directories(${CMAKE_BINARY_DIR}/rfc)
 
+set_asn2quickder_options(-I ${CMAKE_SOURCE_DIR}/rfc)
+
 add_custom_target(arpa2-headers ALL)
 add_asn1_headers(arpa2-headers
 	kxover

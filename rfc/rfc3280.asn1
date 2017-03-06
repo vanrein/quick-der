@@ -59,15 +59,20 @@ BEGIN
    RelativeDistinguishedName ::=
      SET OF AttributeTypeAndValue
 
-   AttributeTypeAndValue ::= SEQUENCE {
+   Attribute ::= SEQUENCE {
      type     AttributeType,
-     value    AttributeValue }
+     values   SET OF AttributeValue }
+		-- at least one value is required
 
    AttributeType ::= OBJECT IDENTIFIER
 
    -- asn1ate AttributeValue ::= ANY DEFINED BY AttributeType
    -- Simplification (Quick DER won't validate the OID anyway)
    AttributeValue ::= ANY
+
+   AttributeTypeAndValue ::= SEQUENCE {
+     type     AttributeType,
+     value    AttributeValue }
 
    DirectoryString ::= CHOICE {
          teletexString           TeletexString (SIZE (1..MAX)),

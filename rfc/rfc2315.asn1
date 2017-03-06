@@ -1,8 +1,12 @@
 PKCS-7 DEFINITIONS ::= BEGIN
 
 -- asn1ate: Detects missing import, namely AlgorithmIdentifier:
-IMPORTS Certificate, CertificateSerialNumber, AlgorithmIdentifier, Name
-FROM RFC3280;
+IMPORTS Certificate, CertificateSerialNumber, AlgorithmIdentifier, Name,
+	AttributeTypeAndValue
+	FROM RFC3280
+
+	CertificateRevocationList
+	FROM RFC1422;
 
 -- asn1ate: Detects missing definitions
 ExtendedCertificate ::= Certificate

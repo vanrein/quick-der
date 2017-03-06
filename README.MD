@@ -110,6 +110,31 @@ ideal for embedded applications, but is also beneficial for a secure programming
 style.
 
 
+## Memory Handling when using Quick DER
+
+Software built around Quick DER, such as
+[LillyDAP](https://github.com/vanrein/lillydap)
+for example, may well have its own regime of memory management.
+If this is the case, it is quite possible to unpack `SEQUENCE OF` and
+`SET OF` elements.  Quick DER does facilitate such approaches.
+
+The storage structure for the `SEQUENCE OF` and `SET OF` elements is not
+the usual `dercursor` field with `uint8_t *derptr` and `size_t derlen`
+attributes, but another field type `dernode` which can take a number of forms,
+namely a `dercursor` with `uint8_t *wire.derptr` and `size_t wire.derlen`
+or a `derarray` with an array of similar entries under `info.derray` and
+an array length under `info.dercnt`.
+
+The structure inserting the extra symbols `wire` for wire format and
+`info` for the array is union named `dernode`; `der_unpack()` will fill it
+with the `wire` form, but it is assumed that the caller's post-parser will
+invoke `der_unpack()` again on the components, and deliver the result in
+`info`, thereby overwriting the original `wire` format.  Before sending out an
+`info` structure with `der_pack()`, the calling application should revert to
+`wire` form again through preparing calls to `der_pack()`.
+
+
+
 ## ASN.1 Compiler
 
 We have provided a simple `asn2quickder` compiler based on
@@ -117,6 +142,13 @@ We have provided a simple `asn2quickder` compiler based on
 to generate both the overlay data structures and the
 byte codes for `der_pack()` and `der_unpack()`.  For most everyday ASN.1
 this should suffice to produce a header file from an ASN.1 module.
+
+The compiler generates annotations for external callers that wish to unpack
+`SEQUENCE OF` and `SET OF` syntax elements.  These annotations can be used
+for invoking the sub-unpacking and sub-packing procedures in a reasonably
+general manner.  We think this is the best trade-off between simplicity
+on the side of Quick DER, and ability on the side of a potentially more
+demanding ASN.1 application.
 
 
 ## RFC Collection

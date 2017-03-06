@@ -8,32 +8,34 @@ BEGIN
 
 IMPORTS
 
-Extensions{}, EXTENSION, ATTRIBUTE
-FROM PKIX-CommonTypes-2009 -- From [RFC5912]
-    {iso(1) identified-organization(3) dod(6) internet(1) security(5)
-    mechanisms(5) pkix(7) id-mod(0) id-mod-pkixCommon-02(57)}
+--asn1ate Extensions{}, EXTENSION, ATTRIBUTE
+Extensions, EXTENSION, ATTRIBUTE
+FROM RFC5912 --asn1ate PKIX-CommonTypes-2009 - - From [RFC5912]
+    --asn1ate {iso(1) identified-organization(3) dod(6) internet(1) security(5)
+    --asn1ate mechanisms(5) pkix(7) id-mod(0) id-mod-pkixCommon-02(57)}
 
-AlgorithmIdentifier{}, DIGEST-ALGORITHM, SIGNATURE-ALGORITHM, PUBLIC-KEY
-FROM AlgorithmInformation-2009 -- From [RFC5912]
-    {iso(1) identified-organization(3) dod(6) internet(1) security(5)
-    mechanisms(5) pkix(7) id-mod(0)
-    id-mod-algorithmInformation-02(58)}
+--asn1ate AlgorithmIdentifier{}, DIGEST-ALGORITHM, SIGNATURE-ALGORITHM, PUBLIC-KEY
+AlgorithmIdentifier, DIGEST-ALGORITHM, SIGNATURE-ALGORITHM, PUBLIC-KEY
+FROM RFC5912 --asn1ate AlgorithmInformation-2009 - - From [RFC5912]
+    --asn1ate {iso(1) identified-organization(3) dod(6) internet(1) security(5)
+    --asn1ate mechanisms(5) pkix(7) id-mod(0)
+    --asn1ate id-mod-algorithmInformation-02(58)}
 
 AuthorityInfoAccessSyntax, GeneralName, CrlEntryExtensions
-FROM PKIX1Implicit-2009 -- From [RFC5912]
-    {iso(1) identified-organization(3) dod(6) internet(1) security(5)
-    mechanisms(5) pkix(7) id-mod(0) id-mod-pkix1-implicit-02(59)}
+FROM RFC5912 --asn1ate PKIX1Implicit-2009 - - From [RFC5912]
+    --asn1ate {iso(1) identified-organization(3) dod(6) internet(1) security(5)
+    --asn1ate mechanisms(5) pkix(7) id-mod(0) id-mod-pkix1-implicit-02(59)}
 
 Name, CertificateSerialNumber, id-kp, id-ad-ocsp, Certificate
-FROM PKIX1Explicit-2009 -- From [RFC5912]
-    {iso(1) identified-organization(3) dod(6) internet(1) security(5)
-    mechanisms(5) pkix(7) id-mod(0) id-mod-pkix1-explicit-02(51)}
+FROM RFC5912 --asn1ate PKIX1Explicit-2009 - - From [RFC5912]
+    --asn1ate {iso(1) identified-organization(3) dod(6) internet(1) security(5)
+    --asn1ate mechanisms(5) pkix(7) id-mod(0) id-mod-pkix1-explicit-02(51)}
 
 sa-dsaWithSHA1, sa-rsaWithMD2, sa-rsaWithMD5, sa-rsaWithSHA1
-FROM PKIXAlgs-2009 -- From [RFC5912]
-    {iso(1) identified-organization(3) dod(6) internet(1) security(5)
-    mechanisms(5) pkix(7) id-mod(0)
-    id-mod-pkix1-algorithms2008-02(56)};
+FROM RFC5912; --asn1ate PKIXAlgs-2009 - - From [RFC5912]
+    --asn1ate {iso(1) identified-organization(3) dod(6) internet(1) security(5)
+    --asn1ate mechanisms(5) pkix(7) id-mod(0)
+    --asn1ate id-mod-pkix1-algorithms2008-02(56)};
 
 OCSPRequest     ::=     SEQUENCE {
     tbsRequest                  TBSRequest,
