@@ -9,14 +9,17 @@ endif()
 add_definitions(-Wall -Wextra -pedantic)
 
 set(quickder_SRC
-	der_data.c
 	der_header.c
 	der_iterate.c
 	der_pack.c
 	der_prepack.c
 	der_skipenter.c
 	der_unpack.c
-	der_walk.c)
+	der_unpack_all.c
+	der_walk.c
+	der_get_int32.c
+	der_get_uint32.c
+)
 
 add_library (quickderShared SHARED ${quickder_SRC})
 set_target_properties (quickderShared

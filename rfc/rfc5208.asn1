@@ -45,6 +45,17 @@ Attribute ::= SEQUENCE {
                 contextList  SET SIZE (1..MAX) OF Context} OPTIONAL
 }
 
+-- asn1ate: Define Context locally to avoid downward import spiral:
+
+Context ::= SEQUENCE {
+  --asn1ate: contextType    CONTEXT.&id({SupportedContexts}),
+  contextType		OBJECT IDENTIFIER,
+  contextValues
+    --asn1ate: SET SIZE (1..MAX) OF CONTEXT.&Type({SupportedContexts}{@contextType}),
+    SET SIZE (1..MAX) OF ANY DEFINED BY contextType,
+  fallback       BOOLEAN DEFAULT FALSE
+}
+
 
 -- Private-key information syntax
 

@@ -226,7 +226,7 @@ class QuickDERgen():
         self.writeln()
         for assigncompos in dependency_sort(self.semamod.assignments):
             for assign in assigncompos:
-                self.generate_overlay_node(assign)
+                self.generate_overlay_node(assign, None, None)
 
     def generate_pack(self):
         self.writeln()
@@ -256,7 +256,7 @@ class QuickDERgen():
                 else:
                     raise Exception('No psub generator for ' + str(tnm))
 
-    def generate_psub_sub(self, node, subtriples, tp, fld):
+    def generate_psub_sub(self, node, subquads, tp, fld):
         if fld is None:
             fld = ''
         else:
@@ -264,18 +264,19 @@ class QuickDERgen():
         #OLD:TEST:TODO# mod = node.module_name or self.unit
         mod = self.unit
         self.comma ()
-        self.writeln ('const struct psub_somestruct DER_PSUB_' + mod + '_' + tp + fld + ' [] = { \\')
-        for (idx, pck, sub) in subtriples:
+        self.writeln ('const struct der_subparser_action DER_PSUB_' + mod + '_' + tp + fld + ' [] = { \\')
+        for (idx,esz,pck,sub) in subquads:
             self.writeln ('\t\t{ ' + str (idx) + ', \\')
+	    self.writeln ('\t\t  ' + str (esz) + ', \\')
             self.writeln ('\t\t  ' + pck + ', \\')
             self.writeln ('\t\t  ' + sub + ' }, \\')
-        self.writeln ('\t\t{ 0, NULL, NULL } \\')
+        self.writeln ('\t\t{ 0, 0, NULL, NULL } \\')
         self.write ('\t}')
 
-    def generate_overlay_node(self, node):
+    def generate_overlay_node(self, node, tp, fld):
         tnm = type(node)
         if tnm in self.overlay_funmap:
-            self.overlay_funmap [tnm](node)
+            self.overlay_funmap [tnm](node, tp, fld)
         else:
             raise Exception('No overlay generator for ' + str(tnm))
 
@@ -295,7 +296,7 @@ class QuickDERgen():
         else:
             raise Exception('No psub generator for ' + str(tnm))
 
-    def overlayValueAssignment(self, node):
+    def overlayValueAssignment(self, node, tp, fld):
         pass
 
     def packValueAssignment(self, node):
@@ -304,20 +305,29 @@ class QuickDERgen():
     def psubValueAssignment(self, node, tp, fld, prim):
         return []
 
-    def overlayTypeAssignment(self, node):
+    def overlayTypeAssignment(self, node, tp, fld):
         # Issue each typedef b a only once, because -- even if you
         # use the same b, a each time -- type-redefinition is a C11
         # feature, which isn't what we want.
-        key = (self.unit, tosym(node.type_name))
-        if key not in self.issued_typedefs:
-            self.issued_typedefs[key] = str(node.type_decl)
-            self.write('typedef ')
-            self.generate_overlay_node(node.type_decl)
-            self.writeln(' DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + ';')
-            self.writeln()
-        else:
-            if self.issued_typedefs[key] != str(node.type_decl):
-                raise TypeError("Redefinition of type %s." % key[1])
+	# self.to_be_overlaid is a list of (tname,tdecl) pairs to be created
+	self.to_be_defined = []
+	self.to_be_overlaid = [ (tosym (node.type_name),node.type_decl) ]
+	while len (self.to_be_overlaid) > 0:
+	    (tname,tdecl) = self.to_be_overlaid.pop (0)
+            key = (self.unit, tname)
+            if not self.issued_typedefs.has_key (key):
+                self.issued_typedefs [key] = str (tdecl)
+                self.write('typedef ')
+                self.generate_overlay_node (tdecl, tname, '0')
+                self.writeln(' DER_OVLY_' + self.unit + '_' + tname + ';')
+                self.writeln()
+            else:
+                if self.issued_typedefs [key] != str (tdecl):
+                    raise TypeError("Redefinition of type %s." % key[1])
+	for tbd in self.to_be_defined:
+		if tbd != 'DER_OVLY_' + self.unit + '_' + tosym (node.type_name) + '_0':
+			self.writeln ('typedef struct ' + tbd + ' ' + tbd + ';')
+	self.writeln ()
 
     def packTypeAssignment(self, node, implicit=False):
         #TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
@@ -333,16 +343,17 @@ class QuickDERgen():
         self.writeln()
 
     def psubTypeAssignment(self, node, tp, fld, prim):
-        # In lieu of typing context, fld is None
+        # In lieu of typing context, fld is None; tp probably is too
 	self.newcomma ('; \\\n\t', '#define DEFINE_DER_PSUB_' + self.unit + '_' + tosym (node.type_name) + ' \\\n\t')
-	subtriples = self.generate_psub_node (node.type_decl, tosym(node.type_name), '0', prim)
-	#TODO:DEBUG# print 'SUBTRIPLES =', subtriples
-	if subtriples != []:
-		self.generate_psub_sub (node.type_decl, subtriples, tosym(node.type_name), None)
-		self.write ('\n\n')
+	tp = tosym (node.type_name)
+	subquads = self.generate_psub_node (node.type_decl, tp, '0', prim)
+	#TODO:DEBUG# print 'SUBTRIPLES =', subquads
+	if subquads != []:
+		self.generate_psub_sub (node.type_decl, subquads, tp, None)
+		self.write (';\n\n')
         return []
 
-    def overlayDefinedType(self, node):
+    def overlayDefinedType(self, node, tp, fld):
         mod = node.module_name or self.unit
         self.write('DER_OVLY_' + tosym(mod) + '_' + tosym(node.type_name))
 
@@ -385,13 +396,16 @@ class QuickDERgen():
 	popsema = self.semamod
 	self.unit = modnm
 	self.semamod = self.refmods [modnm]
-        subtuples = self.generate_psub_node (thetype, node.type_name, fld, prim)
+	tp2 = tosym (node.type_name)
+	fld2 = '0'
+        subtuples = self.generate_psub_node (thetype, tp2, fld2,
+			prim and (popunit == self.unit) and (tp == tp2))
 	self.semamod = popsema
 	self.unit = popunit
 	#TODO:DEBUG# print 'SUBTUPLES =', subtuples
 	return subtuples
 
-    def overlaySimpleType(self, node):
+    def overlaySimpleType(self, node, tp, fld):
         self.write('dercursor')
 
     def packSimpleType(self, node, implicit=False, outer_tag=None):
@@ -409,7 +423,7 @@ class QuickDERgen():
     def psubSimpleType(self, node, tp, fld, prim):
         return []
 
-    def overlayTaggedType(self, node):
+    def overlayTaggedType(self, node, tp, fld):
         # tag = str(node) 
         # tag = tag [:tag.find(']')] + ']'
         # self.write('/* ' + tag + ' */ ')
@@ -417,7 +431,7 @@ class QuickDERgen():
         #     tag = tag + ' IMPLICIT'
         # elif node.implicity == TagImplicity.IMPLICIT:
         #     tag = tag + ' EXPLICIT'
-        self.generate_overlay_node(node.type_decl)
+        self.generate_overlay_node(node.type_decl, tp, fld)
 
     def packTaggedType(self, node, implicit=False,outer_tag=None):
         if outer_tag is not None:
@@ -450,9 +464,14 @@ class QuickDERgen():
         return self.generate_psub_node(node.type_decl, tp, fld, prim)
 
     # Sequence, Set, Choice
-    def overlayConstructedType(self, node, naked=False):
+    def overlayConstructedType(self, node, tp, fld, naked=False):
         if not naked:
-            self.writeln('struct {');
+	    if fld == '0':
+		fld = ''
+	    else:
+		fld = '_' + fld
+            self.writeln('struct DER_OVLY_' + self.unit + '_' + tp + fld + ' {');
+	    self.to_be_defined.append ('DER_OVLY_' + self.unit + '_' + tp + fld)
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
                 self.writeln('\t/* ...ASN.1 extensions... */')
@@ -467,40 +486,47 @@ class QuickDERgen():
                 #TODO:ARG1=???# self.overlayConstructedType (comp.components_of_type, naked=True)
                 continue
             self.write('\t')
-            self.generate_overlay_node(comp.type_decl)
-            self.writeln(' ' + tosym(comp.identifier) + '; // ' + str(comp.type_decl))
+	    subfld = tosym (comp.identifier);
+            self.generate_overlay_node(comp.type_decl, tp, subfld)
+            self.writeln(' ' + subfld + '; // ' + str(comp.type_decl))
         if not naked:
             self.write('}')
 
     # Sequence, Set, Choice
     def psubConstructedType(self, node, tp, fld, prim):
-        # Iterate over field names, recursively retrieving triples;
-        # add the field's offset to each of the triples, for its holding field
-        ovly = 'DER_OVLY_' + self.unit + '_' + tp
+        # Iterate over field names, recursively retrieving quads;
+        # add the field's offset to each of the quads, for its holding field
 	#TODO:DEBUG# print 'OVERLAY =', ovly
-        comptriples = []
+        compquads = []
         for comp in node.components:
 	    if isinstance (comp, ExtensionMarker):
 		continue
-            subfld = comp.identifier
+            subfld = tosym (comp.identifier)
 	    #TODO:DEBUG# print ('subfld is ' + subfld)
 	    #TODO:DEBUG# print ('Generating PSUB node for ' + str (comp.type_decl.type_name))
-            subtriples = self.generate_psub_node (comp.type_decl, tp, subfld, prim)
+            subquads = self.generate_psub_node (comp.type_decl, tp, subfld, prim)
 	    #TODO:DEBUG# print ('Generated  PSUB node for ' + str (comp.type_decl.type_name))
-	    #TODO:DEBUG# print ('triples are ' + str (subtriples))
-	    if subfld != '0':
-		ofs = 'offsetof(' + ovly + ',' + subfld + ')/sizeof(dercursor)'
+	    #TODO:DEBUG# print ('quads are ' + str (subquads))
+            if fld == '0':
+                subtp = tp
+            else:
+                subtp = tp + '_' + fld
+            #TODO:TEST# subtp = tp + ('_' + fld if fld else '')
+            #TODO:TEST# if subfld != '0':
+	    #TODO:TEST# if subfld:
+            if subfld != '0':
+		ofs = 'DER_OFFSET (' + self.unit + ',' + subtp + ',' + subfld + ')'
 	    else:
 		ofs = '0'
-            for (idx,pck,psb) in subtriples:
+            for (idx,esz,pck,psb) in subquads:
 		#TODO:DEBUG# print 'DEALING WITH', pck
                 if str (idx) == '0':
                     idx = ofs
                 else:
-                    idx = ofs + ' + ' + str (idx)
-                comptriples.append ( (idx, pck, psb) )
-	#TODO:DEBUG# print 'psubConstructedType() RETURNS COMPONENT TRIPLES', comptriples
-        return comptriples
+                    idx = ofs + ' \\\n\t\t+ ' + str (idx)
+                compquads.append ( (idx,esz,pck,psb) )
+	#TODO:DEBUG# print 'psubConstructedType() RETURNS COMPONENT TRIPLES', compquads
+        return compquads
 
     def packSequenceType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
         if not implicit:
@@ -573,51 +599,61 @@ class QuickDERgen():
             self.write('DER_PACK_LEAVE')
 
     # Sequence Of, Set Of
-    def overlayRepeatingStructureType(self, node):
+    def overlayRepeatingStructureType(self, node, tp, fld):
+	# Generate a container element for the type...
         self.write('dernode')
+	# ...and provoke overlay generation for DER_OVLY_mod_tp_fld
+	elem_type = node.type_decl
+        if isinstance (elem_type, NamedType):
+            # We can ignore node.identifier...
+            if fld == '0':
+                # ...but in lieu of any name, why not, if it makes rfc4511 cool!
+		fld = tosym (elem_type.identifier)
+            elem_type = elem_type.type_decl
+	# Create future work to describe the repeating elements' type
+	self.to_be_overlaid.append ( (tp+'_'+fld,elem_type) )
 
     # Sequence Of, Set Of
     def psubRepeatingStructureType(self, node, tp, fld, prim):
+	elem_type = node.type_decl
+        if isinstance (elem_type, NamedType):
+            # We can ignore node.identifier...
+            if fld == '0':
+                # ...but in lieu of any name, why not, if it makes rfc4511 cool!
+		fld = tosym (elem_type.identifier)
+            elem_type = elem_type.type_decl
 	if prim:
             # 1. produce derwalk for the nested field
 	    #TODO:DEBUG# print 'FIRST STEP OF psubRepeatingStructureType()'
-	    elem_type = node.type_decl
-            if isinstance (elem_type, NamedType):
-                # We can ignore node.identifier...
-                if fld == '0':
-                    # ...but in lieu of any name, why not, if it makes rfc4511 cool!
-		    pass #TODO:BUG:NEED_0_FOR_OFFSETOF# fld = elem_type.identifier
-		    fld = elem_type.identifier
-                elem_type = elem_type.type_decl
             self.comma ()
-            self.write ('const derwalk DER_PACK_' + self.unit + '_' + tp + '_' + fld + ' [] = {')
+            self.write ('const derwalk DER_PACK_' + self.unit + '_' + tp + ('_' + fld if fld else '') + ' [] = {')
             surround_comma = self.getcomma ()
             self.newcomma (', \\\n\t\t', ' \\\n\t\t')
             self.generate_pack_node (elem_type, implicit=False)
 	    self.comma ()
             self.write ('DER_PACK_END }')
             self.setcomma (surround_comma)
-            # 2. retrieve subtriples for the nested field
+            # 2. retrieve subquads for the nested field
 	    #TODO:DEBUG# print 'SECOND STEP OF psubRepeatingStructureType()'
 	    #TODO:DEBUG# print 'PROVIDED', tp
-            subtriples = self.generate_psub_node (elem_type, tp, fld, False)
+            subquads = self.generate_psub_node (elem_type, tp, fld, False)
             # 3. produce triple structure definition for the nested field
 	    #TODO:DEBUG# print 'THIRD STEP OF psubRepeatingStructureType()'
-            self.generate_psub_sub (node, subtriples, tp, fld)
+            self.generate_psub_sub (node, subquads, tp, fld)
 	else:
 	    pass #TODO:DEBUG# print 'FIRST,SECOND,THIRD STEP OF psubRepeatingStructureType() SKIPPED: SECONDARY'
         # 4. return a fresh triple structure defining this repeating field
 	#TODO:DEBUG# print 'FOURTH STEP OF psubRepeatingStructureType()'
         nam = self.unit + '_' + tp
-	if fld != '0':
-            #TODO# Maybe need to set 0, as this is also added by psubStructuredType
-            #TODO# idx = 'offsetof(DER_OVLY_' + nam + ',' + fld + ')/sizeof(dercursor)'
-	    idx = '0'
+	idx = '0'
+	esz = 'DER_ELEMSZ (' + self.unit + ',' + tp + ',' + (fld or '') + ')'
+	if fld:
+		fld = '_' + fld
 	else:
-	    idx = '0'
-        pck = 'DER_PACK_' + nam + '_' + fld
-        psb = 'DER_PSUB_' + nam + '_' + fld
-        return [ (idx,pck,psb) ]
+		fld = ''
+        pck = 'DER_PACK_' + nam + fld
+        psb = 'DER_PSUB_' + nam + fld
+        return [ (idx,esz,pck,psb) ]
 
     def packSequenceOfType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
         self.comma()
@@ -661,8 +697,8 @@ for file in restargs:
     #TODO:DEBUG# print('Realised semantic model for "%s"' % modnm)
 
 imports = refmods.keys ()
-while imports != []:
-    dm = refmods [imports.pop ().lower ()]
+while len (imports) > 0:
+    dm = refmods [imports.pop (0).lower ()]
     for rm in dm.imports.symbols_imported.keys ():
 	rm = rm.lower ()
 	if not refmods.has_key (rm):

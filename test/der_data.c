@@ -23,7 +23,8 @@ int test_unpack_int()
 	int32_t t;
 	int r;
 
-	for (unsigned int len = 0; len < 8; ++len)
+	unsigned int len;
+	for (len = 0; len < 8; ++len)
 	{
 		/* For various lengths, construct a buffer of (len-1)*0x00 0x01 */
 		memset(buffer, 0, sizeof(buffer));

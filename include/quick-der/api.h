@@ -2,6 +2,7 @@
 #ifndef QUICK_DER_H
 #define QUICK_DER_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -213,8 +214,9 @@ typedef uint8_t derwalk;
 #define DER_TAG_NUMERICSTRING 0x12
 #define DER_TAG_PRINTABLESTRING 0x13
 #define DER_TAG_T61STRING 0x14
+#define DER_TAG_TELETEXSTRING 0x14
 #define DER_TAG_VIDEOTEXSTRING 0x15
-#define DER_TAG_IA5SRING 0x16
+#define DER_TAG_IA5STRING 0x16
 #define DER_TAG_UTCTIME 0x17
 #define DER_TAG_GENERALIZEDTIME 0x18
 #define DER_TAG_GRAPHICSTRING 0x19
@@ -247,6 +249,31 @@ typedef uint8_t derwalk;
 	DER_PACK_##mod##_##tp, \
 	DER_PACK_END };
 #define DER_PSUB_DEFINE(mod,tp) DEFINE_DER_PSUB_##mod##_##tp
+
+
+/* SUB-PARSER STRUCTURAL SUPPORT
+ *
+ * The DER_PSUB_ definitions declare lists that can be traversed by a
+ * memory-aware application, if it wants to overcome the limitation of
+ * Quick DER to not parse SEQUENCE OF and SET OF, which it skips so it
+ * can stay small and simple, due to no memory management at all.
+ *
+ * Each of these structures contain an offset for the repeating type,
+ * the size of each of its elements, and then the DER_PACK_ and
+ * DER_PSUB_ definitions accommodating its processing.  The final
+ * entry is set to { 0, 0, NULL, NULL }.
+ */
+typedef size_t der_subp_size_t;
+
+typedef struct der_subparser_action {
+	der_subp_size_t idx;
+	der_subp_size_t esz;
+	derwalk *pck;
+	struct der_subparser_action *psub;
+} der_subparser_action;
+
+#define DER_OFFSET(mod,tp,fld) (offsetof(DER_OVLY_##mod##_##tp,    fld) / sizeof(dercursor))
+#define DER_ELEMSZ(mod,tp,fld) (sizeof  (DER_OVLY_##mod##_##tp##_##fld) / sizeof(dercursor))
 
 
 /* PARSING AN ENTIRE STRUCTURE
@@ -447,6 +474,8 @@ int der_unpack (dercursor *crs, const derwalk *syntax,
  * components.  While iterating, the initial iterator must continue to be
  * supplied, without modification to it.
  *
+ * NOTE THE DIFFERENT CALLING CONVENTION FOR THIS FUNCTION!
+ *
  * This function returns 1 upon success.  In case of failure, it
  * returns 0; in addition, it sets the nested iterator for zero
  * iterations.  A special case of error is when the container cursor is
@@ -464,6 +493,21 @@ int der_iterate_first (const dercursor *container, dercursor *iterator);
 
 /* Step forward with an iterator.  This assumes an iterator that was
  * setup by der_iterate_first() and has since then not been modified.
+ *
+ * NOTE THE DIFFERENT CALLING CONVENTION FOR THIS FUNCTION!
+ *
+ * This function returns 1 upon success.  In case of failure, it
+ * returns 0; in addition, it sets the nested iterator for zero
+ * iterations.  A special case of error is when the container cursor is
+ * not pointing to a Constructed element; in this case an error is returned
+ * but the cursor will run over the contained elements when using the iterator.
+ *
+ * To be sensitive to errors, use this as follows:
+ *
+ *	if (der_iterate_first (cnt, &iter)) do {
+ *		...process entry...
+ *	} while (der_iterate_next (&iter));
+ *
  */
 int der_iterate_next (dercursor *iterator);
 

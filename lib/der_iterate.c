@@ -5,6 +5,8 @@
  * While iterating, the initial iterator must continue to be supplied, without
  * modification to it.
  *
+ * NOTE THE DIFFERENT CALLING CONVENTION FOR THIS FUNCTION!
+ *
  * This function returns 1 upon success.  In case of failure, it
  * returns 0; in addition, it sets the nested iterator for zero
  * iterations.  A special case of error is when the container cursor is
@@ -38,6 +40,21 @@ int der_iterate_first (const dercursor *container, dercursor *iterator) {
 
 /* Step forward with an iterator.  This assumes an iterator that was
  * setup by der_iterate_first() and has since then not been modified.
+ *
+ * NOTE THE DIFFERENT CALLING CONVENTION FOR THIS FUNCTION!
+ *
+ * This function returns 1 upon success.  In case of failure, it
+ * returns 0; in addition, it sets the nested iterator for zero
+ * iterations.  A special case of error is when the container cursor is
+ * not pointing to a Constructed element; in this case an error is returned
+ * but the cursor will run over the contained elements when using the iterator.
+ *
+ * To be sensitive to errors, use this as follows:
+ *
+ *	if (der_iterate_first (cnt, &iter)) do {
+ *		...process entry...
+ *	} while (der_iterate_next (&iter));
+ *
  */
 int der_iterate_next (dercursor *iterator) {
 	der_skip (iterator);

@@ -31,45 +31,8 @@ int der_get_int32(dercursor crs, int32_t *valp)
 		retval = -1;
 	}
 
-	for (unsigned int i=0; i < crs.derlen; ++i)
-	{
-		retval <<= 8;
-		retval += crs.derptr[i];
-	}
-
-	if (valp)
-	{
-		*valp = retval;
-	}
-	return 0;
-}
-
-/* Extract an unsigned int from a cursor.
- *
- * Because DER uses signed 2s complement storage, a value > 0x7fffffff needs
- * to be stored in 5 bytes: the first (big-endian) byte is then 0x00,
- * followed by the 4 byes of the value. In 40-bit signed, that's 0x00????????.
- */
-int der_get_uint32(dercursor crs, uint32_t *valp)
-{
-	uint32_t retval = 0;
-	if (crs.derlen > 5)
-	{
-		/* It won't fit. */
-		return -1;
-	}
-
-	if (crs.derlen == 5)
-	{
-		if (*crs.derptr)
-		{
-			return -1;
-		}
-		crs.derlen--;
-		crs.derptr++;
-	}
-
-	for (unsigned int i=0; i < crs.derlen; ++i)
+	unsigned int i;
+	for (i=0; i < crs.derlen; ++i)
 	{
 		retval <<= 8;
 		retval += crs.derptr[i];
