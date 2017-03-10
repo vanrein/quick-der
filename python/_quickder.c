@@ -31,8 +31,9 @@
 #include <quick-der/api.h>
 
 
-/* _quickder.der_unpack (pck, bin, numcursori) -> cursori */
+/* _quickder.quickder_unpack (pck, bin, numcursori) -> cursori */
 static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
+puts ("Welcome to der_unpack()");
 	char *pck;
 	int pcklen;
 	char *bin;
@@ -41,9 +42,11 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 	//
 	// Parse the arguments
 	PyObject *retval = NULL;
+puts ("Parsing args");
 	if (!PyArg_ParseTuple (args, "s#s#i", &pck, &pcklen, &bin, &binlen, &numcursori)) {
 		return NULL;
 	}
+puts ("Parsed fine");
 	//
 	// Allocate the dercursor array TODO:TEST
 	dercursor cursori [numcursori];
@@ -55,38 +58,45 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 		//TODO// refctr
 		return NULL;
 	}
+puts ("Unpacked properly");
 	//
 	// Construct the structure of cursori to be returned
-	retval = PyList_New (binlen);
+	retval = PyList_New (numcursori);
 	if (retval == NULL) {
 		//TODO// refctr
 		return NULL;
 	}
-	while (binlen-- > 0) {
+puts ("Created return list");
+	while (numcursori-- > 0) {
 		PyObject *elem;
-		if (cursori [binlen].derptr == NULL) {
+		if (cursori [numcursori].derptr == NULL) {
 			elem = Py_None;
 		} else {
-			elem = PyString_FromStringAndSize (cursori [binlen].derptr, cursori [binlen].derlen);
+printf ("Creating string \"%.*s\" of size %d\n", cursori [numcursori].derlen, cursori [numcursori].derptr, cursori [numcursori].derlen);
+			elem = PyString_FromStringAndSize (cursori [numcursori].derptr, cursori [numcursori].derlen);
 			if (elem == NULL) {
 				//TODO// refctr
 				return NULL;
 			}
 		}
-		if (PyList_SetItem (retval, binlen, elem)) {
+puts ("Setting return list item");
+		if (PyList_SetItem (retval, numcursori, elem)) {
 			//TODO// refctr
 			return NULL;
 		}
+puts ("Set     return list item");
 	}
 	//
 	// Cleanup and return
 	//TODO// refctr
+puts ("Returning");
 	return retval;
 }
 
 
-/* _quickder.der_pack (pck, crsvals) -> bin */
+/* _quickder.quickder_pack (pck, crsvals) -> bin */
 static PyObject *quickder_pack (PyObject *self, PyObject *args) {
+puts ("Welcome to quickder_pack");
 	char *pck;
 	int pcklen;
 	PyObject *bins;
@@ -95,14 +105,18 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	PyObject *retval = NULL;
 	//
 	// Parse arguments, generally
-	if (!PyArg_ParseTuple (args, "s#o", &pck, &pcklen, &bins)) {
+puts ("Parse tuple");
+	if (!PyArg_ParseTuple (args, "s#O", &pck, &pcklen, &bins)) {
 		return NULL;
 	}
+puts ("Parsed fine");
 	if (!PyList_Check (bins)) {
 		//TODO// refctr
 		return NULL;
 	}
+puts ("Got a list");
 	binslen = PyList_Size (bins);
+puts ("Got list size");
 	//
 	// Collect cursori, the dercursor array for der_pack()
 	//TODO:TEST// cursori = malloc (sizeof (dercursor) * binslen);
@@ -115,6 +129,7 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 		PyObject *elem = PyList_GetItem (bins, binslen);
 		if (elem == Py_None) {
 			memset (&cursori [binslen], 0, sizeof (*cursori));
+puts ("Got a NULL cursor");
 		} else if (PyString_Check (elem)) {
 			char *buf;
 			Py_ssize_t buflen;
@@ -122,6 +137,7 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 			PyString_AsStringAndSize (elem, &buf, &buflen);
 			cursori [binslen].derptr = buf;
 			cursori [binslen].derlen = buflen;
+puts ("Got a cursor");
 		} else {
 			//TODO// refctr
 			//TODO:TEST// free (cursori);
@@ -131,8 +147,8 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	//
 	// Determine the length of the packed string
 	//TODO:TEST// uint8_t *packed = NULL;
-	size_t packedlen;
-	packedlen = der_pack (pck, cursori, NULL);
+	size_t packedlen = der_pack (pck, cursori, NULL);
+printf ("Got packed data length %d\n", (int) packedlen);
 	//TODO:TEST// packed = malloc (packedlen);
 	//TODO:TEST// if (!packed) {
 		//TODO:TEST// //TODO:TEST// free (cursori);
@@ -140,18 +156,21 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 		//TODO:TEST// return NULL;
 	//TODO:TEST// }
 	uint8_t packed [packedlen];
-	der_pack (pck, cursori, packed);
+printf ("Allocated bytes at %p\n", packed);
+	der_pack (pck, cursori, packed + packedlen);
+puts ("Got packed data");
 	retval = PyString_FromStringAndSize (packed, packedlen);
 	//TODO:TEST// free (packed);
 	//
 	// Cleanup and return
 	//TODO:TEST// free (cursori);
 	//TODO// refctr
+puts ("Returning a value");
 	return retval;
 }
 
 
-static PyMethodDef quickder_methods [] = {
+static PyMethodDef der_methods [] = {
 	{ "der_unpack", quickder_unpack, METH_VARARGS, "Unpack from DER encoding with Quick DER" },
 	{ "der_pack",   quickder_pack,   METH_VARARGS, "Pack into DER encoding with Quick DER" },
 	{ NULL, NULL, 0, NULL }
@@ -160,7 +179,7 @@ static PyMethodDef quickder_methods [] = {
 
 PyMODINIT_FUNC init_quickder () {
 	PyObject *mod;
-	mod = Py_InitModule ("_quickder", quickder_methods);
+	mod = Py_InitModule ("_quickder", der_methods);
 	if (mod == NULL) {
 		return;
 	}
