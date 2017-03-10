@@ -3,9 +3,10 @@
 #DONE# add a der_pack() method
 #TODO# generate rfc1234.TypeName classes (or modules, or der_unpack functions)
 #DONE# deliver ASN1Object from the der_unpack() called on rfc1234.TypeName
-#TODO# manually program a module _quickder.so to adapt Quick DER to Python
+#DONE# manually program a module _quickder.so to adapt Quick DER to Python
 #DONE# support returning None from OPTIONAL fields
 #DONE# support a __delattr__ method (useful for OPTIONAL field editing)
+#TODO# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 
 
 # We need two methods with Python wrapping in C plugin module _quickder:
@@ -105,13 +106,17 @@ class GeneratedTypeNameClass (ASN1Object):
 		else:
 			der_data = ''
 			cursori = [(None,None)] * 2 #TODO# 2 is an example
-		GeneratedTypeNameClass.ofslen = cursori
-		GeneratedTypeNameClass.bindata = der_data
+		print 'Setting der_data to', der_data
+		print 'Setting cursori  to', cursori
+		super (GeneratedTypeNameClass, self).__init__ (
+			structure={ 'hello':0, 'world':1 }, 
+			ofslen = cursori,
+			bindata = [ der_data ] )
 
 
 # A few package methods, instantiating a class
 
-def from_der (cls, der_data):
+def der_unpack (der_data, cls):
 	if der_data is None:
 		raise Exception ('No DER data provided')
 	return cls (der_data=der_data)
