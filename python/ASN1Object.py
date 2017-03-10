@@ -74,10 +74,19 @@ class ASN1Object (object):
 		   Follow the syntax that was setup when this object
 		   was created, usually after a der_unpack() operation
 		   or a ClassName.from_der (bindata) or ClassName.empty()
-		   call.
+		   call.  Return the bytes with the packed data.
 		"""
-		return _quickder.der_pack (self.der_packer,
-						''.join (self.bindata))
+		binvals = []
+		for (ofs,siz) in self.ofslen:
+			if ofs is None:
+				binvals.append (None)
+			else:
+				elm = 0
+				while ofs >= len (bindata [elm]):
+					ofs = ofs - len (bindata [elm])
+					elm = elm + 1
+				binvals.append (bindata [elm] [ofs:ofs+siz])
+		return _quickder.der_pack (self.der_packer, binvals)
 
 
 
@@ -102,7 +111,7 @@ class GeneratedTypeNameClass (ASN1Object):
 		if bindata is not None:
 			cursori = _quickder.der_unpack (der_packer, bindata)
 		else:
-			cursori = [(0,0)] * TODO_NUM_IN_STRUCTURE
+			cursori = [(None,None)] * TODO_NUM_IN_STRUCTURE
 		return ASN1Object (der_packer=GeneratedTypeNmeClass.der_packer,
 				structure=GeneratedTypeNameClass.structure,
 				ofslen = cursori,
