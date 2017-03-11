@@ -182,6 +182,18 @@ pepe = a1.der_pack ()
 print 'pepe.length =', len (pepe)
 print 'pepe.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe))
 
+(tag,tlen,hlen) = _quickder.der_header (pepe)
+print 'der_header (pepe) =', (tag,tlen,hlen)
+pepe2 = pepe [hlen:]
+while len (pepe2) > 0:
+	print 'pepe2.length =', len (pepe2)
+	print 'pepe2.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe2))
+	(tag2,tlen2,hlen2) = _quickder.der_header (pepe2)
+	print 'der_header (pepe2) =', (tag2,tlen2,hlen2)
+	if len (pepe2) == hlen2+tlen2:
+		print 'Will exactly reach the end of pepe2'
+	pepe2 = pepe2 [hlen2+tlen2:]
+
 a3 = empty (GeneratedTypeNameClass)
 
 print 'EMPTY:', a3.hello, a3.world

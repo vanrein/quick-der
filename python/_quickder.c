@@ -35,7 +35,7 @@
 #include <quick-der/api.h>
 
 
-/* _quickder.quickder_unpack (pck, bin, numcursori) -> cursori */
+/* _quickder.der_unpack (pck, bin, numcursori) -> cursori */
 static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 	char *pck;
 	int pcklen;
@@ -89,7 +89,7 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 }
 
 
-/* _quickder.quickder_pack (pck, crsvals) -> bin */
+/* _quickder.der_pack (pck, crsvals) -> bin */
 static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	char *pck;
 	int pcklen;
@@ -138,9 +138,50 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 }
 
 
+/* _quickder.der_header (cursor) -> (tag, len, hlen) */
+static PyObject *quickder_header (PyObject *self, PyObject *args) {
+	char *buf;
+	Py_ssize_t buflen;
+	dercursor crs;
+	PyObject *retval = NULL;
+	//
+	// Verify and obtain invocation arguments
+	if (!PyArg_ParseTuple (args, "s#", &buf, &buflen)) {
+		return NULL;
+	}
+	//
+	// Retrieve header information
+	crs.derptr = buf;
+	crs.derlen = buflen;
+	uint8_t tag;
+	size_t len;
+	uint8_t hlen;
+	if (der_header (&crs, &tag, &len, &hlen)) {
+		//TODO// set error
+		//TODO// refctr
+		return NULL;
+	}
+	//
+	// Form a tuple with the values tag, len, hlen
+	retval = Py_BuildValue ("(iii)",
+			(int) tag,
+			(int) len,
+			(int) hlen);
+	if (retval == NULL) {
+		//TODO// refctr
+		return NULL;
+	}
+	//
+	// Cleanup and return
+	//TODO// refctr
+	return retval;
+}
+
+
 static PyMethodDef der_methods [] = {
 	{ "der_unpack", quickder_unpack, METH_VARARGS, "Unpack from DER encoding with Quick DER" },
 	{ "der_pack",   quickder_pack,   METH_VARARGS, "Pack into DER encoding with Quick DER" },
+	{ "der_header", quickder_header, METH_VARARGS, "Analyse a DER header with Quick DER" },
 	{ NULL, NULL, 0, NULL }
 };
 
