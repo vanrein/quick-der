@@ -9,8 +9,6 @@
 #DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 
 
-from keyword import iskeyword
-
 
 # We need two methods with Python wrapping in C plugin module _quickder:
 # der_pack() and der_unpack() with proper memory handling
@@ -36,8 +34,7 @@ class ASN1Object (object):
 		for (k,v) in structure.items ():
 			if type (k) != type (""):
 				raise Exception ("ASN.1 structure keys can only be strings")
-			while iskeyword (k):
-				k = k + '_'
+			k.replace ('-', '_')
 			if type (v) == type (13):
 				# Numbers refer to a dercursor index number
 				ASN1Object.structure [k] = ofs + v
@@ -60,22 +57,24 @@ class ASN1Object (object):
 			else:
 				raise Exception ("ASN.1 structure values can only be int, dict or (subclass,suboffset) tuples")
 
-	def __setattr__ (self, name, val):
-		if not ASN1Object.structure.has_key (name):
+	def name2idx (self, name):
+		while not ASN1Object.structure.has_key (name):
+			if name [-1:] == '_':
+				name = name [:1]
+				continue
 			raise AttributeError (name)
-		idx = ASN1Object.structure [name]
+		return ASN1Object.structure [name]
+
+	def __setattr__ (self, name, val):
+		idx = self.name2idx (name)
 		ASN1Object.bindata [idx] = val
 
 	def __delattr__ (self, name):
-		if not ASN1Object.structure.has_key (name):
-			raise AttributeError (name)
-		idx = ASN1Object.structure [name]
+		idx = self.name2idx (name)
 		ASN1Object.bindata [idx] = None
 
 	def __getattr__ (self, name):
-		if not ASN1Object.structure.has_key (name):
-			raise AttributeError (name)
-		idx = ASN1Object.structure [name]
+		idx = self.name2idx (name)
 		return ASN1Object.bindata [idx]
 
 	def der_pack (self):
