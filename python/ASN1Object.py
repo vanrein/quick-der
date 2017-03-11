@@ -33,9 +33,11 @@ class ASN1Object (object):
 		ASN1Object.structure = structure
 		ASN1Object.bindata = bindata
 		ASN1Object.offset = ofs
+		numcursori = 0
 		# Static structure is generated from the ASN.1 grammar
 		# Iterate over this structure to forming the instance data
 		for (k,v) in structure.items ():
+			numcursori = numcursori + 1
 			if type (k) != type (""):
 				raise Exception ("ASN.1 structure keys can only be strings")
 			# Interned strings yield faster dictionary lookups
@@ -62,6 +64,7 @@ class ASN1Object (object):
 							ofs )
 			else:
 				raise Exception ("ASN.1 structure values can only be int, dict or (subclass,suboffset) tuples")
+		ASN1Object.numcursori = numcursori
 
 	def _name2idx (self, name):
 		while not ASN1Object.structure.has_key (name):
@@ -90,6 +93,7 @@ class ASN1Object (object):
 		   or a der_unpack (ClassName, bindata) or empty(ClassName)
 		   call.  Return the bytes with the packed data.
 		"""
+		bindata = ASN1Object.bindata [ASN1Object.offset:ASN1Object.offset+ASN1Object.numcursori]
 		return _quickder.der_pack (self.der_packer, bindata)
 
 
