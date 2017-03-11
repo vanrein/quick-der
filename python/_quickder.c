@@ -22,6 +22,10 @@
  * INTEGER values.  We may be able to provide for such helps in a future
  * version.
  *
+ * The code below allocates DER structures on the stack, assuming that sizes
+ * are kept modest.  This may crash the program when not cared for.  We may
+ * want or need to change that through malloc() in a future version.
+ *
  * From: Rick van Rein <rick@openfortress.nl>
  */
 
@@ -33,7 +37,6 @@
 
 /* _quickder.quickder_unpack (pck, bin, numcursori) -> cursori */
 static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
-puts ("Welcome to der_unpack()");
 	char *pck;
 	int pcklen;
 	char *bin;
@@ -42,13 +45,11 @@ puts ("Welcome to der_unpack()");
 	//
 	// Parse the arguments
 	PyObject *retval = NULL;
-puts ("Parsing args");
 	if (!PyArg_ParseTuple (args, "s#s#i", &pck, &pcklen, &bin, &binlen, &numcursori)) {
 		return NULL;
 	}
-puts ("Parsed fine");
 	//
-	// Allocate the dercursor array TODO:TEST
+	// Allocate the dercursor array
 	dercursor cursori [numcursori];
 	dercursor binput;
 	binput.derptr = bin;
@@ -58,7 +59,6 @@ puts ("Parsed fine");
 		//TODO// refctr
 		return NULL;
 	}
-puts ("Unpacked properly");
 	//
 	// Construct the structure of cursori to be returned
 	retval = PyList_New (numcursori);
@@ -66,70 +66,53 @@ puts ("Unpacked properly");
 		//TODO// refctr
 		return NULL;
 	}
-puts ("Created return list");
 	while (numcursori-- > 0) {
 		PyObject *elem;
 		if (cursori [numcursori].derptr == NULL) {
 			elem = Py_None;
 		} else {
-printf ("Creating string \"%.*s\" of size %d\n", cursori [numcursori].derlen, cursori [numcursori].derptr, cursori [numcursori].derlen);
 			elem = PyString_FromStringAndSize (cursori [numcursori].derptr, cursori [numcursori].derlen);
 			if (elem == NULL) {
 				//TODO// refctr
 				return NULL;
 			}
 		}
-puts ("Setting return list item");
 		if (PyList_SetItem (retval, numcursori, elem)) {
 			//TODO// refctr
 			return NULL;
 		}
-puts ("Set     return list item");
 	}
 	//
 	// Cleanup and return
 	//TODO// refctr
-puts ("Returning");
 	return retval;
 }
 
 
 /* _quickder.quickder_pack (pck, crsvals) -> bin */
 static PyObject *quickder_pack (PyObject *self, PyObject *args) {
-puts ("Welcome to quickder_pack");
 	char *pck;
 	int pcklen;
 	PyObject *bins;
 	Py_ssize_t binslen;
-	//TODO:TEST// dercursor *cursori;
 	PyObject *retval = NULL;
 	//
 	// Parse arguments, generally
-puts ("Parse tuple");
 	if (!PyArg_ParseTuple (args, "s#O", &pck, &pcklen, &bins)) {
 		return NULL;
 	}
-puts ("Parsed fine");
 	if (!PyList_Check (bins)) {
 		//TODO// refctr
 		return NULL;
 	}
-puts ("Got a list");
 	binslen = PyList_Size (bins);
-puts ("Got list size");
 	//
 	// Collect cursori, the dercursor array for der_pack()
-	//TODO:TEST// cursori = malloc (sizeof (dercursor) * binslen);
-	//TODO:TEST// if (cursori == NULL) {
-		//TODO// refctr
-		//TODO:TEST// return NULL;
-	//TODO:TEST// }
 	dercursor cursori [binslen];
 	while (binslen-- > 0) {
 		PyObject *elem = PyList_GetItem (bins, binslen);
 		if (elem == Py_None) {
 			memset (&cursori [binslen], 0, sizeof (*cursori));
-puts ("Got a NULL cursor");
 		} else if (PyString_Check (elem)) {
 			char *buf;
 			Py_ssize_t buflen;
@@ -137,35 +120,20 @@ puts ("Got a NULL cursor");
 			PyString_AsStringAndSize (elem, &buf, &buflen);
 			cursori [binslen].derptr = buf;
 			cursori [binslen].derlen = buflen;
-puts ("Got a cursor");
 		} else {
 			//TODO// refctr
-			//TODO:TEST// free (cursori);
 			return NULL;
 		}
 	}
 	//
 	// Determine the length of the packed string
-	//TODO:TEST// uint8_t *packed = NULL;
 	size_t packedlen = der_pack (pck, cursori, NULL);
-printf ("Got packed data length %d\n", (int) packedlen);
-	//TODO:TEST// packed = malloc (packedlen);
-	//TODO:TEST// if (!packed) {
-		//TODO:TEST// //TODO:TEST// free (cursori);
-		//TODO:TEST// //TODO// refctr
-		//TODO:TEST// return NULL;
-	//TODO:TEST// }
 	uint8_t packed [packedlen];
-printf ("Allocated bytes at %p\n", packed);
 	der_pack (pck, cursori, packed + packedlen);
-puts ("Got packed data");
 	retval = PyString_FromStringAndSize (packed, packedlen);
-	//TODO:TEST// free (packed);
 	//
 	// Cleanup and return
-	//TODO:TEST// free (cursori);
 	//TODO// refctr
-puts ("Returning a value");
 	return retval;
 }
 

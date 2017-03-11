@@ -102,7 +102,6 @@ class GeneratedTypeNameClass (ASN1Object):
 			cursori = _quickder.der_unpack (der_packer, der_data, 2)
 		else:
 			cursori = [None] * 2 #TODO# 2 is an example
-		print 'Setting cursori  to', cursori
 		super (GeneratedTypeNameClass, self).__init__ (
 			structure={ 'hello':0, 'world':1 }, 
 			bindata = cursori )
