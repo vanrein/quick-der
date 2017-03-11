@@ -6,7 +6,7 @@
 #DONE# manually program a module _quickder.so to adapt Quick DER to Python
 #DONE# support returning None from OPTIONAL fields
 #DONE# support a __delattr__ method (useful for OPTIONAL field editing)
-#TODO# is there a reason, any reason, to maintain the (ofs,len) form in Python?
+#DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 
 
 # We need two methods with Python wrapping in C plugin module _quickder:
@@ -17,16 +17,15 @@ import _quickder
 
 
 # The ASN1Object is a nested structure of class, accommodating nested fields.
-# Nesting instances share the bindata and ofslen structures, which they modify
+# Nesting instances share the bindata list structures, which they modify
 # to retain sharing.  The reason for this is that a future der_pack() on the
 # class must use changes made in the nested objects as well as the main one.
 
 class ASN1Object (object):
 
-	def __init__ (self, der_packer='\x00', structure={}, ofslen=[], bindata=['']):
+	def __init__ (self, der_packer='\x00', structure={}, bindata=[]):
 		ASN1Object.der_packer = der_packer
 		ASN1Object.structure = structure
-		ASN1Object.ofslen = ofslen
 		ASN1Object.bindata = bindata
 		for (k,v) in structure.items ():
 			if type (k) != type (""):
@@ -36,58 +35,36 @@ class ASN1Object (object):
 			elif type (v) == type ({}):
 				ASN1Object.structure [k] = ASN1Object (
 							bindata,
-							structure [k],
-							ofslen )
+							structure [k] )
 			else:
 				raise Exception ("ASN.1 structure values can only be int or dict")
 
 	def __setattr__ (self, name, val):
 		if not ASN1Object.structure.has_key (name):
 			raise AttributeError (name)
-		val = str (val)
-		siz = len (val)
-		ofs = sum (map (len, ASN1Object.bindata))
-		ASN1Object.ofslen [ASN1Object.structure [name]] = (ofs,siz)
-		ASN1Object.bindata.append (val)
+		idx = ASN1Object.structure [name]
+		ASN1Object.bindata [idx] = val
 
 	def __delattr__ (self, name):
 		if not ASN1Object.structure.has_key (name):
 			raise AttributeError (name)
 		idx = ASN1Object.structure [name]
-		ASN1Object.ofslen [ASN1Object.structure [name]] = (None, None)
+		ASN1Object.bindata [idx] = None
 
 	def __getattr__ (self, name):
 		if not ASN1Object.structure.has_key (name):
 			raise AttributeError (name)
 		idx = ASN1Object.structure [name]
-		(ofs,siz) = ASN1Object.ofslen [ASN1Object.structure [name]]
-		if ofs is None:
-			# OPTIONAL or CHOICE element, not set to a value
-			return None
-		elm = 0
-		while ofs >= len (ASN1Object.bindata [elm]):
-			ofs = ofs - len (ASN1Object.bindata [elm])
-			elm = elm + 1
-		return ASN1Object.bindata [elm] [ofs:ofs+siz]
+		return ASN1Object.bindata [idx]
 
 	def der_pack (self):
 		"""Pack the current ASN1Object using DER notation.
 		   Follow the syntax that was setup when this object
 		   was created, usually after a der_unpack() operation
-		   or a from_der (ClassName, bindata) or empty(ClassName)
+		   or a der_unpack (ClassName, bindata) or empty(ClassName)
 		   call.  Return the bytes with the packed data.
 		"""
-		binvals = []
-		for (ofs,siz) in self.ofslen:
-			if ofs is None:
-				binvals.append (None)
-			else:
-				elm = 0
-				while ofs >= len (bindata [elm]):
-					ofs = ofs - len (bindata [elm])
-					elm = elm + 1
-				binvals.append (bindata [elm] [ofs:ofs+siz])
-		return _quickder.der_pack (self.der_packer, binvals)
+		return _quickder.der_pack (self.der_packer, bindata)
 
 
 
@@ -98,30 +75,30 @@ class GeneratedTypeNameClass (ASN1Object):
 
 	der_packer = '\x30\x04\x04\x00'
 	structure = { 'hello': 0, 'world': 1 }
-	ofslen = [ (0,5), (6,5) ]
 
 	def __init__ (self, der_data=None):
 		if der_data is not None:
 			cursori = _quickder.der_unpack (der_packer, der_data, 2)
 		else:
-			der_data = ''
-			cursori = [(None,None)] * 2 #TODO# 2 is an example
-		print 'Setting der_data to', der_data
+			cursori = [None] * 2 #TODO# 2 is an example
 		print 'Setting cursori  to', cursori
 		super (GeneratedTypeNameClass, self).__init__ (
 			structure={ 'hello':0, 'world':1 }, 
-			ofslen = cursori,
-			bindata = [ der_data ] )
+			bindata = cursori )
 
 
 # A few package methods, instantiating a class
 
 def der_unpack (der_data, cls):
+	if not issubclass (cls, ASN1Object):
+		raise Exception ('You can only unpack to an ASN1Object')
 	if der_data is None:
 		raise Exception ('No DER data provided')
 	return cls (der_data=der_data)
 
 def empty(cls):
+	if not issubclass (cls, ASN1Object):
+		raise Exception ('You can only create an empty ASN1Object')
 	return cls ()
 
 
@@ -130,14 +107,13 @@ if True:
 
 	der_packer = '\x30\x04\x04\x00'
 	structure = { 'hello': 0, 'world': 1 }
-	ofslen = [ (0,5), (6,5) ]
-	bindata = ['Hello World']
+	bindata = ['Hello', 'World']
 
 	# def unpack (self):
-	# 	return ASN1Object (bindata=self.bindata, ofslen=self.ofslen, structure=self.structure)
+	# 	return ASN1Object (bindata=self.bindata, structure=self.structure)
 
 	def unpack ():
-		return ASN1Object (der_packer=der_packer, bindata=bindata, ofslen=ofslen, structure=structure)
+		return ASN1Object (der_packer=der_packer, bindata=bindata, structure=structure)
 
 
 # 
@@ -185,7 +161,7 @@ a3 = empty (GeneratedTypeNameClass)
 
 print 'EMPTY:', a3.hello, a3.world
 
-a2 = from_der (GeneratedTypeNameClass, pepe)
+a2 = der_unpack (pepe, GeneratedTypeNameClass)
 
 print 'PARSED:', a2.hello, a2.world
 
