@@ -9,6 +9,9 @@
 #DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 
 
+from keyword import iskeyword
+
+
 # We need two methods with Python wrapping in C plugin module _quickder:
 # der_pack() and der_unpack() with proper memory handling
 #  * Arrays of dercursor are passed as [(ofs,len)]
@@ -23,21 +26,39 @@ import _quickder
 
 class ASN1Object (object):
 
-	def __init__ (self, der_packer='\x00', structure={}, bindata=[]):
+	def __init__ (self, der_packer='\x00', structure={}, bindata=[], ofs=0):
 		ASN1Object.der_packer = der_packer
 		ASN1Object.structure = structure
 		ASN1Object.bindata = bindata
+		ASN1Object.offset = ofs
+		# Static structure is generated from the ASN.1 grammar
+		# Iterate over this structure to forming the instance data
 		for (k,v) in structure.items ():
 			if type (k) != type (""):
 				raise Exception ("ASN.1 structure keys can only be strings")
+			while iskeyword (k):
+				k = k + '_'
 			if type (v) == type (13):
-				ASN1Object.structure [k] = v
+				# Numbers refer to a dercursor index number
+				ASN1Object.structure [k] = ofs + v
+			elif type (v) == type ((0,)):
+				# (class,suboffset) tuples are type references
+				# such late linking allows any class order
+				(subcls,subofs) = v
+				assert (issubclass (subcls, ASN1Object))
+				assert (type (subofs) == type (13))
+				ASN1Object.structure [k] = subcls (
+							bindata,
+							v.structure,
+							ofs + subofs )
 			elif type (v) == type ({}):
+				# dictionaries are ASN.1 constructed types
 				ASN1Object.structure [k] = ASN1Object (
 							bindata,
-							structure [k] )
+							structure [k],
+							ofs )
 			else:
-				raise Exception ("ASN.1 structure values can only be int or dict")
+				raise Exception ("ASN.1 structure values can only be int, dict or (subclass,suboffset) tuples")
 
 	def __setattr__ (self, name, val):
 		if not ASN1Object.structure.has_key (name):
