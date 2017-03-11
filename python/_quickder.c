@@ -55,7 +55,7 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 	binput.derptr = bin;
 	binput.derlen = binlen;
 	if (der_unpack (&binput, pck, cursori, 1)) {
-		//TODO// Raise OSError()
+		PyErr_SetFromErrno (PyExc_OSError);
 		//TODO// refctr
 		return NULL;
 	}
@@ -127,7 +127,12 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	}
 	//
 	// Determine the length of the packed string
-	size_t packedlen = der_pack (pck, cursori, NULL);
+	ssize_t packedlen = der_pack (pck, cursori, NULL);
+	if (packedlen < 0) {
+		PyErr_SetFromErrno (PyExc_OSError);
+		//TODO// refctr
+		return NULL;
+	}
 	uint8_t packed [packedlen];
 	der_pack (pck, cursori, packed + packedlen);
 	retval = PyString_FromStringAndSize (packed, packedlen);
@@ -157,7 +162,7 @@ static PyObject *quickder_header (PyObject *self, PyObject *args) {
 	size_t len;
 	uint8_t hlen;
 	if (der_header (&crs, &tag, &len, &hlen)) {
-		//TODO// set error
+		PyErr_SetFromErrno (PyExc_OSError);
 		//TODO// refctr
 		return NULL;
 	}
