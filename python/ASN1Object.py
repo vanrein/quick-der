@@ -8,6 +8,8 @@
 #DONE# support a __delattr__ method (useful for OPTIONAL field editing)
 #DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 #DONE# enjoy faster dict lookups with string interning (also done for fields)
+#DONE# Created support for SEQUENCE OF and SET OF through post-processors
+#DONE# SEQUENCE OF and SET OF for non-class-named objects can use ASN1Object
 
 
 if not 'intern' in dir (__builtins__):
@@ -49,12 +51,14 @@ class ASN1Object (object):
 			elif type (v) == type ((0,)):
 				# (class,suboffset) tuples are type references
 				# such late linking allows any class order
-				(subcls,subofs) = v
+				(subcls,subofs,proc) = v
 				assert (issubclass (subcls, ASN1Object))
 				assert (type (subofs) == type (13))
-				ASN1Object.structure [k] = subcls (
+				if proc is None:
+					proc = lambda c,b,o: c (b,o)
+				ASN1Object.structure [k] = proc (
+							subcls,
 							bindata,
-							v.structure,
 							ofs + subofs )
 			elif type (v) == type ({}):
 				# dictionaries are ASN.1 constructed types
@@ -106,14 +110,16 @@ class GeneratedTypeNameClass (ASN1Object):
 	der_packer = '\x30\x04\x04\x00'
 	structure = { 'hello': 0, 'world': 1 }
 
-	def __init__ (self, der_data=None):
+	def __init__ (self, der_data=None, ofs=0):
 		if der_data is not None:
 			cursori = _quickder.der_unpack (der_packer, der_data, 2)
 		else:
 			cursori = [None] * 2 #TODO# 2 is an example
 		super (GeneratedTypeNameClass, self).__init__ (
+			der_packer=der_packer,
 			structure={ 'hello':0, 'world':1 }, 
-			bindata = cursori )
+			bindata = cursori,
+			ofs=ofs )
 
 
 # A few package methods, instantiating a class
@@ -123,12 +129,31 @@ def der_unpack (der_data, cls):
 		raise Exception ('You can only unpack to an ASN1Object')
 	if der_data is None:
 		raise Exception ('No DER data provided')
-	return cls (der_data=der_data)
+	return cls (der_data=der_data, ofs=0)
 
 def empty(cls):
 	if not issubclass (cls, ASN1Object):
 		raise Exception ('You can only create an empty ASN1Object')
 	return cls ()
+
+
+
+# This function can be used as "proc" entry when building an ASN1Object
+def der_unpack_SEQUENCE_OF (cls, derblob, ofs, structure='SEQUENCE OF'):
+	retval = []
+	while len (derblob) > 0:
+		(tag,ilen,hlen) = _quickder.der_header (derblob)
+		print 'der_header (derblob) =', (tag,ilen,hlen)
+		if len (derblob) < hlen+ilen:
+			raise Exception (structure + ' elements must line up to a neat whole')
+		retval.append (cls (derblob [hlen:hlen+len], ofs))
+		derblob = derblob [hlen+ilen:]
+	return retval
+
+
+# This function can be used as "proc" entry when building an ASN1Object
+def der_unpack_SET_OF (cls, derblob, ofs):
+	return set (proc_mkseq (cls, derblob, ofs, structure='SET OF'))
 
 
 # class LDAPMessage (ASN1Object):
@@ -186,17 +211,17 @@ pepe = a1.der_pack ()
 print 'pepe.length =', len (pepe)
 print 'pepe.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe))
 
-(tag,tlen,hlen) = _quickder.der_header (pepe)
-print 'der_header (pepe) =', (tag,tlen,hlen)
+(tag,ilen,hlen) = _quickder.der_header (pepe)
+print 'der_header (pepe) =', (tag,ilen,hlen)
 pepe2 = pepe [hlen:]
 while len (pepe2) > 0:
 	print 'pepe2.length =', len (pepe2)
 	print 'pepe2.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe2))
-	(tag2,tlen2,hlen2) = _quickder.der_header (pepe2)
-	print 'der_header (pepe2) =', (tag2,tlen2,hlen2)
-	if len (pepe2) == hlen2+tlen2:
+	(tag2,ilen2,hlen2) = _quickder.der_header (pepe2)
+	print 'der_header (pepe2) =', (tag2,ilen2,hlen2)
+	if len (pepe2) == hlen2+ilen2:
 		print 'Will exactly reach the end of pepe2'
-	pepe2 = pepe2 [hlen2+tlen2:]
+	pepe2 = pepe2 [hlen2+ilen2:]
 
 a3 = empty (GeneratedTypeNameClass)
 
