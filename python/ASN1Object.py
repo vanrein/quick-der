@@ -9,7 +9,7 @@
 #DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
 #DONE# enjoy faster dict lookups with string interning (also done for fields)
 #DONE# Created support for SEQUENCE OF and SET OF through post-processors
-#DONE# SEQUENCE OF and SET OF for non-class-named objects can use ASN1Object
+#TODO# SEQUENCE OF and SET OF for non-class-named objects cannot use ASN1Object
 
 
 if not 'intern' in dir (__builtins__):
@@ -94,7 +94,7 @@ class ASN1Object (object):
 		"""Pack the current ASN1Object using DER notation.
 		   Follow the syntax that was setup when this object
 		   was created, usually after a der_unpack() operation
-		   or a der_unpack (ClassName, bindata) or empty(ClassName)
+		   or a der_unpack (ClassName, derblob) or empty(ClassName)
 		   call.  Return the bytes with the packed data.
 		"""
 		bindata = ASN1Object.bindata [ASN1Object.offset:ASN1Object.offset+ASN1Object.numcursori]
@@ -112,48 +112,68 @@ class GeneratedTypeNameClass (ASN1Object):
 
 	def __init__ (self, der_data=None, ofs=0):
 		if der_data is not None:
-			cursori = _quickder.der_unpack (der_packer, der_data, 2)
+			cursori = _quickder.der_unpack (self.der_packer, der_data, 2)
 		else:
 			cursori = [None] * 2 #TODO# 2 is an example
 		super (GeneratedTypeNameClass, self).__init__ (
-			der_packer=der_packer,
+			der_packer=self.der_packer,
 			structure={ 'hello':0, 'world':1 }, 
+			bindata = cursori,
+			ofs=ofs )
+
+class OctetString (ASN1Object):
+
+	der_packer = '\x04\x00'
+	structure = { 'value':0 }
+
+	def __init__ (self, der_data=None, ofs=0):
+		if der_data is not None:
+			print 'Using der_packer =', ''.join (map (lambda c:'%02x '%ord(c), self.der_packer))
+			print 'Using der_data =', ''.join (map (lambda c:'%02x '%ord(c), der_data))
+			cursori = _quickder.der_unpack (self.der_packer, der_data, 1)
+		else:
+			cursori = [None] * 1 #TODO# 1 is an example
+		super (OctetString, self).__init__ (
+			der_packer=self.der_packer,
+			structure={ 'value':0 }, 
 			bindata = cursori,
 			ofs=ofs )
 
 
 # A few package methods, instantiating a class
 
-def der_unpack (der_data, cls):
+def der_unpack (cls, der_data, ofs=0):
 	if not issubclass (cls, ASN1Object):
 		raise Exception ('You can only unpack to an ASN1Object')
 	if der_data is None:
 		raise Exception ('No DER data provided')
-	return cls (der_data=der_data, ofs=0)
+	return cls (der_data=der_data, ofs=ofs)
 
-def empty(cls):
+def empty(cls, ofs=0):
 	if not issubclass (cls, ASN1Object):
 		raise Exception ('You can only create an empty ASN1Object')
-	return cls ()
+	return cls (ofs=ofs)
 
 
 
 # This function can be used as "proc" entry when building an ASN1Object
-def der_unpack_SEQUENCE_OF (cls, derblob, ofs, structure='SEQUENCE OF'):
+def der_unpack_SEQUENCE_OF (cls, derblob, ofs=0, structure='SEQUENCE OF'):
 	retval = []
 	while len (derblob) > 0:
 		(tag,ilen,hlen) = _quickder.der_header (derblob)
 		print 'der_header (derblob) =', (tag,ilen,hlen)
 		if len (derblob) < hlen+ilen:
 			raise Exception (structure + ' elements must line up to a neat whole')
-		retval.append (cls (derblob [hlen:hlen+len], ofs))
+		print 'Creating class instance on', ''.join (map (lambda c:'%02x '%ord(c), derblob[:hlen+ilen]))
+		retval.append (cls (derblob [:hlen+ilen], ofs))
 		derblob = derblob [hlen+ilen:]
 	return retval
 
 
 # This function can be used as "proc" entry when building an ASN1Object
-def der_unpack_SET_OF (cls, derblob, ofs):
-	return set (proc_mkseq (cls, derblob, ofs, structure='SET OF'))
+def der_unpack_SET_OF (cls, derblob, ofs=0):
+	return set (der_unpack_SEQUENCE_OF (
+			cls, derblob, ofs=ofs, structure='SET OF'))
 
 
 # class LDAPMessage (ASN1Object):
@@ -223,11 +243,17 @@ while len (pepe2) > 0:
 		print 'Will exactly reach the end of pepe2'
 	pepe2 = pepe2 [hlen2+ilen2:]
 
+pepe3 = der_unpack_SEQUENCE_OF (OctetString, pepe [hlen:], 0)
+print 'pepe3 =', pepe3
+
+pepe4 = der_unpack_SET_OF (OctetString, pepe [hlen:], 0)
+print 'pepe4 =', pepe4
+
 a3 = empty (GeneratedTypeNameClass)
 
 print 'EMPTY:', a3.hello, a3.world
 
-a2 = der_unpack (pepe, GeneratedTypeNameClass)
+a2 = der_unpack (GeneratedTypeNameClass, pepe)
 
 print 'PARSED:', a2.hello, a2.world
 
