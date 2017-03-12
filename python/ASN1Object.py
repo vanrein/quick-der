@@ -36,7 +36,15 @@ import _quickder
 class ASN1Object (object):
 
 	"""The ASN1Object is an abstract base class for all the value holders
-	   of ASN.1 data.  It has no value on its own.
+	   of ASN.1 data.  It has no value on its own.  Subclasses are the
+	   following generic classes:
+	     - `ASN1ConstructedType`
+	     - `ASN1SequenceOf`
+	     - `ASN1SetOf`
+	     - `ASN1Atom`
+	   The `asn2quickder` compiler creates further subclasses of these.
+	   This means that all the data objects derived from unpacking DER
+	   data are indirect subclasses of `ASN1Obejct`.
 	"""
 
 	pass
@@ -59,6 +67,14 @@ class ASN1ConstructedType (ASN1Object):
 	   and the Python representation makes just that possible.  The result
 	   of updates will automatically be incorporated into the binary data
 	   that is used in upcoming _der_pack() invocations.
+
+	   Construct subclasses of this class, with the following attributes:
+	     * `_der_packer`
+	     * `_structure` is a dictionary that maps field names to one of
+	         - an integer index into `bindata[]`
+	         - a subdictionary shaped like `_structure`
+	         - `(class,...)` tuples referencing an `ASN1Object` subclass
+	   These structures are also built by the `asn2quickder` compiler.
 	"""
 
 	def __init__ (self, bindata=[], ofs=0, structure=None):
@@ -189,11 +205,17 @@ class ASN1SetOf (ASN1Object,set):
 
 class ASN1Atom (ASN1Object):
 
-	"""An atomic ASN.1 object.  This is used for the various STRING forms,
-	   INTEGER, REAL, BOOLEAN, ENUMERATED, ...
+	"""An atomic ASN.1 object.  This is used for `INTEGER`, `REAL`,
+	   `BOOLEAN`, `ENUMERATED` and the various `STRING`, `TIME` and
+	    `OID` forms.
+
+	   Note that `NULL` is not an ASN1Atom; it is represented in Python
+	   as `None`.
 
 	   The value contained is accessed through the value attribute, and
 	   forms the literal byte representation without the DER header.
+
+	   TODO: Map value changes to context for `_der_pack()` calls.
 	"""
 
 	value = ''
@@ -220,6 +242,7 @@ class GeneratedTypeNameClass (ASN1ConstructedType):
 		super (GeneratedTypeNameClass, self).__init__ (
 			bindata = cursori,
 			ofs=ofs )
+
 
 class OctetString (ASN1ConstructedType):
 
@@ -293,8 +316,10 @@ def der_pack_INTEGER (ival):
 
 # This function can be used as "proc" entry when interpreting INTEGER content
 def der_unpack_INTEGER (cls_ignored, derblob, ofs_ignored=0):
+	if derblob == '':
+		return 0
 	retval = 0
-	if (derblob [0]) & 0x80:
+	if ord (derblob [0]) & 0x80:
 		retval = -1
 	for byt in map (ord, derblob):
 		retval = (retval << 8) + byt
@@ -419,3 +444,10 @@ a2 = der_unpack (GeneratedTypeNameClass, pepe)
 
 print 'PARSED:', a2.hello, a2.world
 
+i1 = der_pack_INTEGER (12345)
+print 'Packed 12345 into', ''.join (map (lambda c:'%02x '%ord(c), i1))
+print 'Unpacking gives', der_unpack_INTEGER (None, i1)
+
+i2 = der_pack_INTEGER (-12345)
+print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
+print 'Unpacking gives', der_unpack_INTEGER (None, i2)
