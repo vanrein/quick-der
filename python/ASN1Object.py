@@ -226,6 +226,9 @@ class ASN1Atom (ASN1Object):
 
 	__str__ = get
 
+	def __len__ (self):
+		return len (self.value)
+
 	def __int__ (self):
 		if self.value == '':
 			return 0
@@ -497,13 +500,13 @@ print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
 print 'Unpacking gives', der_unpack_INTEGER (None, i2)
 
 i3 = ASN1Atom (i1)
-print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3)))
+print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
 print 'Atom int is', int (i3)
 
 i4 = ASN1Atom (i2)
-print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4)))
+print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
 print 'Atom int is', int (i4)
 
 i0 = ASN1Atom ()
-print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0)))
+print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
 print 'Atom int is', int (i0)
