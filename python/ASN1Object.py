@@ -90,8 +90,13 @@ class ASN1ConstructedType (ASN1Object):
 		if structure is None:
 			structure = self._structure
 		for (k,v) in structure.items ():
+			if type (k) != str:
+				raise Exception ("ASN.1 structure keys can only be strings")
+			# Interned strings yield faster dictionary lookups
+			# Field names in Python are always interned
+			k = intern (k.replace ('-', '_'))
+			self._fields [k] = build_asn1 (v, bindata, ofs)
 			numcursori = numcursori + 1
-			self._fields [k] = build_asn1 ( (k,v), bindata, ofs )
 		self._numcursori = numcursori
 
 	def _name2idx (self, name):
@@ -240,35 +245,27 @@ class ASN1Atom (ASN1Object):
 		return retval
 
 
-def build_asn1 ( (k,v), bindata, ofs):
-	if type (k) != str:
-		raise Exception ("ASN.1 structure keys can only be strings")
-	# Interned strings yield faster dictionary lookups
-	# Field names in Python are always interned
-	k = intern (k.replace ('-', '_'))
-	vt = type (v)
-	if vt == int:
+def build_asn1 (structure, bindata, ofs):
+	t = type (structure)
+	if t == int:
 		# Numbers refer to a dercursor index number
-		return ofs + v
-	elif vt == tuple:
+		return ofs + structure
+	elif t == tuple:
 		# (class,suboffset) tuples are type references
 		# such late linking allows any class order
-		(subcls,subofs) = v
+		(subcls,subofs) = structure
 		assert (issubclass (subcls, ASN1Object))
 		assert (type (subofs) == int)
 		return subcls (bindata, ofs + subofs)
-	elif vt == list:
-		assert (len (v) == 1)
-		return ASN1SequenceOf (v [0], bindata [ofs])
-	elif vt == set:
-		assert (len (v) == 1)
-		return ASN1SetOf (v [0], bindata [ofs])
-	elif vt == dict:
+	elif t == list:
+		assert (len (structure) == 1)
+		return ASN1SequenceOf (structure [0], bindata [ofs])
+	elif t == set:
+		assert (len (structure) == 1)
+		return ASN1SetOf (structure [0], bindata [ofs])
+	elif t == dict:
 		# dictionaries are ASN.1 constructed types
-		return ASN1ConstructedType (
-					bindata,
-					ofs,
-					structure = structure [k] )
+		return ASN1ConstructedType (bindata, ofs, structure=structure)
 	else:
 		raise ValueError ("ASN.1 structure must be int, dict, list, set or (subclass,suboffset)")
 
