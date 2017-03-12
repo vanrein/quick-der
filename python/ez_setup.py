@@ -10,7 +10,7 @@ sharedlib = Library (
 )
 
 setup (
-	name = "Quick DER",
+	name = 'quick_der',
 	version = "0.1",	#TODO# CMake
 	packages = find_packages (),
 	scripts = [ 'ASN1Object.py' ],

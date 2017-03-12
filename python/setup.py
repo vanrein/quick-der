@@ -14,7 +14,7 @@ sharedlib = Extension (
 
 if __name__ == '__main__':
 	setup (
-		name='quickder',
+		name='quick_der',
 		version='${PACKAGE_VERSION}',
 		#TODO# package_dir={ '': '${CMAKE_CURRENT_SOURCE_DIR}' },
 		package_dir={ '': '.' },

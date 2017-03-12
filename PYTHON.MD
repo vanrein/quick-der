@@ -48,7 +48,8 @@ change it, and then repack the overall structure, to find the changes made
 in the embedded object.  If this is not what you need, you should `clone()`
 the respective object.
 
-Any `ASN1Object` may be turned into DER bytes through `der_pack()`.  This
+Any `ASN1Object` may be turned into DER bytes through its `_der_pack()`
+method (not an ASN.1 name) or the packages `der_pack()` function.  This
 uses the information stored in the object to find the format for packing.
 In general, using Quick DER under Python means that you are using classes,
 not packer descriptions such as in C.  It marks the differences between
@@ -97,5 +98,5 @@ implement a Kerberos Ticket:
             """
             tkt = Ticket (der)
             tkt.realm = newrealm
-            return tkt.der_pack ()
+            return tkt._der_pack ()
 
