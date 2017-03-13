@@ -39,7 +39,40 @@ def tosym(name):
     return str(name).replace(' ', '').replace('-', '_')
 
 
-class QuickDERgen():
+class QuickDERgeneric (object):
+
+    def __init__ (self, outfn, outext):
+        self.unit, curext = os.path.splitext (outfn)
+        if curext == '.h':
+            raise Exception('File cannot overwrite itself -- use another extension than ' + outext + ' for input files')
+        self.outfile = open(self.unit + outext, 'w')
+
+    def write(self, txt):
+        self.outfile.write(txt)
+
+    def writeln(self, txt=''):
+        self.outfile.write(txt + '\n')
+
+    def newcomma(self, comma, firstcomma=''):
+        self.comma0 = firstcomma
+        self.comma1 = comma
+
+    def comma(self):
+        self.write(self.comma0)
+        self.comma0 = self.comma1
+
+    def getcomma(self):
+        return (self.comma1, self.comma0)
+
+    def setcomma(self, (comma1,comma0)):
+        self.comma1 = comma1
+        self.comma0 = comma0
+
+    def close(self):
+        self.outfile.close()
+
+
+class QuickDER2c (QuickDERgeneric):
     """Generate the C header files for Quick DER, a.k.a. Quick and Easy DER.
 
        There are two things that are generated for each of the ASN.1 syntax
@@ -92,10 +125,8 @@ class QuickDERgen():
     def __init__(self, semamod, outfn, refmods):
         self.semamod = semamod
         self.refmods = refmods
-        self.unit, outext = os.path.splitext (outfn)
-        if outext == '.h':
-            raise Exception('File cannot overwrite itself -- use another extension than .h for input files')
-        self.outfile = open(self.unit + '.h', 'w')
+	# Open the output file
+	super (QuickDER2c,self).__init__ (outfn, '.h')
         # Setup function maps
         self.overlay_funmap = {
             DefinedType: self.overlayDefinedType,
@@ -144,37 +175,11 @@ class QuickDERgen():
         }
         self.issued_typedefs = {}  # typedef b a adds a: b to this dict, to weed out dups
 
-    def write(self, txt):
-        self.outfile.write(txt)
-
-    def writeln(self, txt=''):
-        self.outfile.write(txt + '\n')
-
-    def newcomma(self, comma, firstcomma=''):
-        self.comma0 = firstcomma
-        self.comma1 = comma
-
-    def comma(self):
-        self.write(self.comma0)
-        self.comma0 = self.comma1
-
-    def getcomma(self):
-        return (self.comma1, self.comma0)
-
-    def setcomma(self, (comma1,comma0)):
-        self.comma1 = comma1
-        self.comma0 = comma0
-
-    def close(self):
-        self.outfile.close()
-
     def generate_head(self):
         self.writeln('/*')
         self.writeln(' * asn2quickder output for ' + self.semamod.name + ' -- automatically generated')
         self.writeln(' *')
-        self.writeln(' * For information on Quick `n\' Easy DER, see https://github.com/vanrein/quick-der')
-        self.writeln(' *')
-        self.writeln(' * For information on the code generator, see https://github.com/vanrein/asn2quickder')
+        self.writeln(' * Read more about Quick `n\' Easy DER on https://github.com/vanrein/quick-der')
         self.writeln(' *')
         self.writeln(' */')
         self.writeln()
@@ -664,6 +669,252 @@ class QuickDERgen():
         self.write('DER_PACK_STORE | ' + outer_tag)
 
 
+class QuickDER2py (QuickDERgeneric):
+	"""Generate Python modules with Quick DER definitions, based on
+	   generic definitions in the quick_der module.  The main task of
+	   this generator is to provide class definitions that subclass
+	   ASN1Object (usually through an intermediate subclass such as
+	   ASN1StructuredType) and can be invoked with a binary string
+	   holding DER-encoded data, or without any argument to create
+	   an empty structure.  The resulting classes support both the
+	   der_pack() and der_unpack() operations.  See PYTHON.MD!
+
+	   The recursion model strives for two, overlapping, goals and
+	   must therefore be stopped explicitly.  First, it constructs
+	   packer code up to a SEQUENCE OF or SET OF or ANY and cannot
+	   support recursion (yet).  This form of recursion can stop as
+	   soon as any of the packer-terminal codes is reached, but it
+	   needs to follow type references via DefinedType elements.
+	   The second reason for recursion is to produce class code,
+	   and this passes through SEQUENCE OF and SET OF (but not ANY)
+	   to complete the class definition.  It does not need to
+	   traverse to other classes by following DefinedType elements,
+	   however.  Each of these discards certain information from
+	   their continued explorations, and when both kinds of
+	   traversal were crossed, the data would only be collected to
+	   be discarded.  This can be avoided by knowing whether both
+	   forms have been crossed, and stopping the further traversal
+	   if this is indeed the case.  In terms of code, once the
+	   execution reaches a point where it would set one flag, it
+	   would check the other flag and return trivially if this
+	   is already/also set.  Flags are only raised for the
+	   duration of the recursive traversal, and they may be set
+	   multiple times before the other flag is set, so they are
+	   subjected to a stack-based regimen -- or, even simpler,
+	   to nesting counters.  The first form is managed with
+	   nested_typecuts, the second with nested_typerefs.
+	"""
+
+	def __init__(self, semamod, outfn, refmods):
+		self.semamod = semamod
+		self.refmods = refmods
+		# Open the output file
+		super (QuickDER2py,self).__init__ (outfn, '.py')
+		# Setup the function maps for generating Python
+		self.funmap_pytype = {
+			DefinedType: self.pytypeDefinedType,
+			SimpleType: self.pytypeSimple,
+			BitStringType: self.pytypeSimple,
+			ValueListType: self.pytypeSimple,
+			NamedType: self.pytypeNamedType,
+			TaggedType: self.pytypeTagged,
+			ChoiceType: self.pytypeChoice,
+			SequenceType: self.pytypeSequence,
+			SetType: self.pytypeSet,
+			SequenceOfType: self.pytypeSequenceOf,
+			SetOfType: self.pytypeSetOf,
+		}
+
+	def comment (self, text):
+		for ln in str (text).split ('\n'):
+			self.writeln ('# ' + ln)
+
+	def generate_head (self):
+		self.writeln ('#')
+		self.writeln ('# asn2quickder output for ' + self.semamod.name + ' -- automatically generated')
+		self.writeln ('#')
+		self.writeln ('# Read more about Quick `n\' Easy DER on https://github.com/vanrein/quick-der')
+		self.writeln ('#')
+		self.writeln ()
+		self.writeln ()
+		self.writeln ('#')
+		self.writeln ('# Import general definitions and package dependencies')
+		self.writeln ('#')
+		self.writeln ()
+		self.writeln ('import quick_der.api as _api')
+		self.writeln ()
+		imports = self.semamod.imports.symbols_imported
+		for rm in imports.keys ():
+			pymod = tosym(rm.rsplit('.', 1) [0]).lower()
+			self.write ('from ' + pymod + ' import ')
+			self.writeln (', '.join (map (tosym, imports [rm])))
+		self.writeln ()
+		self.writeln ()
+
+	def generate_tail (self):
+		self.writeln()
+		self.writeln('# asn2quickder output for ' + self.semamod.name + ' ends here')
+
+	def generate_classes (self):
+		self.writeln ('#')
+		self.writeln ('# Classes for ASN.1 type assignments')
+		self.writeln ('#')
+		self.writeln ()
+		for assigncompos in dependency_sort(self.semamod.assignments):
+			for assign in assigncompos:
+				if type (assign) != TypeAssignment:
+					self.writeln ('# Skipping non-TypeAssignment:')
+					self.comment (assign)
+					self.writeln ()
+					continue
+				self.pygenTypeAssignment (assign)
+
+	def pygenTypeAssignment (self, node):
+		def pygen_class (clsnm, tp, pck, stru):
+			pck = pck + [ 'DER_PACK_END' ]
+			self.writeln ('class ' + clsnm + ' (_api.' + tp + '):')
+			self.writeln ('\t\t_der_packer = ' + repr (pck))
+			self.writeln ('\t\t_structure = ' + repr (stru))
+			#TODO# Possibly, generate __init__()
+			self.writeln ()
+		self.cursor_offset = 0
+		self.nested_typerefs = 0
+		self.nested_typecuts = 0
+		self.comment (node)
+		(tp,pck,stru) = self.generate_pytype (node.type_decl)
+		pygen_class (tosym (node.type_name), tp, pck, stru)
+
+	def generate_pytype (self, node):
+		sys.stderr.write ('Node = ' + str (node) + '\n')
+		tnm = type (node)
+		if tnm not in self.funmap_pytype.keys ():
+			raise Exception ('Failure to generate a python type for ' + str (tnm))
+		return self.funmap_pytype [tnm] (node)
+
+	def pytypeDefinedType (self, node):
+		if self.nested_typecuts > 0:
+			# We are about to recurse on self.nested_typerefs
+			# but the recursion for self.nested_typecuts
+			# has also occurred, so we can cut off recursion
+			#TODO# Class references, rest rightfully None?
+			return (None,[],999)
+		modnm = node.module_name
+		if modnm is None:
+			syms = self.semamod.imports.symbols_imported
+			for mod in syms.keys ():
+				if node.type_name in syms [mod]:
+					modnm = mod.lower ()
+					break
+		if modnm is None:
+			modnm = self.unit.lower ()
+		if not self.refmods.has_key (modnm):
+			raise Exception ('Module name "%s" not found' % modnm)
+		popunit = self.unit
+		popsema = self.semamod
+		popcofs = self.cursor_offset
+		#TODO# cursor_offset?
+		self.unit = modnm
+		self.semamod = self.refmods [modnm]
+		self.nested_typerefs = self.nested_typerefs + 1
+		thetype = self.refmods [modnm].user_types () [node.type_name]
+		(tp,pck,stru) = self.generate_pytype (thetype)
+		self.nested_typerefs = self.nested_typerefs - 1
+		#TODO# cursor_offset?
+		#TODO# stru should reference the class?
+		self.semamod = popsema
+		self.unit = popunit
+		return (tp,pck,stru)
+
+	def pytypeSimple (self, node):
+		tp = 'ASN1Atom'
+		simptp = node.type_name.replace (' ', '').upper ()
+		if simptp == 'ANY':
+			# ANY counts as self.nested_typecuts but does not
+			# have subtypes to traverse, so no attention to
+			# recursion cut-off is needed or even possible here
+			pck = [ 'DER_PACK_ANY' ]
+		else:
+			pck = [ 'DER_PACK_STORE | DER_TAG_' + simptp ]
+		stru = self.cursor_offset
+		self.cursor_offset = stru + 1
+		return (tp,pck,stru)
+
+	def pytypeTagged (self, node):
+		return self.generate_pytype (node.type_decl)
+
+	def pytypeNamedType (self, node):
+		#TODO# Ignore field name... or should be we use it any way?
+		return self.generate_pytype (node.type_decl)
+
+	def pyhelpConstructedType (self, node):
+		class HashableDictionary (dict):
+			"""This is a dict extension with a __hash__() method
+			   returning the dictionary's identity.  This is
+			   needed because sets distinguish elements by their
+			   hash, a set of dict instances cannot be built.
+			"""
+			def __hash__ (self):
+				return id (self)
+		tp = 'ASN1ConstructedType'
+		pck = []
+		stru = HashableDictionary ()
+		for comp in node.components:
+			if isinstance(comp, ExtensionMarker):
+				#TODO# ...ASN.1 extensions...
+				continue
+			if isinstance (comp, ComponentType) and comp.components_of_type is not None:
+				#TODO# ...COMPONENTS OF...
+				continue
+			(tp1,pck1,stru1) = self.generate_pytype (comp.type_decl)
+			#TODO# loose tp1
+			pck = pck + pck1
+			stru [tosym (comp.identifier)] = stru1
+		return (tp,pck,stru)
+
+	def pytypeChoice (self, node):
+		(tp,pck,stru) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_CHOICE_BEGIN' ] + pck + [ 'DER_PACK_CHOICE_END' ]
+		return (tp,pck,stru)
+
+	def pytypeSequence (self, node):
+		(tp,pck,stru) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | DER_PACK_SEQUENCE' ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,stru)
+
+	def pytypeSet (self, node):
+		(tp,pck,stru) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | DER_PACK_SET' ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,stru)
+
+	def pytypeSequenceOf (self, node):
+		if self.nested_typerefs > 0:
+			# We are about to recurse on self.nested_typecuts
+			# but the recursion for self.nested_typerefs
+			# has also occurred, so we can cut off recursion
+			stru = None
+		else:
+			self.nested_typecuts = self.nested_typecuts + 1
+			(tp,pck,stru) = self.generate_pytype (node.type_decl)
+			self.nested_typecuts = self.nested_typecuts - 1
+			#TODO# We need to return a type/class and pck,stru
+		pck = [ 'DER_PACK_STORE | DER_PACK_SEQUENCE' ]
+		return ('ASN1SequenceOf',pck,[stru])
+
+	def pytypeSetOf (self, node):
+		if self.nested_typerefs > 0:
+			# We are about to recurse on self.nested_typecuts
+			# but the recursion for self.nested_typerefs
+			# has also occurred, so we can cut off recursion
+			stru = None
+		else:
+			self.nested_typecuts = self.nested_typecuts + 1
+			(tp,pck,stru) = self.generate_pytype (node.type_decl)
+			self.nested_typecuts = self.nested_typecuts - 1
+			#TODO# We need to return a type/class and pck,stru
+		pck = [ 'DER_PACK_STORE | DER_PACK_SET' ]
+		return ('ASN1SetOf',pck,set([stru]))
+
+
 """The main program asn2quickder is called with one or more .asn1 files,
    the first of which is mapped to a C header file and the rest is
    loaded to fulfil dependencies.
@@ -719,14 +970,26 @@ while len (imports) > 0:
 	    refmods [rm] = asn1sem [0]
 	    imports.append (rm)
 	    #TODO:DEBUG# print('Realised semantic model for "%s"' % rm)
-# cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
+
+# Generate C header files
 for modnm in defmods.keys ():
-    #TODO:DEBUG# print ('Generating include file for "%s"' % modnm)
-    cogen = QuickDERgen(defmods [modnm], modnm, refmods)
-    cogen.generate_head()
-    cogen.generate_overlay()
-    cogen.generate_pack()
-    cogen.generate_psub()
-    cogen.generate_tail()
-    cogen.close()
-    #TODO:DEBUG# print ('Ready with include file for "%s"' % modnm)
+	#TODO:DEBUG# print ('Generating C header file for "%s"' % modnm)
+	cogen = QuickDER2c (defmods [modnm], modnm, refmods)
+	cogen.generate_head ()
+	cogen.generate_overlay ()
+	cogen.generate_pack ()
+	cogen.generate_psub ()
+	cogen.generate_tail ()
+	cogen.close ()
+	#TODO:DEBUG# print ('Ready with C header file for "%s"' % modnm)
+
+# Generate Python modules
+for modnm in defmods.keys ():
+	#TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
+	cogen = QuickDER2py (defmods [modnm], modnm, refmods)
+	cogen.generate_head ()
+	cogen.generate_classes ()
+	cogen.generate_tail ()
+	cogen.close ()
+	#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
+

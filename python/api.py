@@ -18,8 +18,12 @@
 import string
 
 
+#TODO# Apparently, intern() is not available inside packages?!?
 if not 'intern' in dir (__builtins__):
-	from sys import intern
+	try:
+		from sys import intern
+	except ImportError:
+		intern = lambda s: s
 
 
 # We need two methods with Python wrapping in C plugin module _quickder:
@@ -76,7 +80,7 @@ class ASN1ConstructedType (ASN1Object):
 	         - a subdictionary shaped like `_structure`
 	         - singleton list capturing the element type of SEQUENCE OF
 	         - singleton set  capturing the element type of SET OF
-	         - `(class,...)` tuples referencing an `ASN1Object` subclass
+	         - `(class,offset)` tuples referencing an `ASN1Object` subclass
 	   These structures are also built by the `asn2quickder` compiler.
 	"""
 
@@ -270,6 +274,7 @@ def build_asn1 (typdesc, bindata=[], ofs=0):
 		assert (len (typdesc) == 1)
 		return ASN1SequenceOf (typdesc [0], bindata [ofs])
 	elif t == set:
+		#TODO# typedesc may be made from an unhashable type!
 		assert (len (typdesc) == 1)
 		return ASN1SetOf (typdesc [0], bindata [ofs])
 	elif t == dict:

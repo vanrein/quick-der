@@ -1,0 +1,8 @@
+
+import sys
+sys.path = [ '../../python', 'quick-der' ] + sys.path
+
+import @ASN1_MODULE_NAME@
+
+sys.exit (0)
+
