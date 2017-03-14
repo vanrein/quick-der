@@ -12,12 +12,73 @@
 #DONE# split ASN1Object into abstract and ASN1ConstructedType (and more?)
 #DONE# unpack INTEGER types to Python anysize integers (unpack_der_INTEGER?)
 #DONE# (re)pack mapped Python types in der_pack(): int, set ([]), []
+#DONE# define names like DER_PACK_xxx and DER_TAG_xxx in quick_der.api
 #TODO# generate rfc1234.TypeName classes (or modules, or der_unpack functions)
 #TODO# need to distinguish DER NULL; represent not as None but a data object
 #TODO# construct the __str__ value following ASN.1 value notation
 
 
 import string
+
+
+# Special markers for instructions for (un)packing syntax
+DER_PACK_LEAVE = 0x00
+DER_PACK_END = 0x00
+DER_PACK_OPTIONAL = 0x3f
+DER_PACK_CHOICE_BEGIN = 0x1f
+DER_PACK_CHOICE_END = 0x1f
+DER_PACK_ANY 0xdf
+
+# Flags to add to tags to indicate entering or storing them while (un)packing
+DER_PACK_ENTER = 0x20
+DER_PACK_STORE = 0x00
+DER_PACK_MATCHBITS (~ (DER_PACK_ENTER | DER_PACK_STORE) )
+
+# Universal tags and macros for application, contextual, private tags
+DER_TAG_BOOLEAN = 0x01
+DER_TAG_INTEGER = 0x02
+DER_TAG_BITSTRING = 0x03
+DER_TAG_BIT_STRING = 0x03
+DER_TAG_OCTETSTRING = 0x04
+DER_TAG_OCTET_STRING = 0x04
+DER_TAG_NULL = 0x05
+DER_TAG_OBJECTIDENTIFIER = 0x06
+DER_TAG_OBJECT_IDENTIFIER = 0x06
+DER_TAG_OID = 0x06
+DER_TAG_OBJECT_DESCRIPTOR = 0x07
+DER_TAG_EXTERNAL = 0x08
+DER_TAG_REAL = 0x09
+DER_TAG_ENUMERATED = 0x0a
+DER_TAG_EMBEDDEDPDV = 0x0b
+DER_TAG_EMBEDDED_PDV = 0x0b
+DER_TAG_UTF8STRING = 0x0c
+DER_TAG_RELATIVEOID = 0x0d
+DER_TAG_RELATIVE_OID = 0x0d
+DER_TAG_SEQUENCE = 0x10
+DER_TAG_SEQUENCEOF = 0x10
+DER_TAG_SEQUENCE_OF = 0x10
+DER_TAG_SET = 0x11
+DER_TAG_SETOF = 0x11
+DER_TAG_SET_OF = 0x11
+DER_TAG_NUMERICSTRING = 0x12
+DER_TAG_PRINTABLESTRING = 0x13
+DER_TAG_T61STRING = 0x14
+DER_TAG_TELETEXSTRING = 0x14
+DER_TAG_VIDETEXSTRING = 0x15
+DER_TAG_IA5STRING = 0x16
+DER_TAG_UTCTIME = 0x17
+DER_TAG_GENERALIZEDTIME = 0x18
+DER_TAG_GRAPHICSTRING = 0x19
+DER_TAG_VISIBLESTRING = 0x1a
+DER_TAG_GENERALSTRING = 0x1b
+DER_TAG_UNIVERSALSTRING = 0x1c
+DER_TAG_CHARACTERSTRING = 0x1d
+DER_TAG_CHARACTER_STRING = 0x1d
+DER_TAG_BMPSTRING = 0x1e
+
+DER_TAG_APPLICATION = lambda n: 0x40 | n
+DER_TAG_CONTEXT = lambda n: 0x80 | n
+DER_TAG_PRIVATE = lambda n: 0xc0 | n
 
 
 #TODO# Apparently, intern() is not available inside packages?!?

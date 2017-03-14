@@ -771,7 +771,7 @@ class QuickDER2py (QuickDERgeneric):
 
 	def pygenTypeAssignment (self, node):
 		def pygen_class (clsnm, tp, pck, stru):
-			pck = pck + [ 'DER_PACK_END' ]
+			pck = pck + [ '_api.DER_PACK_END' ]
 			self.writeln ('class ' + clsnm + ' (_api.' + tp + '):')
 			self.writeln ('\t\t_der_packer = ' + repr (pck))
 			self.writeln ('\t\t_structure = ' + repr (stru))
@@ -832,9 +832,9 @@ class QuickDER2py (QuickDERgeneric):
 			# ANY counts as self.nested_typecuts but does not
 			# have subtypes to traverse, so no attention to
 			# recursion cut-off is needed or even possible here
-			pck = [ 'DER_PACK_ANY' ]
+			pck = [ '_api.DER_PACK_ANY' ]
 		else:
-			pck = [ 'DER_PACK_STORE | DER_TAG_' + simptp ]
+			pck = [ '_api.DER_PACK_STORE | _api.DER_TAG_' + simptp ]
 		stru = self.cursor_offset
 		self.cursor_offset = stru + 1
 		return (tp,pck,stru)
@@ -873,17 +873,17 @@ class QuickDER2py (QuickDERgeneric):
 
 	def pytypeChoice (self, node):
 		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ 'DER_PACK_CHOICE_BEGIN' ] + pck + [ 'DER_PACK_CHOICE_END' ]
+		pck = [ '_api.DER_PACK_CHOICE_BEGIN' ] + pck + [ '_api.DER_PACK_CHOICE_END' ]
 		return (tp,pck,stru)
 
 	def pytypeSequence (self, node):
 		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ 'DER_PACK_ENTER | DER_PACK_SEQUENCE' ] + pck + [ 'DER_PACK_LEAVE' ]
+		pck = [ '_api.DER_PACK_ENTER | _api.DER_PACK_SEQUENCE' ] + pck + [ '_api.DER_PACK_LEAVE' ]
 		return (tp,pck,stru)
 
 	def pytypeSet (self, node):
 		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ 'DER_PACK_ENTER | DER_PACK_SET' ] + pck + [ 'DER_PACK_LEAVE' ]
+		pck = [ '_api.DER_PACK_ENTER | _api.DER_PACK_SET' ] + pck + [ '_api.DER_PACK_LEAVE' ]
 		return (tp,pck,stru)
 
 	def pytypeSequenceOf (self, node):
@@ -897,7 +897,7 @@ class QuickDER2py (QuickDERgeneric):
 			(tp,pck,stru) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
 			#TODO# We need to return a type/class and pck,stru
-		pck = [ 'DER_PACK_STORE | DER_PACK_SEQUENCE' ]
+		pck = [ '_api.DER_PACK_STORE | _api.DER_PACK_SEQUENCE' ]
 		return ('ASN1SequenceOf',pck,[stru])
 
 	def pytypeSetOf (self, node):
@@ -911,7 +911,7 @@ class QuickDER2py (QuickDERgeneric):
 			(tp,pck,stru) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
 			#TODO# We need to return a type/class and pck,stru
-		pck = [ 'DER_PACK_STORE | DER_PACK_SET' ]
+		pck = [ '_api.DER_PACK_STORE | _api.DER_PACK_SET' ]
 		return ('ASN1SetOf',pck,set([stru]))
 
 
