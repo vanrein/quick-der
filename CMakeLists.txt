@@ -60,6 +60,7 @@ if (SPEC_ARPA2)
 endif ()
 add_subdirectory (tool)
 add_subdirectory (test)
+add_subdirectory (python)
 
 add_uninstall_target ()
 

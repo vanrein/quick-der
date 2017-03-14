@@ -40,10 +40,9 @@
 #    https://opensource.org/licenses/BSD-2-Clause
 #    SPDX short identifier: BSD-2-Clause
 
-find_program (PYTHON python python3 python2.7 python2.6)
-#TODO# Determine version sys.version_info.major/minor
-#TODO# Or better, the path to this version's lib/pythonV.V/site-packages
-#TODO# Note that Python may move outside of the PREFIX ?!?
+execute_process(COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
+		OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 macro(add_asn1_module _modulename _groupname)
 # Generate the module file in <quick-der/modulename.h>
@@ -58,7 +57,7 @@ macro(add_asn1_module _modulename _groupname)
 	add_custom_target(${_modulename}_asn1_h DEPENDS quick-der/${_modulename}.h)
 	add_custom_target(${_modulename}_asn1_py DEPENDS quick-der/${_modulename}.py)
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h DESTINATION include/quick-der)
-	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h DESTINATION lib/python2.7/site-packages/quick_der)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.py DESTINATION ${PYTHON_SITE_PACKAGES}/quick_der)
 # Also add a test that builds against that module
 	set(ASN1_MODULE_NAME ${_modulename})
 	set(ASN1_HEADER_NAME quick-der/${_modulename})

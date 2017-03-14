@@ -13,7 +13,7 @@ setup (
 	name = 'quick_der',
 	version = "0.1",	#TODO# CMake
 	packages = find_packages (),
-	scripts = [ 'ASN1Object.py' ],
+	scripts = [ '__init__.py', 'api.py' ],
 	ext_modules = [ sharedlib ],
 
 	install_requires = [],

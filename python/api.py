@@ -13,6 +13,8 @@
 #DONE# unpack INTEGER types to Python anysize integers (unpack_der_INTEGER?)
 #DONE# (re)pack mapped Python types in der_pack(): int, set ([]), []
 #TODO# generate rfc1234.TypeName classes (or modules, or der_unpack functions)
+#TODO# need to distinguish DER NULL; represent not as None but a data object
+#TODO# construct the __str__ value following ASN.1 value notation
 
 
 import string
