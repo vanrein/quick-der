@@ -78,7 +78,7 @@ DER_TAG_NUMERICSTRING = 0x12
 DER_TAG_PRINTABLESTRING = 0x13
 DER_TAG_T61STRING = 0x14
 DER_TAG_TELETEXSTRING = 0x14
-DER_TAG_VIDETEXSTRING = 0x15
+DER_TAG_VIDEOTEXSTRING = 0x15
 DER_TAG_IA5STRING = 0x16
 DER_TAG_UTCTIME = 0x17
 DER_TAG_GENERALIZEDTIME = 0x18
@@ -505,6 +505,7 @@ class ASN1Atom (ASN1Object):
 	"""
 
 	_numcursori = 1
+	_recipe = 0
 
 	# The following lists the data types that can be represented in an
 	# ASN1Atom, but that might also find another format more suited to
@@ -530,7 +531,7 @@ class ASN1Atom (ASN1Object):
 		DER_TAG_NUMERICSTRING: der_unpack_STRING,
 		DER_TAG_PRINTABLESTRING: der_unpack_STRING,
 		DER_TAG_TELETEXSTRING: der_unpack_STRING,
-		DER_TAG_VIDETEXSTRING: der_unpack_STRING,
+		DER_TAG_VIDEOTEXSTRING: der_unpack_STRING,
 		DER_TAG_IA5STRING: der_unpack_STRING,
 		DER_TAG_UTCTIME: der_unpack_UTCTIME,
 		DER_TAG_GENERALIZEDTIME: der_unpack_GENERALIZEDTIME,
@@ -593,13 +594,114 @@ class ASN1Atom (ASN1Object):
 		return self._bindata [self._offset]
 
 
+class ASN1Boolean (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_BOOLEAN) + chr(DER_PACK_END)
+
+
 class ASN1Integer (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
-	_recipe = 0
 
 	def __int__ (self):
 		return der_unpack_INTEGER (str (self))
+
+
+class ASN1BitString (ASN1Atom):
+
+	_der_pack = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
+
+	#TODO# Consider methods: test(), set(), testandset()
+
+
+class ASN1OctetString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_OCTETSTRING) + chr(DER_PACK_END)
+
+
+class ASN1Null (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_NULL) + chr(DER_PACK_END)
+
+
+class ASN1OID (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
+
+
+class ASN1Real (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_REAL) + chr(DER_PACK_END)
+
+
+class ASN1Enumerated (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_ENUMERATED) + chr(DER_PACK_END)
+
+
+class ASN1UTF8String (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTF8STRING) + chr(DER_PACK_END)
+
+
+class ASN1RelativeOID (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_RELATIVE_OID) + chr(DER_PACK_END)
+
+
+class ASN1NumericString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_NUMERICSTRING) + chr(DER_PACK_END)
+
+
+class ASN1PrintableString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_PRINTABLESTRING) + chr(DER_PACK_END)
+
+
+class ASN1TeletexString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_TELETEXSTRING) + chr(DER_PACK_END)
+
+
+class ASN1VideotexString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_VIDEOTEXSTRING) + chr(DER_PACK_END)
+
+
+class ASN1IA5String (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_IA5STRING) + chr(DER_PACK_END)
+
+
+class ASN1UTCTime (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTCTIME) + chr(DER_PACK_END)
+
+
+class ASN1GeneralizedTime (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALIZEDTIME) + chr(DER_PACK_END)
+
+
+class ASN1GraphicString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_GRAPHICSTRING) + chr(DER_PACK_END)
+
+
+class ASN1VisibleString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_VISIBLESTRING) + chr(DER_PACK_END)
+
+
+class ASN1GeneralString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALSTRING) + chr(DER_PACK_END)
+
+
+class ASN1UniversalString (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_UNIVERSALSTRING) + chr(DER_PACK_END)
 
 
 def build_asn1 (recipe, bindata=[], ofs=0):
@@ -665,11 +767,6 @@ class GeneratedTypeNameClass (ASN1ConstructedType):
 	_recipe = { 'hello': 0, 'world': 1 }
 	_numcursori = 2
 
-
-class OctetString (ASN1Atom):
-
-	_der_packer = '\x04\x00'
-	_recipe = 0
 
 
 def der_unpack (cls, derblob, ofs=0):
@@ -770,16 +867,16 @@ while len (pepe2) > 0:
 		print 'Will exactly reach the end of pepe2'
 	pepe2 = pepe2 [hlen2+ilen2:]
 
-#TODO:FUNGONE# pepe3 = der_unpack_SEQUENCE_OF (OctetString, pepe [hlen:], 0)
+#TODO:FUNGONE# pepe3 = der_unpack_SEQUENCE_OF (ASN1OctetString, pepe [hlen:], 0)
 #TODO:FUNGONE# print 'pepe3 =', pepe3
 
-#TODO:FUNGONE# pepe4 = der_unpack_SET_OF (OctetString, pepe [hlen:], 0)
+#TODO:FUNGONE# pepe4 = der_unpack_SET_OF (ASN1OctetString, pepe [hlen:], 0)
 #TODO:FUNGONE# print 'pepe4 =', pepe4
 
-pepe5 = ASN1SequenceOf (recipe=('_SEQOF',OctetString._der_packer,OctetString._recipe), derblob=pepe)
+pepe5 = ASN1SequenceOf (recipe=('_SEQOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=pepe)
 print 'pepe5 =', pepe5, '::', type (pepe5), '[0]::', type (pepe5 [0]), '[1]::', type (pepe5 [1])
 
-pepe6 = ASN1SetOf (recipe=('_SETOF',OctetString._der_packer,OctetString._recipe), derblob=chr(0x31)+pepe[1:])
+pepe6 = ASN1SetOf (recipe=('_SETOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=chr(0x31)+pepe[1:])
 print 'pepe6 =', pepe6, '::', type (pepe6)
 
 a3 = GeneratedTypeNameClass ()
