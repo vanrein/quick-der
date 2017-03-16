@@ -770,28 +770,70 @@ class QuickDER2py (QuickDERgeneric):
 				self.pygenTypeAssignment (assign)
 
 	def pygenTypeAssignment (self, node):
-		def pygen_class (clsnm, tp, pck, stru):
-			pck = pck + [ '_api.DER_PACK_END' ]
+		def pygen_class (clsnm, tp, pck, recp, numcrs):
+			def pygen_recp (recp, ln="\n\t\t"):
+				recptp = type (recp)
+				if recptp == int:
+					rstr = str (recp)
+				elif recptp == dict:
+					rstr = '{ '
+					ln = ln + '  '
+					comma = ''
+					for (rkey,rval) in recp.items ():
+						rstr = rstr + repr (rkey) + ':'
+						rstr = rstr + pygen_recp (rval, ln)
+						rstr = rstr + comma
+						comma = ',' + ln
+					rstr = rstr + '}'
+				elif recptp == set:
+					rstr = 'set([ '
+					comma = ''
+					for elm in recp:
+						rstr = rstr + pygen_recp (elm, ln)
+						rstr = rstr + comma
+						comma = ', '
+					rstr = rstr + ' ])'
+				elif recptp == list:
+					rstr = '[ '
+					comma = ''
+					for elm in recp:
+						rstr = rstr + pygen_recp (elm, ln)
+						rstr = rstr + comma
+						comma = ', '
+					rstr = rstr + ' ]
+				else: #tuple
+					(cls,ofs) = recp
+					rstr = '(' + cls + ',' + str (ofs) + ')'
+				return rstr
+			pck = pck + [ 'DER_PACK_END' ]
+			pckstr = ''
+			comma = ''
+			for pcke in pck:
+				pkce = pcke.replace ('DER_', '_api.DER_')
+				pkcstr = pckstr + comma + 'chr(' + pcke + ')'
+				comma = ' + '
 			self.writeln ('class ' + clsnm + ' (_api.' + tp + '):')
-			self.writeln ('\t\t_der_packer = ' + repr (pck))
-			self.writeln ('\t\t_structure = ' + repr (stru))
+			self.writeln ('\t\t_der_packer = ' + pcke)
+			self.writeln ('\t\t_recipe = ' + pygen_recp (recp))
+			self.writeln ('\t\t_numcursori = ' + str (numcrs))
 			#TODO# Possibly, generate __init__()
 			self.writeln ()
 		self.cursor_offset = 0
 		self.nested_typerefs = 0
 		self.nested_typecuts = 0
 		self.comment (node)
-		(tp,pck,stru) = self.generate_pytype (node.type_decl)
-		pygen_class (tosym (node.type_name), tp, pck, stru)
+		(tp,pck,recp) = self.generate_pytype (node.type_decl)
+		numcrs = self.cursor_offset
+		pygen_class (tosym (node.type_name), tp, pck, recp, numcrs)
 
-	def generate_pytype (self, node):
+	def generate_pytype (self, node, *subarg):
 		sys.stderr.write ('Node = ' + str (node) + '\n')
 		tnm = type (node)
 		if tnm not in self.funmap_pytype.keys ():
 			raise Exception ('Failure to generate a python type for ' + str (tnm))
-		return self.funmap_pytype [tnm] (node)
+		return self.funmap_pytype [tnm] (node, *subarg)
 
-	def pytypeDefinedType (self, node):
+	def pytypeDefinedType (self, node, *subarg):
 		if self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typerefs
 			# but the recursion for self.nested_typecuts
@@ -817,34 +859,51 @@ class QuickDER2py (QuickDERgeneric):
 		self.semamod = self.refmods [modnm]
 		self.nested_typerefs = self.nested_typerefs + 1
 		thetype = self.refmods [modnm].user_types () [node.type_name]
-		(tp,pck,stru) = self.generate_pytype (thetype)
+		(tp,pck,recp) = self.generate_pytype (thetype, *subarg)
 		self.nested_typerefs = self.nested_typerefs - 1
 		#TODO# cursor_offset?
-		#TODO# stru should reference the class?
+		#TODO# recp should reference the class?
 		self.semamod = popsema
 		self.unit = popunit
-		return (tp,pck,stru)
+		return (tp,pck,recp)
 
-	def pytypeSimple (self, node):
+	def pytypeSimple (self, node, implicit_tag=None):
 		tp = 'ASN1Atom'
 		simptp = node.type_name.replace (' ', '').upper ()
 		if simptp == 'ANY':
 			# ANY counts as self.nested_typecuts but does not
 			# have subtypes to traverse, so no attention to
 			# recursion cut-off is needed or even possible here
-			pck = [ '_api.DER_PACK_ANY' ]
+			pck = [ 'DER_PACK_ANY' ]
+			if implicit_tag:
+				# Can't have an implicit tag around ANY
+				pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
 		else:
-			pck = [ '_api.DER_PACK_STORE | _api.DER_TAG_' + simptp ]
-		stru = self.cursor_offset
-		self.cursor_offset = stru + 1
-		return (tp,pck,stru)
+			if not implicit_tag:
+				implicit_tag = 'DER_TAG_' + simptp
+			pck = [ 'DER_PACK_STORE | implicit_tag ]
+		recp = self.cursor_offset
+		self.cursor_offset = recp + 1
+		return (tp,pck,recp)
 
-	def pytypeTagged (self, node):
-		return self.generate_pytype (node.type_decl)
+	def pytypeTagged (self, node, implicit_tag=None):
+		mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
+		if self.semamod.resolve_tag_implicity (node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
+			# Tag implicitly by handing mytag down to type_decl
+			(tp,pck,recp) = self.generate_pytype (node.type_decl,
+							implicit_tag=mytag)
+		else:
+			# Tag explicitly by wrapping mytag around the type_decl
+			(tp,pck,recp) = self.generate_pytype (node.type_decl)
+			pck = [ 'DER_PACK_ENTER | ' + mytag ] + pck + [ 'DER_PACK_LEAVE' ]
+		if implicit_tag:
+			# Can't nest implicit tags, so wrap surrounding ones
+			pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,recp)
 
-	def pytypeNamedType (self, node):
+	def pytypeNamedType (self, node,*subarg):
 		#TODO# Ignore field name... or should be we use it any way?
-		return self.generate_pytype (node.type_decl)
+		return self.generate_pytype (node.type_decl,*subarg)
 
 	def pyhelpConstructedType (self, node):
 		class HashableDictionary (dict):
@@ -857,7 +916,7 @@ class QuickDER2py (QuickDERgeneric):
 				return id (self)
 		tp = 'ASN1ConstructedType'
 		pck = []
-		stru = HashableDictionary ()
+		recp = HashableDictionary ()
 		for comp in node.components:
 			if isinstance(comp, ExtensionMarker):
 				#TODO# ...ASN.1 extensions...
@@ -866,53 +925,56 @@ class QuickDER2py (QuickDERgeneric):
 				#TODO# ...COMPONENTS OF...
 				continue
 			(tp1,pck1,stru1) = self.generate_pytype (comp.type_decl)
-			#TODO# loose tp1
+			#TODO# loose tp1 -- no problem, it's derivable from stru
 			pck = pck + pck1
-			stru [tosym (comp.identifier)] = stru1
-		return (tp,pck,stru)
+			recp [tosym (comp.identifier)] = stru1
+		return (tp,pck,recp)
 
-	def pytypeChoice (self, node):
-		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ '_api.DER_PACK_CHOICE_BEGIN' ] + pck + [ '_api.DER_PACK_CHOICE_END' ]
-		return (tp,pck,stru)
+	def pytypeChoice (self, node, implicit_tag):
+		(tp,pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_CHOICE_BEGIN' ] + pck + [ 'DER_PACK_CHOICE_END' ]
+		if implicit_tag:
+			# Can't have an implicit tag around a CHOICE
+			pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,recp)
 
-	def pytypeSequence (self, node):
-		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ '_api.DER_PACK_ENTER | _api.DER_PACK_SEQUENCE' ] + pck + [ '_api.DER_PACK_LEAVE' ]
-		return (tp,pck,stru)
+	def pytypeSequence (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+		(tp,pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,recp)
 
-	def pytypeSet (self, node):
-		(tp,pck,stru) = self.pyhelpConstructedType (node)
-		pck = [ '_api.DER_PACK_ENTER | _api.DER_PACK_SET' ] + pck + [ '_api.DER_PACK_LEAVE' ]
-		return (tp,pck,stru)
+	def pytypeSet (self, node, implicit_tag='DER_TAG_SET'):
+		(tp,pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (tp,pck,recp)
 
-	def pytypeSequenceOf (self, node):
+	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
 		if self.nested_typerefs > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			stru = None
+			recp = None
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
-			(tp,pck,stru) = self.generate_pytype (node.type_decl)
+			(tp,pck,recp) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
-			#TODO# We need to return a type/class and pck,stru
-		pck = [ '_api.DER_PACK_STORE | _api.DER_PACK_SEQUENCE' ]
-		return ('ASN1SequenceOf',pck,[stru])
+			#TODO# We need to return a type/class and pck,recp
+		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
+		return ('ASN1SequenceOf',pck,['_SEQOF',inner_pck,recp])
 
-	def pytypeSetOf (self, node):
+	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
 		if self.nested_typerefs > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			stru = None
+			recp = None
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
-			(tp,pck,stru) = self.generate_pytype (node.type_decl)
+			(tp,pck,recp) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
-			#TODO# We need to return a type/class and pck,stru
-		pck = [ '_api.DER_PACK_STORE | _api.DER_PACK_SET' ]
-		return ('ASN1SetOf',pck,set([stru]))
+			#TODO# We need to return a type/class and pck,recp
+		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
+		return ('ASN1SetOf',pck,['_SETOF',inner_pck,recp])
 
 
 """The main program asn2quickder is called with one or more .asn1 files,
