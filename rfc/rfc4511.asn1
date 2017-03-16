@@ -249,28 +249,15 @@
                        -- The LDAPString is constrained to
                        -- <attributeSelector> in Section 4.5.1.8
 
-        Filter ::= CHOICE {
+	--asn1ate: intermediate ANY breaks up recursion;
+	--         this is done at the entry of Filter for consistent handling
+	Filter ::= ANY  --FilterOperation (always)
+
+	--asn1ate: intermediate form, look at tags to know how to process
+        FilterOperation ::= CHOICE {
              and             [0] SET SIZE (1..MAX) OF filter Filter,
              or              [1] SET SIZE (1..MAX) OF filter Filter,
-	     --
-             -- asn1ate: not             [2] Filter,
-	     --
-	     -- Quick DER cannot process the nesting because it expands
-	     -- into infinite parser byte code.  Instead, we could use ANY
-	     -- to leave it to the Quick DER caller to recurse into the
-	     -- structure as deeply as needed.  But the aternative below
-	     -- is better; it is equivalent in terms of ASN.1 syntax
-	     -- enforcement regime and the IMPLICIT tags overtakes the
-	     -- SET OF which contains exactly one entry as the direct
-	     -- notation of [2] Filter, but the infinite unfolding is
-	     -- broken; in fact this makes not behave similar to and/or.
-	     -- TODO: IS THIS TRUE? LDAP ALREADY ASSUMES IMPLICIT TAGS!
-	     --
-	     -- Take note that Quick DER does not validate the size
-	     -- constraint, but any sane implementation is likely to
-	     -- check it anyway; merely stating that indeed, it must.
-	     --
-	     not             [2] IMPLICIT SET SIZE(1) OF Filter,
+             not             [2] Filter,
              equalityMatch   [3] AttributeValueAssertion,
              substrings      [4] SubstringFilter,
              greaterOrEqual  [5] AttributeValueAssertion,
