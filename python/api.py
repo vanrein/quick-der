@@ -21,12 +21,8 @@
 import string
 import time
 
-#TODO# Apparently, intern() is not available inside packages?!?
-if not 'intern' in dir (__builtins__):
-	try:
-		from sys import intern
-	except ImportError:
-		intern = lambda s: s
+if not 'intern' in dir (globals () ['__builtins__']):
+	from sys import intern
 
 # We need three methods with Python wrapping in C plugin module _quickder:
 # der_pack() and der_unpack() with proper memory handling, plus der_header()
@@ -110,8 +106,10 @@ def der_unpack_STRING (derblob):
 
 def der_pack_OID (oidstr):
 	oidvals = map (int, oidstr.split ('.'))
-	oidvals [1] = chr (oidvals [0] * 40 + oidvals [1])
+	oidvals [1] = oidvals [0] * 40 + oidvals [1]
+	enc = ''
 	for oidx in range (len (oidvals)-1, 0, -1):
+		oidval = oidvals [oidx]
 		enc = chr (oidval & 0x7f) + enc
 		while oidval > 127:
 			oidval >>= 7
@@ -121,20 +119,20 @@ def der_pack_OID (oidstr):
 
 def der_unpack_OID (derblob):
 	oidvals = [0]
-	for byte in derblob:
+	for byte in map (ord, derblob):
 		if byte & 0x80 != 0x00:
 			oidvals [-1] = (oidvals [-1] << 7) | (byte & 0x7f)
 		else:
 			oidvals [-1] = (oidvals [-1] << 7) |  byte
-			oidsvals.append (0)
+			oidvals.append (0)
 	fst = oidvals [0] / 40
 	snd = oidvals [1] % 40
 	oidvals = [fst, snd] + oidvals [1:-1]
 	retval = ''
 	comma = ''
 	for oidval in oidvals:
-		retval = retval + '%d%s' % (oidval, comma)
-		comma = ','
+		retval = retval + '%s%d' % (comma, oidval)
+		comma = '.'
 	# We intern the OID because it is commonly used as an index
 	return intern (retval)
 
@@ -147,14 +145,14 @@ def der_unpack_RELATIVE_OID (oidstr):
 	raise NotImplementedError ('der_unpack_RELATIVE_OID')
 
 
-def der_pack_BITSTRING (bset):
-	bits = '\x00'
+def der_pack_BITSTRING (bitset):
+	bits = [0]
 	for bit in bitset:
 		byte = 1 + (bit >> 3)
 		if len (bits) < byte + 1:
-			byte = byte + '\x00' * (byte + 1 - len (bits))
-		bits [byte] = bits [byte] | (1 << (bit & 0x07))
-	return bits
+			bits = bits + [0] * (byte + 1 - len (bits))
+		bits [byte] |= (1 << (bit & 0x07))
+	return ''.join (map (chr,bits))
 
 
 def der_unpack_BITSTRING (derblob):
@@ -164,7 +162,7 @@ def der_unpack_BITSTRING (derblob):
 	bitnum = 8 * len (derblob) - 8 - ord (derblob [0])
 	bitset = set ()
 	for bit in range (bitnum):
-		if derblob [(bit >> 3) + 1] & (1 << (bit & 0x07)) != 0:
+		if ord (derblob [(bit >> 3) + 1]) & (1 << (bit & 0x07)) != 0:
 			bitset.add (bit)
 	return bitset
 
@@ -611,7 +609,14 @@ class ASN1BitString (ASN1Atom):
 
 	_der_pack = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
 
-	#TODO# Consider methods: test(), set(), testandset()
+	def test (self, bit):
+		return bit in self._bindata [self._index]
+
+	def set (self, bit):
+		self._bindata [self._index].add (bit)
+
+	def clear (self, bit):
+		self._bindata [self._index].remove (bit)
 
 
 class ASN1OctetString (ASN1Atom):

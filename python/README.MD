@@ -176,7 +176,7 @@ type of `offset` to distinguish this outcome.
   * `(usertyp,index)` tuples hold an `index` into the `_bindata`; an
     `_offset` for nested type parsing may still be added.  The 
     `usertyp` references a type name that is defined as a type-named class
-    in either this module, or in one imported into it.  It is a name so it
+    in either this module, or in one imported into it.  It is a string so it
     can be bound late, thus enabling recursive type definitions.
 
 Note how the outer level of each of these can be used to derive the choice
@@ -305,7 +305,7 @@ The generator, represented by the `self` object passed between the Python
 functions that produce the aforementioned type descriptions, manages
 information too:
 
-    The `cursor_offset` resets to 0 in a few cases.  First, for every reference
+  * The `cursor_offset` resets to 0 in a few cases.  First, for every reference
     to a named type.  This is not because a named type cannot be part of a
     larger whole, but because a new value for `_offset` can be supplied to a
     constructor, so that the offsets generated inside the type-named class
