@@ -13,8 +13,8 @@
 #DONE# unpack INTEGER types to Python anysize integers (unpack_der_INTEGER?)
 #DONE# (re)pack mapped Python types in der_pack(): int, set ([]), []
 #DONE# define names like DER_PACK_xxx and DER_TAG_xxx in quick_der.api
+#DONE# need to distinguish DER NULL; represent not as None but a data object
 #TODO# generate rfc1234.TypeName classes (or modules, or der_unpack functions)
-#TODO# need to distinguish DER NULL; represent not as None but a data object
 #TODO# construct the __str__ value following ASN.1 value notation
 
 
@@ -267,10 +267,9 @@ class ASN1Object (object):
 		   _bindata values.  If neither bindata nor derblob are
 		   supplied, then an empty instance is delivered.
 		"""
-		print 'CLASS =', self.__class__.__name__
-		assert der_packer or self._der_packer, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
-		assert recipe or self._recipe, 'You or a class from asn2quickder must supply a recipe for instantiating object structures'
-		assert bindata or derblob or self._numcursori, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
+		assert der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
+		assert recipe is not None or self._recipe is not None, 'You or a class from asn2quickder must supply a recipe for instantiating object structures'
+		assert bindata is not None or derblob is not None or self._numcursori is not None, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
 		# Construct the type if so desired
 		if der_packer:
 			self._der_packer = der_packer
@@ -291,9 +290,10 @@ class ASN1Object (object):
 			self._bindata    = [ None ] * self._numcursori
 			self._offset     = offset
 			assert offset == 0, 'You supplied no initialisation data, so you cannot request any offset but 0'
+			self.__init_bindata__ ()
 
 	def __init_bindata__ (self):
-		assert False, 'Required __init_bindata__() method not found in ' + __class__.__name__
+		assert False, 'Expected __init_bindata__() method not found in ' + self.__class__.__name__
 
 
 # The ASN1ConstructedType is a nested structure of named fields.
@@ -358,7 +358,7 @@ class ASN1ConstructedType (ASN1Object):
 				self._fields [subfld] = subval
 				numcursori = numcursori + 1
 		self._numcursori = numcursori	# Though we don't need it...
-		self._bindata [self._offset] = self
+		#HUH:WHY:DROP# self._bindata [self._offset] = self
 
 	def _name2idx (self, name):
 		while not self._fields.has_key (name):
@@ -504,7 +504,7 @@ class ASN1Atom (ASN1Object):
 	   TODO: Consider using the _der_packer, and/or having subclasses.
 	"""
 
-	numcursori = 1
+	_numcursori = 1
 
 	# The following lists the data types that can be represented in an
 	# ASN1Atom, but that might also find another format more suited to
@@ -554,64 +554,36 @@ class ASN1Atom (ASN1Object):
 		   counting the overhead should be tolerable, though it may
 		   be avoided in a more clever approach.
 		"""
-		mytag = self._der_packer [0] & DER_PACK_MATCHBITS
+		mytag = ord (self._der_packer [0]) & DER_PACK_MATCHBITS
 		if mytag in self._direct_data_map:
 			mapfun = self._direct_data_map [mytag]
-			myrepr = mapfun (self._bindata [self._offset])
+			if self._bindata [self._offset] is None:
+				myrepr = None
+			else:
+				myrepr = mapfun (self._bindata [self._offset])
 		else:
 			myrepr = self
+		# Keep the binary string in _value; possibly change _bindata
+		self._value = self._bindata [self._offset]
 		self._bindata [self._offset] = myrepr
 
 	def get (self):
-		return self._bindata [self._offset]
+		return self._value
 
-	def set (self, value):
-		tv = type (value)
-		if tv == str:
-			self._bindata [self._offset] = value
-		elif tv == int:
-			strval = ''
-			while value not in [0,-1]:
-				byt = value & 0xff
-				value = value >> 8
-				strval = chr (byt) + strval
-			if value == 0:
-				if len (strval) > 0 and byt & 0x80 == 0x80:
-					strval = chr (0x00) + strval
-			else:
-				if len (strval) == 0 or byt & 0x80 == 0x00:
-					strval = chr (0xff) + strval
-			self._bindata [self._offset] = strval
+	def set (self, derblob):
+		if type (derblob) == str:
+			self._value = derblob
 		else:
-			raise ValueError ('ASN1Atom.set() only accepts int or str')
+			raise ValueError ('ASN1Atom.set() only accepts derblob strings')
 
-	__str__ = get
+	def __str__ (self):
+		if self._value is not None:
+			return self._value
+		else:
+			return ''
 
 	def __len__ (self):
-		return len (self.get ())
-
-	def __int__ (self):
-		strval = self.get ()
-		if strval == '':
-			return 0
-		retval = 0
-		if ord (strval [0]) & 0x80:
-			retval = -1
-		for byt in map (ord, strval):
-			retval = (retval << 8) + byt
-		return retval
-
-	def _der_unpack (self, derblob, offset=0):
-		"""This is an overwriting method that uses `der_unpack()`
-		   to find new data in `derblob` using the structural
-		   information stored in this object or possibly its class.
-		   The `dercursor` array found is stored internally, along
-		   with the offset that defaults to 0.
-		"""
-		#TODO# cut off the header!
-		assert (self._numcursori == 1)
-		self._bindata = [derblob]
-		self._offset = offset
+		return len (self._value)
 
 	def _der_pack (self):
 		"""Return the result of the `der_pack()` operation on this
@@ -619,6 +591,15 @@ class ASN1Atom (ASN1Object):
 		"""
 		#TODO# insert the header!
 		return self._bindata [self._offset]
+
+
+class ASN1Integer (ASN1Atom):
+
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
+	_recipe = 0
+
+	def __int__ (self):
+		return der_unpack_INTEGER (str (self))
 
 
 def build_asn1 (recipe, bindata=[], ofs=0):
@@ -685,40 +666,10 @@ class GeneratedTypeNameClass (ASN1ConstructedType):
 	_numcursori = 2
 
 
-class ExtraTroep:
-	def __init__ (self, derblob=None, ofs=0):
-		if derblob is not None:
-			cursori = _quickder.der_unpack (self._der_packer, derblob, 2)
-		else:
-			cursori = [None] * 2 #TODO# 2 is an example
-		super (GeneratedTypeNameClass, self).__init__ (
-			bindata = cursori,
-			ofs=ofs )
-
-
-class OldOctetString (ASN1ConstructedType):
-
-	_der_packer = '\x04\x00'
-	_recipe = ('_NAMED', _der_packer, { 'value':0 } )
-	_numcursori = 1
-
 class OctetString (ASN1Atom):
 
 	_der_packer = '\x04\x00'
 	_recipe = 0
-	_numcursori = 1
-
-class MoreOctet:
-	def __init__ (self, derblob=None, ofs=0):
-		if derblob is not None:
-			print 'Using _der_packer =', ''.join (map (lambda c:'%02x '%ord(c), self._der_packer))
-			print 'Using derblob =', ''.join (map (lambda c:'%02x '%ord(c), derblob))
-			cursori = _quickder.der_unpack (self._der_packer, derblob, 1)
-		else:
-			cursori = [None] * 1 #TODO# 1 is an example
-		super (OctetString, self).__init__ (
-			bindata = cursori,
-			ofs=ofs )
 
 
 def der_unpack (cls, derblob, ofs=0):
@@ -732,7 +683,7 @@ def der_unpack (cls, derblob, ofs=0):
 		raise Exception ('You can only unpack to an ASN1ConstructedType')
 	if derblob is None:
 		raise Exception ('No DER data provided')
-	return cls (derblob=derblob, ofs=ofs)
+	return cls (derblob=derblob, offset=ofs)
 
 
 def der_pack (pyval):
@@ -787,7 +738,7 @@ if True:
 
 a1=GeneratedTypeNameClass (derblob='\x30\x0e\x04\x05\x48\x65\x6c\x6c\x6f\x04\x05\x57\x6f\x72\x6c\x64')
 
-print 'Created a1'
+print 'Created a1:', a1
 
 print a1.hello, a1.world
 
@@ -833,7 +784,10 @@ print 'pepe6 =', pepe6, '::', type (pepe6)
 
 a3 = GeneratedTypeNameClass ()
 
-print 'EMPTY:', a3.hello, a3.world
+print 'EMPTY:', a3
+print 'FIELD:', a3.hello
+print 'FIELD:', a3.world
+print 'FIELD:', a3.hello, a3.world
 
 a2 = der_unpack (GeneratedTypeNameClass, pepe)
 
@@ -841,20 +795,23 @@ print 'PARSED:', a2.hello, a2.world
 
 i1 = der_pack_INTEGER (12345)
 print 'Packed 12345 into', ''.join (map (lambda c:'%02x '%ord(c), i1))
-print 'Unpacking gives', der_unpack_INTEGER (None, i1)
+print 'Unpacking gives', der_unpack_INTEGER (i1)
 
 i2 = der_pack_INTEGER (-12345)
 print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
-print 'Unpacking gives', der_unpack_INTEGER (None, i2)
+print 'Unpacking gives', der_unpack_INTEGER (i2)
 
-i3 = ASN1Atom ([i1])
-print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
-print 'Atom int is', int (i3)
+# i3 = ASN1Atom (bindata=[i1], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
+i3 = ASN1Integer (derblob=chr(2) + chr(len(i1)) + i1)
+#CHANGED_TYPE# print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
+print 'Atom int is', i3, '::', type (i3), 'with value', int (i3)
 
-i4 = ASN1Atom ([i2])
-print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
-print 'Atom int is', int (i4)
+# i4 = ASN1Atom (bindata=[i2], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
+i4 = ASN1Integer (derblob=chr(2) + chr(len(i2)) + i2)
+#CHANGED_TYPE# print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
+print 'Atom int is', i4, '::', type (i4), 'with value', int (i4)
 
-i0 = ASN1Atom ()
-print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
-print 'Atom int is', int (i0)
+i0 = ASN1Integer ()
+#CHANGED_TYPE# print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
+print 'Atom int is', i0, '::', type (i0), 'with value', int (i0)
+
