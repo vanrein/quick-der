@@ -786,7 +786,7 @@ class QuickDER2py (QuickDERgeneric):
 		self.writeln ()
 
 	def pyvalInteger (self, valnode):
-		return '_api.der_pack_INTEGER(' + str (int (valnode)) + ')'
+		return str (int (valnode))
 
 	def pyvalOID (self, valnode):
 		retc = []
@@ -813,59 +813,64 @@ class QuickDER2py (QuickDERgeneric):
 				self.pygenTypeAssignment (assign)
 
 	def pygenTypeAssignment (self, node):
-		def pygen_class (clsnm, tp, pck, recp, numcrs):
-			def pygen_recp (recp, ln="\n\t\t"):
-				#TODO# This can probably go
-				if type (recp) == int:
-					rstr = str (recp)
-				elif recp [0] == '_NAMED':
-					(_NAMED,pck,fields) = recp
-					rstr = '{ '
-					ln = ln + '  '
-					comma = ''
-					for (rkey,rval) in fields.items ():
-						rstr = rstr + repr (rkey) + ':'
-						rstr = rstr + pygen_recp (rval, ln)
-						rstr = rstr + comma
-						comma = ',' + ln
-					rstr = rstr + '}'
-				elif recp [0] == '_SEQOF':
-					(_SEQOF,pck,elemrecp) = recp
-					rstr = '[ '
-					comma = ''
-					for elm in elemrecp:
-						rstr = rstr + pygen_recp (elm, ln)
-						rstr = rstr + comma
-						comma = ', '
-					rstr = rstr + ' ]'
-				elif recp [0] == '_SETOF':
-					rstr = 'set([ '
-					comma = ''
-					for elm in recp:
-						rstr = rstr + pygen_recp (elm, ln)
-						rstr = rstr + comma
-						comma = ', '
-					rstr = rstr + ' ])'
-				elif recp [0] == '_TYPTR':
-					pass #TODO#
-				else:
-					self.comment (str (recp) + ' :: ' + str (type (recp)) + ' has ' + str (len (recp)) + ' components')
-					(cls,ofs) = recp
-					rstr = '(' + cls + ',' + str (ofs) + ')'
-				return rstr
+		def pymap_packer (pck, ln='\n\t\t  '):
+			retval = '(' + ln
 			pck = pck + [ 'DER_PACK_END' ]
-			pckstr = ''
 			comma = ''
 			for pcke in pck:
-				pkce = pcke.replace ('DER_', '_api.DER_')
-				pkcstr = pckstr + comma + 'chr(' + pcke + ')'
-				comma = ' + '
-			self.writeln ('class ' + clsnm + ' (_api.' + tp + '):')
-			self.writeln ('\t\t_der_packer = ' + pcke)
-			#TODO:DROP?# self.writeln ('\t\t_recipe = ' + pygen_recp (recp))
-			self.writeln ('\t\t_recipe = ' + repr (recp))
-			self.writeln ('\t\t_numcursori = ' + str (numcrs))
-			#TODO# Possibly, generate __init__()
+				pcke = pcke.replace ('DER_', '_api.DER_')
+				retval += comma + 'chr(' + pcke + ')'
+				comma = ' +' + ln
+			retval += ' )'
+			return retval
+		def pymap_recipe (recp, ln='\n\t\t'):
+			if type (recp) == int:
+				retval = str (recp)
+			elif recp [0] == '_NAMED':
+				(_NAMED,map) = recp
+				ln += '  '
+				retval = "('_NAMED', {"
+				comma = False
+				sorted = []
+				for (fld,fldrcp) in map.items ():
+					sorted.append ( (fldrcp,fld) )
+				sorted.sort ()
+				for (fldrcp,fld) in sorted:
+					if comma:
+						retval += ',' + ln
+					else:
+						retval += ln
+					retval += "'" + tosym (fld) + "': "
+					retval += pymap_recipe (fldrcp, ln)
+					comma = True
+				retval += ' } )'
+			elif recp [0] in ['_SEQOF','_SETOF']:
+				(_STHOF,pck,inner_recp) = recp
+				ln += '  '
+				retval = "('" + _STHOF + "', "
+				retval += pymap_packer (pck, ln) + ',' + ln
+				retval += pymap_recipe (inner_recp, ln) + ' )'
+			elif recp [0] == '_TYPTR':
+				(_TYPTR,cls,ofs) = recp
+				retval = "('_TYPTR'," + cls.__name__ + ',' + str (ofs) + ')'
+			else:
+				(usertp,idx) = recp
+				retval = repr (recp)
+			return retval
+		def pygen_class (clsnm, tp, pck, recp, numcrs):
+			#TODO# Sometimes, ASN1Atom may have a specific supertp
+			supertp = '_api.' + tp
+			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
+			if tp not in ['ASN1SequenceOf','ASN1SetOf']:
+				self.writeln ('\t\t_der_packer = ' + pymap_packer (pck))
+			if tp not in ['ASN1Atom']:
+				self.writeln ('\t\t_recipe = ' + pymap_recipe (recp))
+			if False:
+				#TODO# Always fixed or computed
+				self.writeln ('\t\t_numcursori = ' + str (numcrs))
+			if False:
+				#TODO# Perhaps needed at some point?
+				self.writeln ('\t\tpass')
 			self.writeln ()
 		self.cursor_offset = 0
 		self.nested_typerefs = 0
@@ -897,12 +902,14 @@ class QuickDER2py (QuickDERgeneric):
 		return self.funmap_pytype [tnm] (node, **subarg)
 
 	def pytypeDefinedType (self, node, **subarg):
-		if self.nested_typecuts > 0:
+		if self.nested_typecuts > 0 and self.nested_typerefs > 0:
 			# We are about to recurse on self.nested_typerefs
 			# but the recursion for self.nested_typecuts
 			# has also occurred, so we can cut off recursion
-			#TODO# Class references, rest rightfully None?
-			return ([],999)
+			#TODO# Offset should be properly incremented???
+			ofs = self.cursor_offset
+			self.cursor_offset += 1
+			return ([],(tosym (node.type_name), ofs))
 		modnm = node.module_name
 		if modnm is None:
 			syms = self.semamod.imports.symbols_imported
@@ -988,8 +995,7 @@ class QuickDER2py (QuickDERgeneric):
 			(pck1,stru1) = self.generate_pytype (comp.type_decl)
 			pck = pck + pck1
 			recp [tosym (comp.identifier)] = stru1
-		#TODO# Huh, pck needed twice?!?
-		return (pck,('_NAMED',pck,recp))
+		return (pck,('_NAMED',recp))
 
 	def pytypeChoice (self, node, implicit_tag=None):
 		(pck,recp) = self.pyhelpConstructedType (node)
@@ -1010,32 +1016,34 @@ class QuickDER2py (QuickDERgeneric):
 		return (pck,recp)
 
 	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
-		if self.nested_typerefs > 0:
+		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			inner_pck = None
-			recp = None
+			inner_pck = []
+			recp = self.cursor_offset
+			self.cursor_offset += 1
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
 			(inner_pck,recp) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
 		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,['_SEQOF',inner_pck,recp])
+		return (pck,('_SEQOF',inner_pck,recp))
 
 	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
-		if self.nested_typerefs > 0:
+		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			inner_pck = None
-			recp = None
+			inner_pck = []
+			recp = self.cursor_offset
+			self.cursor_offset += 1
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
 			(inner_pck,recp) = self.generate_pytype (node.type_decl)
 			self.nested_typecuts = self.nested_typecuts - 1
 		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,['_SETOF',inner_pck,recp])
+		return (pck,('_SETOF',inner_pck,recp))
 
 
 """The main program asn2quickder is called with one or more .asn1 files,

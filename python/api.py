@@ -22,7 +22,10 @@ import string
 import time
 
 if not 'intern' in dir (globals () ['__builtins__']):
-	from sys import intern
+	try:
+		from sys import intern
+	except:
+		intern = lambda s: s
 
 # We need three methods with Python wrapping in C plugin module _quickder:
 # der_pack() and der_unpack() with proper memory handling, plus der_header()

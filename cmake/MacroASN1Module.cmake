@@ -67,7 +67,7 @@ macro(add_asn1_module _modulename _groupname)
 	target_include_directories(${_modulename}-test-h PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 	add_dependencies(${_modulename}-test-h ${_groupname})
 	add_test(${_modulename}-test-h ${_modulename}-test-h)
-	add_test(${_modulename}-test-py python ${_modulename}-test-py)
+	add_test(${_modulename}-test-py python ${_modulename}.py)
 endmacro()
 
 macro(add_asn1_modules _groupname)

@@ -156,8 +156,8 @@ type of `offset` to distinguish this outcome.
 
   * `offset` presents an integer `offset` into the current
     `_bindata`, after addition of the contextual `_offset`
-  * `('_NAMED',der_packer,{ field: sub_recipe, ... })` defines a `der_packer`
-    and a dictionary to map `field` names in
+  * `('_NAMED',{ field: sub_recipe, ... })` defines
+    a dictionary to map `field` names in
     ASN.1 constructed types `SEQUENCE`, `SET` and `CHOICE` to a `sub_recipe`
     that adheres to the same format; the `sub_recipe` can suggest the
     instantion of an element attached to the named `field`
