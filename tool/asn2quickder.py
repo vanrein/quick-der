@@ -755,6 +755,19 @@ class QuickDER2py (QuickDERgeneric):
 		self.writeln()
 		self.writeln('# asn2quickder output for ' + self.semamod.name + ' ends here')
 
+	def generate_values (self):
+		self.writeln ('#')
+		self.writeln ('# Variables with ASN.1 value assignments')
+		self.writeln ('#')
+		self.writeln ()
+		for assigncompos in dependency_sort(self.semamod.assignments):
+			for assign in assigncompos:
+				if type (assign) != ValueAssignment:
+					# TypeAssignemnts: generate_classes()
+					continue
+				#TODO# Need generic mapping to DER values
+				self.pygenValueAssignment (assign)
+
 	def generate_classes (self):
 		self.writeln ('#')
 		self.writeln ('# Classes for ASN.1 type assignments')
@@ -763,11 +776,41 @@ class QuickDER2py (QuickDERgeneric):
 		for assigncompos in dependency_sort(self.semamod.assignments):
 			for assign in assigncompos:
 				if type (assign) != TypeAssignment:
-					self.writeln ('# Skipping non-TypeAssignment:')
-					self.comment (assign)
-					self.writeln ()
+					# ValueAssignment: generate_values()
 					continue
 				self.pygenTypeAssignment (assign)
+
+	def pygenValueAssignment (self, node):
+		# We only found INTEGER and OBJECTIDENTIFIER in RFCs
+		# Note that these forms are computed while loading, so not fast
+		cls = tosym (node.type_decl)
+		var = tosym (node.value_name)
+		if cls == 'INTEGER':
+			val = self.pyvalInteger (node.value)
+			cls = '_api.der_pack_INTEGER'
+		elif cls == 'OBJECTIDENTIFIER':
+			val = self.pyvalOID (node.value)
+			cls = '_api.der_pack_OID'
+		else:
+			val = 'MAP2DER("""' + str (node.value) + '""")'
+		self.comment (str (node))
+		self.writeln (var + ' = ' + cls + ' (' + val + ')')
+		self.writeln ()
+
+	def pyvalInteger (self, valnode):
+		return '_api.der_pack_INTEGER(' + str (int (valnode)) + ')'
+
+	def pyvalOID (self, valnode):
+		retc = []
+		for oidcompo in valnode.components:
+			if type (oidcompo) == NameForm:
+				retc.append (tosym (oidcompo.name) + '.get()')
+			elif type (oidcompo) == NumberForm:
+				retc.append ("'" + str (oidcompo.value) + "'")
+			elif type (oidcompo) == NameAndNumberForm:
+				retc.append ("'" + str (oidcompo.number) + "'")
+		retval = " + '.' + ".join (retc)
+		return retval.replace ("' + '", "")
 
 	def pygenTypeAssignment (self, node):
 		def pygen_class (clsnm, tp, pck, recp, numcrs):
@@ -800,7 +843,7 @@ class QuickDER2py (QuickDERgeneric):
 						rstr = rstr + pygen_recp (elm, ln)
 						rstr = rstr + comma
 						comma = ', '
-					rstr = rstr + ' ]
+					rstr = rstr + ' ]'
 				else: #tuple
 					(cls,ofs) = recp
 					rstr = '(' + cls + ',' + str (ofs) + ')'
@@ -821,7 +864,7 @@ class QuickDER2py (QuickDERgeneric):
 		self.cursor_offset = 0
 		self.nested_typerefs = 0
 		self.nested_typecuts = 0
-		self.comment (node)
+		self.comment (str (node))
 		(tp,pck,recp) = self.generate_pytype (node.type_decl)
 		numcrs = self.cursor_offset
 		pygen_class (tosym (node.type_name), tp, pck, recp, numcrs)
@@ -881,7 +924,7 @@ class QuickDER2py (QuickDERgeneric):
 		else:
 			if not implicit_tag:
 				implicit_tag = 'DER_TAG_' + simptp
-			pck = [ 'DER_PACK_STORE | implicit_tag ]
+			pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
 		recp = self.cursor_offset
 		self.cursor_offset = recp + 1
 		return (tp,pck,recp)
@@ -1050,7 +1093,8 @@ for modnm in defmods.keys ():
 	#TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
 	cogen = QuickDER2py (defmods [modnm], modnm, refmods)
 	cogen.generate_head ()
-	cogen.generate_classes ()
+	# cogen.generate_classes ()
+	cogen.generate_values ()
 	cogen.generate_tail ()
 	cogen.close ()
 	#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
