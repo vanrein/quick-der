@@ -6,7 +6,8 @@ RFC2578 --asn1ate:SNMPv2-SMI-- DEFINITIONS ::= BEGIN
 
 -- the path to the root
 
-org            OBJECT IDENTIFIER ::= { iso 3 }  --  "iso" = 1
+--asn1ate org            OBJECT IDENTIFIER ::= { iso 3 }  - -  "iso" = 1
+org            OBJECT IDENTIFIER ::= { 1 3 }
 dod            OBJECT IDENTIFIER ::= { org 6 }
 internet       OBJECT IDENTIFIER ::= { dod 1 }
 
@@ -348,11 +349,13 @@ Counter64 ::=
 
 -- definitions of administrative identifiers
 
-zeroDotZero    OBJECT-IDENTITY
+-- asn1ate: zeroDotZero    OBJECT-IDENTITY
     -- asn1ate: STATUS     current
     -- asn1ate: DESCRIPTION
     -- asn1ate:         "A value used for null identifiers."
-    ::= { 0 0 }
+    -- asn1ate: ::= { 0 0 }
+
+zeroDotZero OBJECT IDENTIFIER ::= { 0 0 }
 
 END
 

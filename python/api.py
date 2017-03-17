@@ -107,7 +107,8 @@ def der_unpack_STRING (derblob):
 	return derblob
 
 
-def der_pack_OID (oidstr):
+def der_pack_OID (oidstr, hdr=False):
+	print 'PACKING OID', oidstr
 	oidvals = map (int, oidstr.split ('.'))
 	oidvals [1] = oidvals [0] * 40 + oidvals [1]
 	enc = ''
@@ -117,6 +118,8 @@ def der_pack_OID (oidstr):
 		while oidval > 127:
 			oidval >>= 7
 			enc = chr (0x80 | (oidval & 0x7f)) + enc
+	if hdr:
+		enc = _quickder.der_pack ('\x06\x00', [enc])
 	return enc
 
 
@@ -196,7 +199,7 @@ def der_unpack_BOOLEAN (derblob):
 	return derblob != '\x00' * len (derblob)
 
 
-def der_pack_INTEGER (ival):
+def der_pack_INTEGER (ival, hdr=False):
 	retval = ''
 	while ival not in [0,-1]:
 		byt = ival & 0xff
@@ -208,6 +211,8 @@ def der_pack_INTEGER (ival):
 	else:
 		if len (retval) == 0 or byt & 0x80 == 0x00:
 			retval = chr (0xff) + retval
+	if hdr:
+		retval = _quickder.der_pack ('\x02\x00', [retval])
 	return retval
 
 
