@@ -274,14 +274,15 @@ description structures in the semantical framework of `asn2quickder`.
 
 The structure for a type recipe is simple enough, it is a tuple of the form
 
-    `(typname, packer, recipe)`
+    `(packer, recipe)`
 
 in addition there is a counter `cursor_offset` that increments for every
 `dercursor` that is generated, and upon return from a type evaluation its
 value indicates the `numcursori` value.
 
-  * The `typname` is a string for the intermediate class from `quick_der.api`,
-    so one of `ASN1StructuredType`, `ASN1SequenceOf`, `ASN1SetOf`, `ASN1Atom`.
+  * We used to pass a `typname` with a string for the intermediate class from
+    `quick_der.api`, until we realised that this could be derived from `recipe`
+    as one of `ASN1StructuredType`, `ASN1SequenceOf`, `ASN1SetOf`, `ASN1Atom`.
     It is either used to construct an anonymous type which is then supplied
     with the `der_packer`, `recipe` and `numcursori` parameters, or it can
     be used to construct a Python class named by an ASN.1 type assignment,
@@ -341,7 +342,7 @@ parameters.  These allow the recursive passing-down of information along
 the semantical tree structures.  The functions behaving as described above
 are called `pytypeXXX` and they are invoked thusly:
 
-    (typname,packer,recipe) = pytypeXXXX (self, node, impl_tag)
+    (packer,recipe) = pytypeXXXX (self, node, impl_tag)
 
 Where the parameters have the following meaning:
 
