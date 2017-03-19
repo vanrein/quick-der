@@ -12,7 +12,7 @@
  * length field, so it can be recognised later on as an array reference.
  */
 void der_prepack (dercursor *derray, size_t arraycount, derarray *target) {
-	target->derray = derray;
+	target->derray = (dernode *)derray;
 	target->dercnt = arraycount | DER_DERLEN_FLAG_CONSTRUCTED;
 }
 
