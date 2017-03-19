@@ -161,11 +161,13 @@ type of `offset` to distinguish this outcome.
     ASN.1 constructed types `SEQUENCE`, `SET` and `CHOICE` to a `sub_recipe`
     that adheres to the same format; the `sub_recipe` can suggest the
     instantion of an element attached to the named `field`
-  * `('_SEQOF',der_packer,element_recipe)` tuples indicate that a `SEQUENCE OF`
-    must be instantiated, with the given `der_packer` for its elements, and
+  * `('_SEQOF',allidx,der_packer,element_recipe)` tuples indicate that a
+    `SEQUENCE OF` must be instantiated, with the total contents stored in
+     `allidx` and, for further analysis, a `der_packer` for its elements, and
     `element_recipe` used to instantiate elements.
-  * `('_SETOF',der_packer,element_recipe)` tuples indicate that a `SET OF`
-    must be instantiated, with the given `der_packer` for its elements, and
+  * `('_SETOF',allidx,der_packer,element_recipe)` tuples indicate that a
+    `SET OF` must be instantiated, with the total contents stored in
+    `allidx` and, for futhre analysis, a `der_packer` for its elements, and
     `element_recipe` used to instantiate elements.
   * `('_TYPTR',class,ofs)` tuples reference an `ASN1Object` subclass, whose
     contained `_recipe` is used to further nail down the `_bindata`
@@ -181,7 +183,7 @@ type of `offset` to distinguish this outcome.
 
 Note how the outer level of each of these can be used to derive the choice
 between `ASN1Atom`, `ASN1ConstructedType`, `ASN1SequenceOf` and `ASN1SetOf`.
-The `_TYREF` plays a special role; it may be dereferenced or instantiated,
+The `_TYPTR` plays a special role; it may be dereferenced or instantiated,
 or it may be used to make an immediate equation when types are equated to
 form aliases, so ASN.1 notation `D ::= C` could translate to Python `D = C`
 instead of a full class abstraction.  (Although we probably won't do that;

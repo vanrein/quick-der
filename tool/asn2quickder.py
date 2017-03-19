@@ -815,7 +815,7 @@ class QuickDER2py (QuickDERgeneric):
 				self.pygenTypeAssignment (assign)
 
 	def pygenTypeAssignment (self, node):
-		def pymap_packer (pck, ln='\n\t\t  '):
+		def pymap_packer (pck, ln='\n        '):
 			retval = '(' + ln
 			pck = pck + [ 'DER_PACK_END' ]
 			comma = ''
@@ -825,19 +825,15 @@ class QuickDER2py (QuickDERgeneric):
 				comma = ' +' + ln
 			retval += ' )'
 			return retval
-		def pymap_recipe (recp, ln='\n\t\t'):
+		def pymap_recipe (recp, ln='\n    '):
 			if type (recp) == int:
 				retval = str (recp)
 			elif recp [0] == '_NAMED':
 				(_NAMED,map) = recp
-				ln += '  '
+				ln += '    '
 				retval = "('_NAMED', {"
 				comma = False
-				sorted = []
 				for (fld,fldrcp) in map.items ():
-					sorted.append ( (fldrcp,fld) )
-				sorted.sort ()
-				for (fldrcp,fld) in sorted:
 					if comma:
 						retval += ',' + ln
 					else:
@@ -847,9 +843,10 @@ class QuickDER2py (QuickDERgeneric):
 					comma = True
 				retval += ' } )'
 			elif recp [0] in ['_SEQOF','_SETOF']:
-				(_STHOF,pck,inner_recp) = recp
-				ln += '  '
+				(_STHOF,allidx,pck,inner_recp) = recp
+				ln += '    '
 				retval = "('" + _STHOF + "', "
+				retval += str (allidx) + ', '
 				retval += pymap_packer (pck, ln) + ',' + ln
 				retval += pymap_recipe (inner_recp, ln) + ' )'
 			elif recp [0] == '_TYPTR':
@@ -864,15 +861,15 @@ class QuickDER2py (QuickDERgeneric):
 			supertp = '_api.' + tp
 			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
 			if tp not in ['ASN1SequenceOf','ASN1SetOf']:
-				self.writeln ('\t\t_der_packer = ' + pymap_packer (pck))
+				self.writeln ('    _der_packer = ' + pymap_packer (pck))
 			if tp not in ['ASN1Atom']:
-				self.writeln ('\t\t_recipe = ' + pymap_recipe (recp))
+				self.writeln ('    _recipe = ' + pymap_recipe (recp))
 			if False:
 				#TODO# Always fixed or computed
-				self.writeln ('\t\t_numcursori = ' + str (numcrs))
+				self.writeln ('    _numcursori = ' + str (numcrs))
 			if False:
 				#TODO# Perhaps needed at some point?
-				self.writeln ('\t\tpass')
+				self.writeln ('    pass')
 			self.writeln ()
 		self.cursor_offset = 0
 		self.nested_typerefs = 0
@@ -904,12 +901,15 @@ class QuickDER2py (QuickDERgeneric):
 		return self.funmap_pytype [tnm] (node, **subarg)
 
 	def pytypeDefinedType (self, node, **subarg):
-		if self.nested_typecuts > 0 and self.nested_typerefs > 0:
+		#TODO# Really stop recursion here?!?
+		if self.nested_typecuts > 0:
+			#TODO# And not self.nested_typerefs > 0
 			# We are about to recurse on self.nested_typerefs
 			# but the recursion for self.nested_typecuts
 			# has also occurred, so we can cut off recursion
 			#TODO# Offset should be properly incremented???
 			ofs = self.cursor_offset
+			#TODO# Why increase cursor for a type reference?!?
 			self.cursor_offset += 1
 			return ([],(tosym (node.type_name), ofs))
 		modnm = node.module_name
@@ -977,16 +977,8 @@ class QuickDER2py (QuickDERgeneric):
 		return self.generate_pytype (node.type_decl,**subarg)
 
 	def pyhelpConstructedType (self, node):
-		class HashableDictionary (dict):
-			"""This is a dict extension with a __hash__() method
-			   returning the dictionary's identity.  This is
-			   needed because sets distinguish elements by their
-			   hash, a set of dict instances cannot be built.
-			"""
-			def __hash__ (self):
-				return id (self)
 		pck = []
-		recp = HashableDictionary ()
+		recp = {}
 		for comp in node.components:
 			if isinstance(comp, ExtensionMarker):
 				#TODO# ...ASN.1 extensions...
@@ -1018,34 +1010,40 @@ class QuickDER2py (QuickDERgeneric):
 		return (pck,recp)
 
 	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+		allidx = self.cursor_offset
+		self.cursor_offset += 1
 		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			inner_pck = []
-			recp = self.cursor_offset
-			self.cursor_offset += 1
+			subpck = []
+			subrcp = 666
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
-			(inner_pck,recp) = self.generate_pytype (node.type_decl)
+			#TODO# push & reset self.cursor_offset
+			(subpck,subrcp) = self.generate_pytype (node.type_decl)
+			#TODO# pop self.cursor_offset
 			self.nested_typecuts = self.nested_typecuts - 1
 		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,('_SEQOF',inner_pck,recp))
+		return (pck,('_SEQOF',allidx,subpck,subrcp))
 
 	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
+		allidx = self.cursor_offset
+		self.cursor_offset += 1
 		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			inner_pck = []
-			recp = self.cursor_offset
-			self.cursor_offset += 1
+			subpck = []
+			subrcp = 777
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
-			(inner_pck,recp) = self.generate_pytype (node.type_decl)
+			#TODO# push & reset self.cursor_offset
+			(subpck,subrcp) = self.generate_pytype (node.type_decl)
+			#TODO# pop self.cursor_offset
 			self.nested_typecuts = self.nested_typecuts - 1
 		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,('_SETOF',inner_pck,recp))
+		return (pck,('_SETOF',allidx,subpck,subrcp))
 
 
 """The main program asn2quickder is called with one or more .asn1 files,
