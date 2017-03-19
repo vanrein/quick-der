@@ -52,9 +52,9 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 	// Allocate the dercursor array
 	dercursor cursori [numcursori];
 	dercursor binput;
-	binput.derptr = bin;
+	binput.derptr = (uint8_t *)bin;
 	binput.derlen = binlen;
-	if (der_unpack (&binput, pck, cursori, 1)) {
+	if (der_unpack (&binput, (derwalk *)pck, cursori, 1)) {
 		PyErr_SetFromErrno (PyExc_OSError);
 		//TODO// refctr
 		return NULL;
@@ -71,7 +71,7 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 		if (cursori [numcursori].derptr == NULL) {
 			elem = Py_None;
 		} else {
-			elem = PyString_FromStringAndSize (cursori [numcursori].derptr, cursori [numcursori].derlen);
+			elem = PyString_FromStringAndSize ((char *)cursori [numcursori].derptr, cursori [numcursori].derlen);
 			if (elem == NULL) {
 				//TODO// refctr
 				return NULL;
@@ -118,7 +118,7 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 			Py_ssize_t buflen;
 			//TODO// Retval from following call?  Can it go wrong?
 			PyString_AsStringAndSize (elem, &buf, &buflen);
-			cursori [binslen].derptr = buf;
+			cursori [binslen].derptr = (uint8_t *)buf;
 			cursori [binslen].derlen = buflen;
 		} else {
 			//TODO// refctr
@@ -127,15 +127,15 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	}
 	//
 	// Determine the length of the packed string
-	ssize_t packedlen = der_pack (pck, cursori, NULL);
+	ssize_t packedlen = der_pack ((derwalk *)pck, cursori, NULL);
 	if (packedlen < 0) {
 		PyErr_SetFromErrno (PyExc_OSError);
 		//TODO// refctr
 		return NULL;
 	}
 	uint8_t packed [packedlen];
-	der_pack (pck, cursori, packed + packedlen);
-	retval = PyString_FromStringAndSize (packed, packedlen);
+	der_pack ((derwalk *)pck, cursori, packed + packedlen);
+	retval = PyString_FromStringAndSize ((char *)packed, packedlen);
 	//
 	// Cleanup and return
 	//TODO// refctr
@@ -156,7 +156,7 @@ static PyObject *quickder_header (PyObject *self, PyObject *args) {
 	}
 	//
 	// Retrieve header information
-	crs.derptr = buf;
+	crs.derptr = (uint8_t *)buf;
 	crs.derlen = buflen;
 	uint8_t tag;
 	size_t len;
