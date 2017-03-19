@@ -476,7 +476,8 @@ class QuickDER2c (QuickDERgeneric):
 	    else:
 		fld = '_' + fld
             self.writeln('struct DER_OVLY_' + self.unit + '_' + tp + fld + ' {');
-	    self.to_be_defined.append ('DER_OVLY_' + self.unit + '_' + tp + fld)
+            if fld:
+                self.to_be_defined.append ('DER_OVLY_' + self.unit + '_' + tp + fld)
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
                 self.writeln('\t/* ...ASN.1 extensions... */')
