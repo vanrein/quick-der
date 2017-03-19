@@ -10,6 +10,7 @@ sharedlib = Extension (
 	# extra_objects = [
 	# 	"unix/x86_64/_quickder.so"
 	# ]
+	include_dirs = [ "@CMAKE_SOURCE_DIR@/include" ],
 )
 
 if __name__ == '__main__':
