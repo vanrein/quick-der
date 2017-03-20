@@ -871,6 +871,7 @@ class QuickDER2py (QuickDERgeneric):
 				#TODO# Always fixed or computed
 				self.writeln ('    _numcursori = ' + str (numcrs))
 			self.writeln ('    _context = globals ()')
+			self.writeln ('    _numcursori = ' + str (numcrs))
 			self.writeln ()
 
 		#
@@ -982,6 +983,8 @@ class QuickDER2py (QuickDERgeneric):
 				#TODO# ...COMPONENTS OF...
 				continue
 			(pck1,stru1) = self.generate_pytype (comp.type_decl)
+			if comp.optional:
+				pck1 = [ 'DER_PACK_OPTIONAL' ] + pck1
 			pck = pck + pck1
 			recp [tosym (comp.identifier)] = stru1
 		return (pck,('_NAMED',recp))
