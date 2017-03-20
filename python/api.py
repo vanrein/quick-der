@@ -113,7 +113,7 @@ def der_unpack_STRING (derblob):
 def der_pack_OID (oidstr, hdr=False):
 	print 'PACKING OID', oidstr
 	oidvals = map (int, oidstr.split ('.'))
-	oidvals [1] = oidvals [0] * 40 + oidvals [1]
+	oidvals [1] += 40 * oidvals [0]
 	enc = ''
 	for oidx in range (len (oidvals)-1, 0, -1):
 		oidval = oidvals [oidx]
@@ -135,14 +135,9 @@ def der_unpack_OID (derblob):
 			oidvals [-1] = (oidvals [-1] << 7) |  byte
 			oidvals.append (0)
 	fst = oidvals [0] / 40
-	snd = oidvals [1] % 40
+	snd = oidvals [0] % 40
 	oidvals = [fst, snd] + oidvals [1:-1]
-	retval = ''
-	comma = ''
-	for oidval in oidvals:
-		retval = retval + '%s%d' % (comma, oidval)
-		comma = '.'
-	# We intern the OID because it is commonly used as an index
+	retval = '.'.join (map (str, oidvals))
 	return intern (retval)
 
 
@@ -347,7 +342,6 @@ class ASN1ConstructedType (ASN1Object):
 		"""
 		assert type (self._recipe) == dict, 'ASN1ConstructedType instances must have a dictionary in their _recipe'
 		self._fields = {}
-		numcursori = 0
 		# Static recipe is generated from the ASN.1 grammar
 		# Iterate over this recipe to forming the instance data
 		for (subfld,subrcp) in self._recipe.items ():
@@ -361,12 +355,10 @@ class ASN1ConstructedType (ASN1Object):
 				# The following moved into __init_bindata__():
 				# self._bindata [self._offset] = subval
 				# Native types may be assigned instead of subval
-				numcursori = numcursori + subval._numcursori
+				pass
 			else:
 				# Primitive: Index into _bindata; set in _fields
 				self._fields [subfld] = subval
-				numcursori = numcursori + 1
-		self._numcursori = numcursori	# Though we don't need it...
 		#HUH:WHY:DROP# self._bindata [self._offset] = self
 
 	def _name2idx (self, name):
