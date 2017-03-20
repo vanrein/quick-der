@@ -815,6 +815,7 @@ class QuickDER2py (QuickDERgeneric):
 				self.pygenTypeAssignment (assign)
 
 	def pygenTypeAssignment (self, node):
+
 		def pymap_packer (pck, ln='\n        '):
 			retval = '(' + ln
 			pck = pck + [ 'DER_PACK_END' ]
@@ -825,6 +826,7 @@ class QuickDER2py (QuickDERgeneric):
 				comma = ' +' + ln
 			retval += ' )'
 			return retval
+
 		def pymap_recipe (recp, ln='\n    '):
 			if type (recp) == int:
 				retval = str (recp)
@@ -850,12 +852,13 @@ class QuickDER2py (QuickDERgeneric):
 				retval += pymap_packer (pck, ln) + ',' + ln
 				retval += pymap_recipe (inner_recp, ln) + ' )'
 			elif recp [0] == '_TYPTR':
-				(_TYPTR,cls,ofs) = recp
-				retval = "('_TYPTR'," + cls.__name__ + ',' + str (ofs) + ')'
+				(_TYPTR,[clsnm],ofs) = recp
+				retval = "('_TYPTR',[" + repr (clsnm) + '],' + str (ofs) + ')'
 			else:
-				(usertp,idx) = recp
+				assert False, 'Unexpected recipe tag ' + str (recp [0])
 				retval = repr (recp)
 			return retval
+
 		def pygen_class (clsnm, tp, pck, recp, numcrs):
 			#TODO# Sometimes, ASN1Atom may have a specific supertp
 			supertp = '_api.' + tp
@@ -867,10 +870,12 @@ class QuickDER2py (QuickDERgeneric):
 			if False:
 				#TODO# Always fixed or computed
 				self.writeln ('    _numcursori = ' + str (numcrs))
-			if False:
-				#TODO# Perhaps needed at some point?
-				self.writeln ('    pass')
+			self.writeln ('    _context = globals ()')
 			self.writeln ()
+
+		#
+		# body of pygenTypeAssignment
+		#
 		self.cursor_offset = 0
 		self.nested_typerefs = 0
 		self.nested_typecuts = 0
@@ -885,11 +890,10 @@ class QuickDER2py (QuickDERgeneric):
 		elif recp [0] == '_SETOF':
 			tp = 'ASN1SetOf'
 		elif recp [0] == '_TYPTR':
-			(_TYPTR,cls,ofs) = recp
+			(_TYPTR,[cls],ofs) = recp
 			tp = str (cls)
 		else:
-			(usrtp,idx) = recp
-			tp = usrtp
+			assert Fail, 'Unknown recipe tag ' + str (recp [0])
 		numcrs = self.cursor_offset
 		pygen_class (tosym (node.type_name), tp, pck, recp, numcrs)
 
@@ -901,17 +905,6 @@ class QuickDER2py (QuickDERgeneric):
 		return self.funmap_pytype [tnm] (node, **subarg)
 
 	def pytypeDefinedType (self, node, **subarg):
-		#TODO# Really stop recursion here?!?
-		if self.nested_typecuts > 0:
-			#TODO# And not self.nested_typerefs > 0
-			# We are about to recurse on self.nested_typerefs
-			# but the recursion for self.nested_typecuts
-			# has also occurred, so we can cut off recursion
-			#TODO# Offset should be properly incremented???
-			ofs = self.cursor_offset
-			#TODO# Why increase cursor for a type reference?!?
-			self.cursor_offset += 1
-			return ([],(tosym (node.type_name), ofs))
 		modnm = node.module_name
 		if modnm is None:
 			syms = self.semamod.imports.symbols_imported
@@ -926,15 +919,17 @@ class QuickDER2py (QuickDERgeneric):
 		popunit = self.unit
 		popsema = self.semamod
 		popcofs = self.cursor_offset
-		#TODO# cursor_offset?
 		self.unit = modnm
 		self.semamod = self.refmods [modnm]
-		self.nested_typerefs = self.nested_typerefs + 1
+		self.cursor_offset = 0
+		if self.nested_typecuts > 0:
+			self.nested_typerefs += 1
 		thetype = self.refmods [modnm].user_types () [node.type_name]
 		(pck,recp) = self.generate_pytype (thetype, **subarg)
-		self.nested_typerefs = self.nested_typerefs - 1
-		#TODO# cursor_offset?
-		#TODO# recp should reference the class?
+		if self.nested_typecuts > 0:
+			recp = ('_TYPTR',[node.type_name],popcofs)
+			self.nested_typerefs -= 1
+		self.cursor_offset += popcofs
 		self.semamod = popsema
 		self.unit = popunit
 		return (pck,recp)
@@ -973,7 +968,7 @@ class QuickDER2py (QuickDERgeneric):
 		return (pck,recp)
 
 	def pytypeNamedType (self, node,**subarg):
-		#TODO# Ignore field name... or should be we use it any way?
+		#TODO# Ignore field name... or should we use it any way?
 		return self.generate_pytype (node.type_decl,**subarg)
 
 	def pyhelpConstructedType (self, node):
@@ -1009,42 +1004,30 @@ class QuickDER2py (QuickDERgeneric):
 		pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
 		return (pck,recp)
 
-	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+	def pyhelpRepeatedType (self, node, dertag, recptag):
 		allidx = self.cursor_offset
 		self.cursor_offset += 1
 		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
 			# We are about to recurse on self.nested_typecuts
 			# but the recursion for self.nested_typerefs
 			# has also occurred, so we can cut off recursion
-			subpck = []
-			subrcp = 666
+			subpck = ['DER_ERROR_RECURSIVE_USE_IN' + recptag]
+			subrcp = ('_ERROR', 'Recursive use in ' + recptag)
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
-			#TODO# push & reset self.cursor_offset
+			popcofs = self.cursor_offset
+			self.cursor_offset = 0
 			(subpck,subrcp) = self.generate_pytype (node.type_decl)
-			#TODO# pop self.cursor_offset
+			self.cursor_offset = popcofs
 			self.nested_typecuts = self.nested_typecuts - 1
-		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,('_SEQOF',allidx,subpck,subrcp))
+		pck = [ 'DER_PACK_STORE | ' + dertag ]
+		return (pck,(recptag,allidx,subpck,subrcp))
+
+	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+		return self.pyhelpRepeatedType (node, implicit_tag, '_SEQOF')
 
 	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
-		allidx = self.cursor_offset
-		self.cursor_offset += 1
-		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
-			# We are about to recurse on self.nested_typecuts
-			# but the recursion for self.nested_typerefs
-			# has also occurred, so we can cut off recursion
-			subpck = []
-			subrcp = 777
-		else:
-			self.nested_typecuts = self.nested_typecuts + 1
-			#TODO# push & reset self.cursor_offset
-			(subpck,subrcp) = self.generate_pytype (node.type_decl)
-			#TODO# pop self.cursor_offset
-			self.nested_typecuts = self.nested_typecuts - 1
-		pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
-		return (pck,('_SETOF',allidx,subpck,subrcp))
-
+		return self.pyhelpRepeatedType (node, implicit_tag, '_SETOF')
 
 """The main program asn2quickder is called with one or more .asn1 files,
    the first of which is mapped to a C header file and the rest is

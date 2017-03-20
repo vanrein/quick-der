@@ -134,6 +134,10 @@ two variables that are considered shared by all instances:
     nested type.  Where type definitions may be recursive, this is reflected
     in a `_recipe` through references to type-named classes.
 
+  * `_context` is the name context in which the class is created.  It is
+    simply set to the return value of `globals()` at the time, and it serves
+    as a reference context for the lazy linking procedure described below.
+
   * `_numcursori` is the number of `dercursor` structures output by the
     `_der_packer`.  Its main use is to construct an empty `ASN1Object`
     instance, for which it needs to be known how many `None` elements are
@@ -161,25 +165,25 @@ type of `offset` to distinguish this outcome.
     ASN.1 constructed types `SEQUENCE`, `SET` and `CHOICE` to a `sub_recipe`
     that adheres to the same format; the `sub_recipe` can suggest the
     instantion of an element attached to the named `field`
-  * `('_SEQOF',allidx,der_packer,element_recipe)` tuples indicate that a
+  * `('_SEQOF',allidx,pack_recipe,element_recipe)` tuples indicate that a
     `SEQUENCE OF` must be instantiated, with the total contents stored in
-     `allidx` and, for further analysis, a `der_packer` for its elements, and
+     `allidx` and, for further analysis, a `pack_recipe` from which a
+     `der_packer` can be derived for the sequence elements, and
     `element_recipe` used to instantiate elements.
-  * `('_SETOF',allidx,der_packer,element_recipe)` tuples indicate that a
+  * `('_SETOF',allidx,pack_recipe,element_recipe)` tuples indicate that a
     `SET OF` must be instantiated, with the total contents stored in
-    `allidx` and, for futhre analysis, a `der_packer` for its elements, and
+    `allidx` and, for futhre analysis, a `pack_recipe` from which a
+    `der_packer` can be derived for the set elements, and
     `element_recipe` used to instantiate elements.
-  * `('_TYPTR',class,ofs)` tuples reference an `ASN1Object` subclass, whose
+  * `('_TYPTR',[class],ofs)` tuples reference an `ASN1Object` subclass, whose
     contained `_recipe` is used to further nail down the `_bindata`
     starting at `ofs`, which is relative to the `_offset` of the object
     whose class holds the `_recipe` in which this form occurs; so the
     `offset` parameter used to instantiate the `class` is the sum of this
-    reference `_offset` and the `ofs` supplied here.
-  * `(usertyp,index)` tuples hold an `index` into the `_bindata`; an
-    `_offset` for nested type parsing may still be added.  The 
-    `usertyp` references a type name that is defined as a type-named class
-    in either this module, or in one imported into it.  It is a string so it
-    can be bound late, thus enabling recursive type definitions.
+    reference `_offset` and the `ofs` supplied here.  The `class` may be a
+    name (typed `str`) or, after late linking, it may be a subclass of
+    `ASN1Object`.  The form `[class]` instead of `class` permits in-place
+    substitution of the value.
 
 Note how the outer level of each of these can be used to derive the choice
 between `ASN1Atom`, `ASN1ConstructedType`, `ASN1SequenceOf` and `ASN1SetOf`.
@@ -189,6 +193,45 @@ form aliases, so ASN.1 notation `D ::= C` could translate to Python `D = C`
 instead of a full class abstraction.  (Although we probably won't do that;
 this both requires ordering of such a rule under the definition of `C` and
 it suppresses class information which may be useful on its own.)
+
+The `pack_recipe` is a form from which a `_der_packer` can be derived, namely
+a list of strings.  Most of the strings are a `DER_xxx` macros, or perhaps
+two with an intermittent `|` operator.  This form is used to generate the
+binary string form that is directly usable to Quick DER.  In the `pack_recipe`
+however, the nicest form is a single binary string that can be employed
+directly for further unpacking.  The problem is that it might include type
+references that have not been resolved at the time the `pack_recipe` is
+parsed, so a lazy linking mechanism is needed.  This is achieved as follows:
+
+  * The `pack_recipe` is generally a list of at least one element.  The first
+    element holds either `None` or the linked form, which is substituted
+    after lazy linking it.
+  * When a `pack_recipe [0] is not None` its further elements will be ignored,
+    so it may be removed (except perhaps in the interest of debugging).
+  * When encountering a `pack_recipe [0] is None`, the linking is started and
+    the substitution is made.
+  * A valid `pack_recipe [0]` is a single binary string in the same format as
+    the `_der_packer`, including the final `DER_PACK_END`.  This format is
+    obtained by the lazy linking mechanism, and inserted in place so that
+    it only needs to perform the linking once per occurrence.
+  * The `der_packer [1:]` is a list of descriptions in the
+    same form as passed internally by the generator (strings like
+    `DER_PACK_ENTER | DER_PACK_SEQUENCE`) interspersed with an extra form
+    `?TypeName` that lazily resolves to a reference to the class `TypeName`,
+    similar to the `_TYPTR` mechanism that will usually parallel it.
+  * In addition to the above, the `DER_xxx` labels may be prefixed with a
+    package name, so they only need to pass through `chr()`; this prefix is
+    a normal Python identifier, so it will never start with `?` and can thus
+    be clearly distinguished.
+  * The rewriting of each form results in a list expression that can be
+    passed into `eval()`, which will yield a binary string in the same format
+    as the `_der_packer` in a class.  This form adds a final `DER_PACK_END`,
+    as with a class's `_der_packer`.
+  * The context in which the `pack_recipe` occurs is always a list, and it
+    is possible to substitute the respective part of that tuple with another
+    value in-place; this means that future references to the same place in
+    the code (which is part of the global data structure) will henceforth be
+    the resolved `_der_packer` form.
 
 
 ## Internal Data Storage
@@ -329,8 +372,8 @@ information too:
     only a limited depth is required.  The `nested_typerefs` variable counts
     how many type-name references have been followed and this increments
     while diving deeper and decrements when returning.  Similarly,
-    `nested_typecuts` counts how many `SEQUENCE OF` or `SET OF` elements
-    have been nested.  Both of these discard some information that may be
+    `nested_typecuts` may increase as `SEQUENCE OF` or `SET OF` elements
+    are being nested.  Both of these discard some information that may be
     of use to the outer type that is being sought; when both nestings occur
     there is no added value for the outermost type that initiated the type
     traversal, and so infinite recursion can be halted as soon as both
@@ -338,6 +381,21 @@ information too:
     recursive structures can be mapped; this is a general restriction of
     Quick DER and may be remedied with explicit recursion markers in the
     future.
+
+    One detail not immediately obvious to this scheme (at least to us) is
+    that there is a sub-packer for elements of `SEQEUENCE OF` and `SET OF`
+    structures, and this sub-packer requires full unwinding of even type
+    references.  This means that `nested_typecuts` are only incremented
+    when `nested_typerefs` has been.  We can do this easily by incrementing
+    and decrementing the `nested_typecuts` value with `nested_typerefs`
+    instead of `1`.  The two values are still needed, however: any nesting
+    of `SEQUENCE OF` and `SET OF` can occur, and must have a complete
+    sub-packer description, until one is encountered in a referenced type,
+    which will be assumed to do its own unwinding.
+
+    TODO: Given packer recipes in the sub-packer, we can just follow typerefs!
+
+    TODO: Could generate a recipe everywhere, and fixate it in the compiler
 
 When type descriptors are being generated, functions are called with a few
 parameters.  These allow the recursive passing-down of information along
