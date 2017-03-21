@@ -358,13 +358,15 @@ class ASN1ConstructedType (ASN1Object):
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
 			subval = build_asn1 (self._context, subrcp, self._bindata, self._offset)
-			if isinstance (subval, ASN1Object):
+			if type (subval) == int:
+				# Primitive: Index into _bindata; set in _fields
+				self._fields [subfld] = subval
+			elif isinstance (subval, ASN1Atom):
 				# The following moved into __init_bindata__():
 				# self._bindata [self._offset] = subval
 				# Native types may be assigned instead of subval
 				pass
-			else:
-				# Primitive: Index into _bindata; set in _fields
+			elif isinstance (subval, ASN1Object):
 				self._fields [subfld] = subval
 		#HUH:WHY:DROP# self._bindata [self._offset] = self
 
@@ -389,7 +391,10 @@ class ASN1ConstructedType (ASN1Object):
 
 	def __getattr__ (self, name):
 		idx = self._name2idx (name)
-		return self._bindata [idx]
+		if type (idx) == int:
+			return self._bindata [idx]
+		else:
+			return idx
 
 	def _der_pack (self):
 		"""Pack the current ASN1ConstructedType using DER notation.
@@ -403,6 +408,15 @@ class ASN1ConstructedType (ASN1Object):
 			#TODO# list, set, ...
 			bindata.append (bd)
 		return _quickder.der_pack (self._der_packer, bindata)
+
+	def __str__ (self):
+		retval = '{\n    '
+		comma = ''
+		for (name,value) in self._fields.items ():
+			retval = retval + name + ' ' + str (value) + comma
+			comma = ',\n    '
+		retval = retval + '}'
+		return retval
 
 
 class ASN1SequenceOf (ASN1Object,list):
@@ -430,11 +444,11 @@ class ASN1SequenceOf (ASN1Object,list):
 		"""
 		assert self._recipe [0] == '_SEQOF', 'ASN1SequenceOf instances must have a _recipe tuple (\'_SEQOF\',...)'
 		(_SEQOF,allidx,subpck,subrcp) = self._recipe
-		print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
-		print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
+		#TODO:DEBUG# print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
+		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
 		while len (derblob) > 0:
-			print 'Getting the header from ' + ' '.join (map (lambda x: x.encode ('hex'), derblob [:5])) + '...'
+			#TODO:DEBUG# print 'Getting the header from ' + ' '.join (map (lambda x: x.encode ('hex'), derblob [:5])) + '...'
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
 			if len (derblob) < hlen+ilen:
 				raise Exception ('SEQUENCE OF elements must line up to a neat whole')
@@ -444,7 +458,7 @@ class ASN1SequenceOf (ASN1Object,list):
 			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.append (subval)
 			derblob = derblob [hlen+ilen:]
-		self._bindata [self._offset] = self
+		#TODO:GENERIC# self._bindata [self._offset] = self
 
 	def _der_pack (self):
 		return ''.join ( [ elem._der_pack () for elem in self ] )
@@ -475,8 +489,8 @@ class ASN1SetOf (ASN1Object,set):
 		"""
 		assert self._recipe [0] == '_SETOF', 'ASN1SetOf instances must have a _recipe tuple (\'_SETOF\',...)'
 		(_SETOF,allidx,subpck,subrcp) = self._recipe
-		print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
-		print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
+		#TODO:DEBUG# print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
+		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
 		while len (derblob) > 0:
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
@@ -488,7 +502,7 @@ class ASN1SetOf (ASN1Object,set):
 			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.add (subval)
 			derblob = derblob [hlen+ilen:]
-		self._bindata [self._offset] = self
+		#TODO:GENERIC# self._bindata [self._offset] = self
 
 	def _der_pack (self):
 		"""Return the result of the `der_pack()` operation on this
@@ -592,11 +606,14 @@ class ASN1Atom (ASN1Object):
 		else:
 			raise ValueError ('ASN1Atom.set() only accepts derblob strings')
 
+	#OLD# 	def __str__ (self):
+	#OLD# 		if self._value is not None:
+	#OLD# 			return self._value
+	#OLD# 		else:
+	#OLD# 			return ''
+
 	def __str__ (self):
-		if self._value is not None:
-			return self._value
-		else:
-			return ''
+		return "'" + self.get ().encode ('hex') + "'H"
 
 	def __len__ (self):
 		return len (self._value)
@@ -613,6 +630,12 @@ class ASN1Boolean (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_BOOLEAN) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		if self.get ():
+			return 'TRUE'
+		else:
+			return 'FALSE'
+
 
 class ASN1Integer (ASN1Atom):
 
@@ -620,6 +643,9 @@ class ASN1Integer (ASN1Atom):
 
 	def __int__ (self):
 		return der_unpack_INTEGER (str (self))
+
+	def __str__ (self):
+		return str (__int__ (self))
 
 
 class ASN1BitString (ASN1Atom):
@@ -645,12 +671,19 @@ class ASN1Null (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_NULL) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return 'NULL'
+
 
 class ASN1OID (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
 
 	_context = {}
+
+	def __str__ (self):
+		oidstr = der_unpack_OID (self.get ())
+		return '{ ' + oidstr.replace ('.', ' ') + ' }'
 
 
 class ASN1Real (ASN1Atom):
@@ -667,6 +700,9 @@ class ASN1UTF8String (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTF8STRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1RelativeOID (ASN1Atom):
 
@@ -677,35 +713,56 @@ class ASN1NumericString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_NUMERICSTRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1PrintableString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_PRINTABLESTRING) + chr(DER_PACK_END)
+
+	def __str__ (self):
+		return '"' + self.get () + '"'
 
 
 class ASN1TeletexString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_TELETEXSTRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1VideotexString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VIDEOTEXSTRING) + chr(DER_PACK_END)
+
+	def __str__ (self):
+		return '"' + self.get () + '"'
 
 
 class ASN1IA5String (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_IA5STRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1UTCTime (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTCTIME) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1GeneralizedTime (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALIZEDTIME) + chr(DER_PACK_END)
+
+	def __str__ (self):
+		return '"' + self.get () + '"'
 
 
 class ASN1GraphicString (ASN1Atom):
@@ -717,15 +774,24 @@ class ASN1VisibleString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VISIBLESTRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1GeneralString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALSTRING) + chr(DER_PACK_END)
 
+	def __str__ (self):
+		return '"' + self.get () + '"'
+
 
 class ASN1UniversalString (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UNIVERSALSTRING) + chr(DER_PACK_END)
+
+	def __str__ (self):
+		return '"' + self.get () + '"'
 
 
 def build_asn1 (context, recipe, bindata=[], ofs=0):
