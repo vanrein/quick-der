@@ -165,15 +165,17 @@ type of `offset` to distinguish this outcome.
     ASN.1 constructed types `SEQUENCE`, `SET` and `CHOICE` to a `sub_recipe`
     that adheres to the same format; the `sub_recipe` can suggest the
     instantion of an element attached to the named `field`
-  * `('_SEQOF',allidx,pack_recipe,element_recipe)` tuples indicate that a
-    `SEQUENCE OF` must be instantiated, with the total contents stored in
-     `allidx` and, for further analysis, a `pack_recipe` from which a
-     `der_packer` can be derived for the sequence elements, and
+  * `('_SEQOF',allidx,pack_recipe,pack_cursori,element_recipe)`
+     tuples indicate that a `SEQUENCE OF` must be instantiated,
+     with the total contents stored at offset `allidx` and, for further
+     analysis, a `pack_recipe` from which a `der_packer` can be derived
+     to cover `pack_cursori` output cursors for the sequence elements, and
     `element_recipe` used to instantiate elements.
-  * `('_SETOF',allidx,pack_recipe,element_recipe)` tuples indicate that a
-    `SET OF` must be instantiated, with the total contents stored in
-    `allidx` and, for futhre analysis, a `pack_recipe` from which a
-    `der_packer` can be derived for the set elements, and
+  * `('_SETOF',allidx,pack_recipe,pack_cursori,element_recipe)`
+     tuples indicate that a `SET OF` must be instantiated,
+     with the total contents stored at offset `allidx` and, for further
+     analysis, a `pack_recipe` from which a `der_packer` can be derived
+     to cover `pack_cursori` output cursors for the set elements, and
     `element_recipe` used to instantiate elements.
   * `('_TYPTR',[class],ofs)` tuples reference an `ASN1Object` subclass, whose
     contained `_recipe` is used to further nail down the `_bindata`

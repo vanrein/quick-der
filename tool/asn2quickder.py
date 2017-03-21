@@ -845,11 +845,12 @@ class QuickDER2py (QuickDERgeneric):
 					comma = True
 				retval += ' } )'
 			elif recp [0] in ['_SEQOF','_SETOF']:
-				(_STHOF,allidx,pck,inner_recp) = recp
+				(_STHOF,allidx,pck,num,inner_recp) = recp
 				ln += '    '
 				retval = "('" + _STHOF + "', "
 				retval += str (allidx) + ', '
-				retval += pymap_packer (pck, ln) + ',' + ln
+				retval += pymap_packer (pck, ln) + ','
+				retval += str (num) + ',' + ln
 				retval += pymap_recipe (inner_recp, ln) + ' )'
 			elif recp [0] == '_TYPTR':
 				(_TYPTR,[clsnm],ofs) = recp
@@ -1017,15 +1018,17 @@ class QuickDER2py (QuickDERgeneric):
 			# has also occurred, so we can cut off recursion
 			subpck = ['DER_ERROR_RECURSIVE_USE_IN' + recptag]
 			subrcp = ('_ERROR', 'Recursive use in ' + recptag)
+			subnum = 0
 		else:
 			self.nested_typecuts = self.nested_typecuts + 1
 			popcofs = self.cursor_offset
 			self.cursor_offset = 0
 			(subpck,subrcp) = self.generate_pytype (node.type_decl)
+			subnum = self.cursor_offset
 			self.cursor_offset = popcofs
 			self.nested_typecuts = self.nested_typecuts - 1
 		pck = [ 'DER_PACK_STORE | ' + dertag ]
-		return (pck,(recptag,allidx,subpck,subrcp))
+		return (pck,(recptag,allidx,subpck,subnum,subrcp))
 
 	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
 		return self.pyhelpRepeatedType (node, implicit_tag, '_SEQOF')

@@ -293,6 +293,7 @@ class ASN1Object (object):
 			self.__init_bindata__ ()
 		elif derblob:
 			self._bindata    = _quickder.der_unpack (self._der_packer, derblob, self._numcursori)
+			assert len (self._bindata) == self._numcursori, 'Wrong number of values returned from der_unpack()'
 			self._offset     = 0
 			assert offset == 0, 'You supplied a derblob, so you cannot request any offset but 0'
 			self.__init_bindata__ ()
@@ -413,6 +414,10 @@ class ASN1ConstructedType (ASN1Object):
 		retval = '{\n    '
 		comma = ''
 		for (name,value) in self._fields.items ():
+			if type (value) == int:
+				value = self._bindata [value]
+			if value is None:
+				continue
 			retval = retval + name + ' ' + str (value) + comma
 			comma = ',\n    '
 		retval = retval + '}'
@@ -443,7 +448,7 @@ class ASN1SequenceOf (ASN1Object,list):
 		   calls.
 		"""
 		assert self._recipe [0] == '_SEQOF', 'ASN1SequenceOf instances must have a _recipe tuple (\'_SEQOF\',...)'
-		(_SEQOF,allidx,subpck,subrcp) = self._recipe
+		(_SEQOF,allidx,subpck,subnum,subrcp) = self._recipe
 		#TODO:DEBUG# print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
 		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
@@ -453,7 +458,7 @@ class ASN1SequenceOf (ASN1Object,list):
 			if len (derblob) < hlen+ilen:
 				raise Exception ('SEQUENCE OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
-			subcrs = _quickder.der_unpack (subpck,subdta,1)
+			subcrs = _quickder.der_unpack (subpck,subdta,subnum)
 			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
 			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.append (subval)
@@ -488,7 +493,7 @@ class ASN1SetOf (ASN1Object,set):
 		   calls.
 		"""
 		assert self._recipe [0] == '_SETOF', 'ASN1SetOf instances must have a _recipe tuple (\'_SETOF\',...)'
-		(_SETOF,allidx,subpck,subrcp) = self._recipe
+		(_SETOF,allidx,subpck,subnum,subrcp) = self._recipe
 		#TODO:DEBUG# print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
 		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
@@ -817,7 +822,7 @@ def build_asn1 (context, recipe, bindata=[], ofs=0):
 					offset = ofs,
 					context = context )
 	elif recipe [0] in ['_SEQOF', '_SETOF']:
-		(_STHOF,allidx,subpck,subrcp) = recipe
+		(_STHOF,allidx,subpck,subnum,subrcp) = recipe
 		cls = ASN1SequenceOf if _STHOF == '_SEQOF' else ASN1SetOf
 		packer = subpck [0]
 		if packer is None:
