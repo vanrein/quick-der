@@ -111,7 +111,6 @@ def der_unpack_STRING (derblob):
 
 
 def der_pack_OID (oidstr, hdr=False):
-	print 'PACKING OID', oidstr
 	oidvals = map (int, oidstr.split ('.'))
 	oidvals [1] += 40 * oidvals [0]
 	enc = ''
@@ -262,23 +261,30 @@ class ASN1Object (object):
 	_recipe     = None
 	_numcursori = None
 
-	def __init__ (self, derblob=None, bindata=None, offset=0, der_packer=None, recipe=None):
+	def __init__ (self, derblob=None, bindata=None, offset=0, der_packer=None, recipe=None, context=None):
 		"""Initialise the current object; abstract classes require
 		   parameters with typing information (der_packer, recipe,
 		   numcursori).  Instance data may be supplied through bindata
 		   and a possible offset, with a fallback to derblob that
 		   will use the subclasses' _der_unpack() methods to form the
 		   _bindata values.  If neither bindata nor derblob are
-		   supplied, then an empty instance is delivered.
+		   supplied, then an empty instance is delivered.  The optional
+		   context defines the globals() map in which type references
+		   should be resolved.
 		"""
-		assert der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
+		#TODO:OLD# assert der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
+		assert (bindata is not None and recipe is not None) or der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
 		assert recipe is not None or self._recipe is not None, 'You or a class from asn2quickder must supply a recipe for instantiating object structures'
-		assert bindata is not None or derblob is not None or self._numcursori is not None, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
+		#TODO:OLD# assert bindata is not None or derblob is not None or self._numcursori is not None, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
+		#TODO:NEW:MAYBENOTNEEDED# assert self._numcursori is not None, 'You should always indicate how many values will be stored'
+		assert context is not None or self._context is not None, 'You or a subclass definition should provide a context for symbol resolution'
 		# Construct the type if so desired
 		if der_packer:
 			self._der_packer = der_packer
 		if recipe:
 			self._recipe     = recipe
+		if context:
+			self._context    = context
 		# Ensure presence of all typing data
 		# Fill the instance data as supplied, or else make it empty
 		if bindata:
@@ -340,17 +346,18 @@ class ASN1ConstructedType (ASN1Object):
 		   _bindata [_offset], so as to support future _der_pack()
 		   calls.
 		"""
-		assert type (self._recipe) == dict, 'ASN1ConstructedType instances must have a dictionary in their _recipe'
+		assert self._recipe [0] == '_NAMED', 'ASN1ConstructedType instances must have a dictionary in their _recipe'
+		(_NAMED,recp) = self._recipe
 		self._fields = {}
 		# Static recipe is generated from the ASN.1 grammar
-		# Iterate over this recipe to forming the instance data
-		for (subfld,subrcp) in self._recipe.items ():
+		# Iterate over this recipe to form the instance data
+		for (subfld,subrcp) in recp.items ():
 			if type (subfld) != str:
 				raise Exception ("ASN.1 recipe keys can only be strings")
 			# Interned strings yield faster dictionary lookups
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
-			subval = build_asn1 (subrcp, self._bindata, self._offset)
+			subval = build_asn1 (self._context, subrcp, self._bindata, self._offset)
 			if isinstance (subval, ASN1Object):
 				# The following moved into __init_bindata__():
 				# self._bindata [self._offset] = subval
@@ -422,15 +429,19 @@ class ASN1SequenceOf (ASN1Object,list):
 		   calls.
 		"""
 		assert self._recipe [0] == '_SEQOF', 'ASN1SequenceOf instances must have a _recipe tuple (\'_SEQOF\',...)'
-		(_SEQOF,subpck,subrcp) = self._recipe
+		(_SEQOF,allidx,subpck,subrcp) = self._recipe
+		print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
+		print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
 		while len (derblob) > 0:
+			print 'Getting the header from ' + ' '.join (map (lambda x: x.encode ('hex'), derblob [:5])) + '...'
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
 			if len (derblob) < hlen+ilen:
 				raise Exception ('SEQUENCE OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
 			subcrs = _quickder.der_unpack (subpck,subdta,1)
-			subval = build_asn1 (subrcp, subcrs, 0)
+			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
+			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.append (subval)
 			derblob = derblob [hlen+ilen:]
 		self._bindata [self._offset] = self
@@ -463,7 +474,9 @@ class ASN1SetOf (ASN1Object,set):
 		   calls.
 		"""
 		assert self._recipe [0] == '_SETOF', 'ASN1SetOf instances must have a _recipe tuple (\'_SETOF\',...)'
-		(_SETOF,subpck,subrcp) = self._recipe
+		(_SETOF,allidx,subpck,subrcp) = self._recipe
+		print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
+		print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
 		derblob = self._bindata [self._offset]
 		while len (derblob) > 0:
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
@@ -471,7 +484,8 @@ class ASN1SetOf (ASN1Object,set):
 				raise Exception ('SET OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
 			subcrs = _quickder.der_unpack (subpck,subdta,1)
-			subval = build_asn1 (subrcp, subcrs, 0)
+			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
+			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.add (subval)
 			derblob = derblob [hlen+ilen:]
 		self._bindata [self._offset] = self
@@ -636,6 +650,8 @@ class ASN1OID (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
 
+	_context = {}
+
 
 class ASN1Real (ASN1Atom):
 
@@ -712,10 +728,13 @@ class ASN1UniversalString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UNIVERSALSTRING) + chr(DER_PACK_END)
 
 
-def build_asn1 (recipe, bindata=[], ofs=0):
+def build_asn1 (context, recipe, bindata=[], ofs=0):
 	"""Construct an ASN.1 structural element from a recipe and bindata.
 	   with ofset.  The result can either be an ASN1Object subclass
-	   instance or an offset into bindata.
+	   instance or an offset into bindata.  The context is used to lookup
+	   identifiers during lazy binding, normally it is set to self._context
+	   for a generated class, and it would reference the globals() context
+	   of that class definition.
 	"""
 	if type (recipe) == int:
 		# Numbers refer to a dercursor index number
@@ -723,14 +742,16 @@ def build_asn1 (recipe, bindata=[], ofs=0):
 		return ofs + offset
 	elif recipe [0] == '_NAMED':
 		# dictionaries are ASN.1 constructed types
-		(_NAMED,pck,map) = recipe
+		#TODO:OLD# (_NAMED,pck,map) = recipe
+		(_NAMED,map) = recipe
 		return ASN1ConstructedType (
-					recipe = map,
-					der_packer = pck,
+					recipe = recipe,
+					#TODO:OLD# der_packer = pck,
 					bindata = bindata,
-					offset = ofs )
+					offset = ofs,
+					context = context )
 	elif recipe [0] in ['_SEQOF', '_SETOF']:
-		(_STHOF,subpck,subrcp) = recipe
+		(_STHOF,allidx,subpck,subrcp) = recipe
 		cls = ASN1SequenceOf if _STHOF == '_SEQOF' else ASN1SetOf
 		packer = subpck [0]
 		if packer is None:
@@ -738,7 +759,7 @@ def build_asn1 (recipe, bindata=[], ofs=0):
 			packer = ''
 			for idx in range (1, len (subpck)):
 				if subpck [idx] [:1] == '?':
-					new = self._context [subpck [idx] [1:]]
+					new = context [subpck [idx] [1:]]
 				else:
 					new = 0x00
 					for elm in subpck [idx].split ('|'):
@@ -751,15 +772,16 @@ def build_asn1 (recipe, bindata=[], ofs=0):
 			subpck [0] = packer
 			del subpck [1:]
 		return cls (
-					recipe = subrcp,
+					recipe = recipe,
 					der_packer = subpck [0],
 					bindata = bindata,
-					offset = ofs )
+					offset = allidx,
+					context = context )
 	elif recipe [0] == '_TYPTR':
 		# Reference to an ASN1Object subclass
 		(_TYPTR,[subcls],subofs) = recipe
 		if type (subcls) == str:
-			subcls = self._context [subcls]	# lazy link
+			subcls = context [subcls]	# lazy link
 			recipe [1] [0] = subcls		# memorise
 		assert (issubclass (subcls, ASN1Object))
 		assert (type (subofs) == int)
@@ -767,7 +789,8 @@ def build_asn1 (recipe, bindata=[], ofs=0):
 					recipe = subcls._recipe,
 					der_packer = subcls._der_packer,
 					bindata = bindata,
-					offset = ofs )
+					offset = ofs,
+					context = context )
 	else:
 		assert False, 'Unknown recipe tag ' + str (recipe [0])
 
@@ -847,82 +870,82 @@ if True:
 # # a1 = LDAPMessage ()
 # a1 = LDAPMessage2 ()
 
-a1=GeneratedTypeNameClass (derblob='\x30\x0e\x04\x05\x48\x65\x6c\x6c\x6f\x04\x05\x57\x6f\x72\x6c\x64')
-
-print 'Created a1:', a1
-
-print a1.hello, a1.world
-
-a1.world = 'Wereld'
-a1.hello = 'Motjo'
-
-print a1.hello, a1.world
-
-del a1.hello
-
-print a1.hello, a1.world
-
-a1.hello = 'Hoi'
-print a1.hello, a1.world
-
-pepe = a1._der_pack ()
-print 'pepe.length =', len (pepe)
-print 'pepe.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe))
-
-(tag,ilen,hlen) = _quickder.der_header (pepe)
-print 'der_header (pepe) =', (tag,ilen,hlen)
-pepe2 = pepe [hlen:]
-while len (pepe2) > 0:
-	print 'pepe2.length =', len (pepe2)
-	print 'pepe2.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe2))
-	(tag2,ilen2,hlen2) = _quickder.der_header (pepe2)
-	print 'der_header (pepe2) =', (tag2,ilen2,hlen2)
-	if len (pepe2) == hlen2+ilen2:
-		print 'Will exactly reach the end of pepe2'
-	pepe2 = pepe2 [hlen2+ilen2:]
-
-#TODO:FUNGONE# pepe3 = der_unpack_SEQUENCE_OF (ASN1OctetString, pepe [hlen:], 0)
-#TODO:FUNGONE# print 'pepe3 =', pepe3
-
-#TODO:FUNGONE# pepe4 = der_unpack_SET_OF (ASN1OctetString, pepe [hlen:], 0)
-#TODO:FUNGONE# print 'pepe4 =', pepe4
-
-pepe5 = ASN1SequenceOf (recipe=('_SEQOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=pepe)
-print 'pepe5 =', pepe5, '::', type (pepe5), '[0]::', type (pepe5 [0]), '[1]::', type (pepe5 [1])
-
-pepe6 = ASN1SetOf (recipe=('_SETOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=chr(0x31)+pepe[1:])
-print 'pepe6 =', pepe6, '::', type (pepe6)
-
-a3 = GeneratedTypeNameClass ()
-
-print 'EMPTY:', a3
-print 'FIELD:', a3.hello
-print 'FIELD:', a3.world
-print 'FIELD:', a3.hello, a3.world
-
-a2 = der_unpack (GeneratedTypeNameClass, pepe)
-
-print 'PARSED:', a2.hello, a2.world
-
-i1 = der_pack_INTEGER (12345)
-print 'Packed 12345 into', ''.join (map (lambda c:'%02x '%ord(c), i1))
-print 'Unpacking gives', der_unpack_INTEGER (i1)
-
-i2 = der_pack_INTEGER (-12345)
-print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
-print 'Unpacking gives', der_unpack_INTEGER (i2)
-
-# i3 = ASN1Atom (bindata=[i1], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
-i3 = ASN1Integer (derblob=chr(2) + chr(len(i1)) + i1)
-#CHANGED_TYPE# print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
-print 'Atom int is', i3, '::', type (i3), 'with value', int (i3)
-
-# i4 = ASN1Atom (bindata=[i2], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
-i4 = ASN1Integer (derblob=chr(2) + chr(len(i2)) + i2)
-#CHANGED_TYPE# print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
-print 'Atom int is', i4, '::', type (i4), 'with value', int (i4)
-
-i0 = ASN1Integer ()
-#CHANGED_TYPE# print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
-print 'Atom int is', i0, '::', type (i0), 'with value', int (i0)
-
+#TESTCODE:TODO:OLD# a1=GeneratedTypeNameClass (derblob='\x30\x0e\x04\x05\x48\x65\x6c\x6c\x6f\x04\x05\x57\x6f\x72\x6c\x64')
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print 'Created a1:', a1
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print a1.hello, a1.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# a1.world = 'Wereld'
+#TESTCODE:TODO:OLD# a1.hello = 'Motjo'
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print a1.hello, a1.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# del a1.hello
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print a1.hello, a1.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# a1.hello = 'Hoi'
+#TESTCODE:TODO:OLD# print a1.hello, a1.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# pepe = a1._der_pack ()
+#TESTCODE:TODO:OLD# print 'pepe.length =', len (pepe)
+#TESTCODE:TODO:OLD# print 'pepe.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe))
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# (tag,ilen,hlen) = _quickder.der_header (pepe)
+#TESTCODE:TODO:OLD# print 'der_header (pepe) =', (tag,ilen,hlen)
+#TESTCODE:TODO:OLD# pepe2 = pepe [hlen:]
+#TESTCODE:TODO:OLD# while len (pepe2) > 0:
+#TESTCODE:TODO:OLD# 	print 'pepe2.length =', len (pepe2)
+#TESTCODE:TODO:OLD# 	print 'pepe2.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe2))
+#TESTCODE:TODO:OLD# 	(tag2,ilen2,hlen2) = _quickder.der_header (pepe2)
+#TESTCODE:TODO:OLD# 	print 'der_header (pepe2) =', (tag2,ilen2,hlen2)
+#TESTCODE:TODO:OLD# 	if len (pepe2) == hlen2+ilen2:
+#TESTCODE:TODO:OLD# 		print 'Will exactly reach the end of pepe2'
+#TESTCODE:TODO:OLD# 	pepe2 = pepe2 [hlen2+ilen2:]
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# #TODO:FUNGONE# pepe3 = der_unpack_SEQUENCE_OF (ASN1OctetString, pepe [hlen:], 0)
+#TESTCODE:TODO:OLD# #TODO:FUNGONE# print 'pepe3 =', pepe3
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# #TODO:FUNGONE# pepe4 = der_unpack_SET_OF (ASN1OctetString, pepe [hlen:], 0)
+#TESTCODE:TODO:OLD# #TODO:FUNGONE# print 'pepe4 =', pepe4
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# pepe5 = ASN1SequenceOf (recipe=('_SEQOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=pepe)
+#TESTCODE:TODO:OLD# print 'pepe5 =', pepe5, '::', type (pepe5), '[0]::', type (pepe5 [0]), '[1]::', type (pepe5 [1])
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# pepe6 = ASN1SetOf (recipe=('_SETOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=chr(0x31)+pepe[1:])
+#TESTCODE:TODO:OLD# print 'pepe6 =', pepe6, '::', type (pepe6)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# a3 = GeneratedTypeNameClass ()
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print 'EMPTY:', a3
+#TESTCODE:TODO:OLD# print 'FIELD:', a3.hello
+#TESTCODE:TODO:OLD# print 'FIELD:', a3.world
+#TESTCODE:TODO:OLD# print 'FIELD:', a3.hello, a3.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# a2 = der_unpack (GeneratedTypeNameClass, pepe)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# print 'PARSED:', a2.hello, a2.world
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# i1 = der_pack_INTEGER (12345)
+#TESTCODE:TODO:OLD# print 'Packed 12345 into', ''.join (map (lambda c:'%02x '%ord(c), i1))
+#TESTCODE:TODO:OLD# print 'Unpacking gives', der_unpack_INTEGER (i1)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# i2 = der_pack_INTEGER (-12345)
+#TESTCODE:TODO:OLD# print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
+#TESTCODE:TODO:OLD# print 'Unpacking gives', der_unpack_INTEGER (i2)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# # i3 = ASN1Atom (bindata=[i1], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
+#TESTCODE:TODO:OLD# i3 = ASN1Integer (derblob=chr(2) + chr(len(i1)) + i1)
+#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
+#TESTCODE:TODO:OLD# print 'Atom int is', i3, '::', type (i3), 'with value', int (i3)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# # i4 = ASN1Atom (bindata=[i2], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
+#TESTCODE:TODO:OLD# i4 = ASN1Integer (derblob=chr(2) + chr(len(i2)) + i2)
+#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
+#TESTCODE:TODO:OLD# print 'Atom int is', i4, '::', type (i4), 'with value', int (i4)
+#TESTCODE:TODO:OLD# 
+#TESTCODE:TODO:OLD# i0 = ASN1Integer ()
+#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
+#TESTCODE:TODO:OLD# print 'Atom int is', i0, '::', type (i0), 'with value', int (i0)
+#TESTCODE:TODO:OLD# 
