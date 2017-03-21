@@ -540,6 +540,7 @@ class ASN1Atom (ASN1Object):
 
 	_numcursori = 1
 	_recipe = 0
+	_context = {}
 
 	# The following lists the data types that can be represented in an
 	# ASN1Atom, but that might also find another format more suited to
@@ -683,8 +684,6 @@ class ASN1Null (ASN1Atom):
 class ASN1OID (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
-
-	_context = {}
 
 	def __str__ (self):
 		oidstr = der_unpack_OID (self.get ())

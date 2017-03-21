@@ -33,10 +33,37 @@ import getopt
 from asn1ate import parser
 from asn1ate.sema import *
 
+from quick_der import api
+
 
 def tosym(name):
     """Replace unsupported characters in ASN.1 symbol names"""
     return str(name).replace(' ', '').replace('-', '_')
+
+
+dertag2atomsubclass = {
+	api.DER_TAG_BOOLEAN: 'ASN1Boolean',
+	api.DER_TAG_INTEGER: 'ASN1Integer',
+	api.DER_TAG_BITSTRING: 'ASN1BitString',
+	api.DER_TAG_OCTETSTRING: 'ASN1OctetString',
+	api.DER_TAG_NULL: 'ASN1Null',
+	api.DER_TAG_OID: 'ASN1OID',
+	api.DER_TAG_REAL: 'ASN1Real',
+	api.DER_TAG_ENUMERATED: 'ASN1Enumerated',
+	api.DER_TAG_UTF8STRING: 'ASN1UTF8String',
+	api.DER_TAG_RELATIVEOID: 'ASN1RelativeOID',
+	api.DER_TAG_NUMERICSTRING: 'ASN1NumericString',
+	api.DER_TAG_PRINTABLESTRING: 'ASN1PrintableString',
+	api.DER_TAG_TELETEXSTRING: 'ASN1TeletexString',
+	api.DER_TAG_VIDEOTEXSTRING: 'ASN1VideoTexString',
+	api.DER_TAG_IA5STRING: 'ASN1IA5String',
+	api.DER_TAG_UTCTIME: 'ASN1UTCTime',
+	api.DER_TAG_GENERALIZEDTIME: 'ASN1GeneralizedTime',
+	api.DER_TAG_GRAPHICSTRING: 'ASN1GraphicString',
+	api.DER_TAG_VISIBLESTRING: 'ASN1VisibleString',
+	api.DER_TAG_GENERALSTRING: 'ASN1GeneralString',
+	api.DER_TAG_UNIVERSALSTRING: 'ASN1UniversalString'
+}
 
 
 class QuickDERgeneric (object):
@@ -865,15 +892,25 @@ class QuickDER2py (QuickDERgeneric):
 			#TODO# Sometimes, ASN1Atom may have a specific supertp
 			supertp = '_api.' + tp
 			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
-			if tp not in ['ASN1SequenceOf','ASN1SetOf']:
+			atom = type (recp) == int
+			subatom = atom and tp != 'ASN1Atom'
+			said_sth = False
+			if tp not in ['ASN1SequenceOf','ASN1SetOf'] and not subatom:
 				self.writeln ('    _der_packer = ' + pymap_packer (pck))
-			if tp not in ['ASN1Atom']:
+				said_sth = True
+			if not atom:
 				self.writeln ('    _recipe = ' + pymap_recipe (recp))
+				said_sth = True
 			if False:
 				#TODO# Always fixed or computed
 				self.writeln ('    _numcursori = ' + str (numcrs))
-			self.writeln ('    _context = globals ()')
-			self.writeln ('    _numcursori = ' + str (numcrs))
+				said_sth = True
+			if not atom:
+				self.writeln ('    _context = globals ()')
+				self.writeln ('    _numcursori = ' + str (numcrs))
+				said_sth = True
+			if not said_sth:
+				self.writeln ('    pass')
 			self.writeln ()
 
 		#
@@ -885,7 +922,11 @@ class QuickDER2py (QuickDERgeneric):
 		self.comment (str (node))
 		(pck,recp) = self.generate_pytype (node.type_decl)
 		if type (recp) == int:
-			tp = 'ASN1Atom'
+			dertag = eval (pck [0], api.__dict__)
+			if dertag2atomsubclass.has_key (dertag):
+				tp = dertag2atomsubclass [dertag]
+			else:
+				tp = 'ASN1Atom'
 		elif recp [0] == '_NAMED':
 			tp = 'ASN1ConstructedType'
 		elif recp [0] == '_SEQOF':
