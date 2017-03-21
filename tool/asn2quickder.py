@@ -548,7 +548,7 @@ class QuickDER2c (QuickDERgeneric):
                 self.comma()
                 self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
-            if comp.optional:
+            if comp.optional or comp.default_value:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
@@ -572,7 +572,7 @@ class QuickDER2c (QuickDERgeneric):
                 self.comma()
                 self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
-            if comp.optional:
+            if comp.optional or comp.default_value:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
@@ -983,8 +983,9 @@ class QuickDER2py (QuickDERgeneric):
 				#TODO# ...COMPONENTS OF...
 				continue
 			(pck1,stru1) = self.generate_pytype (comp.type_decl)
-			if comp.optional:
-				pck1 = [ 'DER_PACK_OPTIONAL' ] + pck1
+			if isinstance (comp, ComponentType):
+				if comp.optional or comp.default_value:
+					pck1 = [ 'DER_PACK_OPTIONAL' ] + pck1
 			pck = pck + pck1
 			recp [tosym (comp.identifier)] = stru1
 		return (pck,('_NAMED',recp))
