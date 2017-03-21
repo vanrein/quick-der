@@ -922,7 +922,7 @@ class QuickDER2py (QuickDERgeneric):
 		popcofs = self.cursor_offset
 		self.unit = modnm
 		self.semamod = self.refmods [modnm]
-		self.cursor_offset = 0
+		#TODO:BAD# self.cursor_offset = 0
 		if self.nested_typecuts > 0:
 			self.nested_typerefs += 1
 		thetype = self.refmods [modnm].user_types () [node.type_name]
@@ -930,7 +930,7 @@ class QuickDER2py (QuickDERgeneric):
 		if self.nested_typecuts > 0:
 			recp = ('_TYPTR',[node.type_name],popcofs)
 			self.nested_typerefs -= 1
-		self.cursor_offset += popcofs
+		#TODO:BAD# self.cursor_offset += popcofs
 		self.semamod = popsema
 		self.unit = popunit
 		return (pck,recp)
