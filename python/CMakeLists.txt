@@ -13,10 +13,16 @@ execute_process(COMMAND python -c "from distutils.sysconfig import get_python_li
 configure_file (setup.py.in ${CMAKE_CURRENT_BINARY_DIR}/setup.py @ONLY)
 
 add_custom_command (OUTPUT quickder-shared-module-build
-			COMMAND python ${CMAKE_CURRENT_BINARY_DIR}/setup.py build)
+			COMMAND python ${CMAKE_CURRENT_BINARY_DIR}/setup.py build
+			COMMAND python ${CMAKE_CURRENT_BINARY_DIR}/setup.py install --root ${CMAKE_CURRENT_BINARY_DIR}/quick_der --install-platlib .
+	)
 add_custom_target (quickder-shared-module ALL
 		DEPENDS quickder-shared-module-build)
-
+add_custom_command (TARGET quickder-shared-module
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/api.py ${CMAKE_CURRENT_BINARY_DIR}/quick_der
+	COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py ${CMAKE_CURRENT_BINARY_DIR}/quick_der
+	)
 
 #OLD# install(FILES _quickder.so DESTINATION ${PYTHON_SITE_PACKAGES}/quick_der)
 
