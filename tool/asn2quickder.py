@@ -12,7 +12,7 @@
 #
 # Copyright (c) 2016-2017 OpenFortress B.V. and InternetWide.org
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #     * Redistributions of source code must retain the above copyright
@@ -31,7 +31,7 @@ import os.path
 import getopt
 
 from asn1ate import parser
-from asn1ate.sema import * 
+from asn1ate.sema import *
 
 
 def tosym(name):
@@ -429,7 +429,7 @@ class QuickDER2c (QuickDERgeneric):
         return []
 
     def overlayTaggedType(self, node, tp, fld):
-        # tag = str(node) 
+        # tag = str(node)
         # tag = tag [:tag.find(']')] + ']'
         # self.write('/* ' + tag + ' */ ')
         # if node.implicity == TagImplicity.IMPLICIT:
@@ -783,7 +783,8 @@ class QuickDER2py (QuickDERgeneric):
 		else:
 			val = 'MAP2DER("""' + str (node.value) + '""")'
 		self.comment (str (node))
-		self.writeln (var + ' = ' + cls + ' (' + val + ')')
+		# Must provide a context for name resolution, any non-None value will do.
+		self.writeln (var + ' = ' + cls + ' (' + val + ', context=False)')
 		self.writeln ()
 
 	def pyvalInteger (self, valnode):

@@ -277,7 +277,7 @@ class ASN1Object (object):
 		assert recipe is not None or self._recipe is not None, 'You or a class from asn2quickder must supply a recipe for instantiating object structures'
 		#TODO:OLD# assert bindata is not None or derblob is not None or self._numcursori is not None, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
 		#TODO:NEW:MAYBENOTNEEDED# assert self._numcursori is not None, 'You should always indicate how many values will be stored'
-		assert context is not None or self._context is not None, 'You or a subclass definition should provide a context for symbol resolution'
+		assert context is not None or getattr(self, "_context", None) is not None, 'You or a subclass definition should provide a context for symbol resolution'
 		# Construct the type if so desired
 		if der_packer:
 			self._der_packer = der_packer
