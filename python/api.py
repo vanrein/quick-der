@@ -355,7 +355,6 @@ class ASN1ConstructedType (ASN1Object):
 		for (subfld,subrcp) in recp.items ():
 			if type (subfld) != str:
 				raise Exception ("ASN.1 recipe keys can only be strings")
-			print 'BUILDING FIELD', subfld
 			# Interned strings yield faster dictionary lookups
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
@@ -363,12 +362,13 @@ class ASN1ConstructedType (ASN1Object):
 			subval = build_asn1 (self._context, subrcp, self._bindata, self._offset)
 			if type (subval) == int:
 				# Primitive: Index into _bindata; set in _fields
-				self._fields [subfld] = subval
-			elif isinstance (subval, ASN1Atom):
+				self._fields [subfld] += subval
+			elif subval.__class__ == ASN1Atom:
 				# The following moved into __init_bindata__():
 				# self._bindata [self._offset] = subval
 				# Native types may be assigned instead of subval
 				pass
+				print 'Not placing field', subfld, 'subvalue ::', type (subval)
 			elif isinstance (subval, ASN1Object):
 				self._fields [subfld] = subval
 		#HUH:WHY:DROP# self._bindata [self._offset] = self
@@ -420,9 +420,12 @@ class ASN1ConstructedType (ASN1Object):
 				value = self._bindata [value]
 			if value is None:
 				continue
-			retval = retval + name + ' ' + str (value) + comma
+			if isinstance (value, ASN1Atom) and value.get () is None:
+				continue
+			newval = str (value).replace ('\n', '\n    ')
+			retval = retval + comma + name + ' ' + newval
 			comma = ',\n    '
-		retval = retval + '}'
+		retval = retval + ' }'
 		return retval
 
 
@@ -470,6 +473,11 @@ class ASN1SequenceOf (ASN1Object,list):
 	def _der_pack (self):
 		return ''.join ( [ elem._der_pack () for elem in self ] )
 
+	def __str__ (self):
+		entries = ',\n'.join ([str(x) for x in self])
+		entries.replace ('\n', '\n    ')
+		return 'SEQUENCE { ' + entries + ' }'
+
 
 class ASN1SetOf (ASN1Object,set):
 
@@ -516,6 +524,11 @@ class ASN1SetOf (ASN1Object,set):
 		   element.
 		"""
 		return ''.join ( [ elem._der_pack () for elem in self ] )
+
+	def __str__ (self):
+		entries = ',\n'.join ([str(x) for x in self])
+		entries.replace ('\n', '\n    ')
+		return 'SET { ' + entries + ' }'
 
 
 class ASN1Atom (ASN1Object):
@@ -621,10 +634,18 @@ class ASN1Atom (ASN1Object):
 	#OLD# 			return ''
 
 	def __str__ (self):
-		return "'" + self.get ().encode ('hex') + "'H"
+		retval = self.get ()
+		if retval:
+			retval = "'" + self.get ().encode ('hex') + "'H"
+		else:
+			retval = 'None'
+		return retval
 
 	def __len__ (self):
-		return len (self._value)
+		if self._value:
+			return len (self._value)
+		else:
+			return 0
 
 	def _der_pack (self):
 		"""Return the result of the `der_pack()` operation on this
@@ -653,7 +674,7 @@ class ASN1Integer (ASN1Atom):
 		return der_unpack_INTEGER (self.get ())
 
 	def __str__ (self):
-		return str (__int__ (self))
+		return str (self.__int__ ())
 
 
 class ASN1BitString (ASN1Atom):
@@ -707,7 +728,12 @@ class ASN1UTF8String (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTF8STRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1RelativeOID (ASN1Atom):
@@ -720,7 +746,12 @@ class ASN1NumericString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_NUMERICSTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1PrintableString (ASN1Atom):
@@ -728,7 +759,12 @@ class ASN1PrintableString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_PRINTABLESTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1TeletexString (ASN1Atom):
@@ -736,7 +772,12 @@ class ASN1TeletexString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_TELETEXSTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1VideotexString (ASN1Atom):
@@ -744,7 +785,12 @@ class ASN1VideotexString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VIDEOTEXSTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1IA5String (ASN1Atom):
@@ -752,7 +798,12 @@ class ASN1IA5String (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_IA5STRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1UTCTime (ASN1Atom):
@@ -760,7 +811,12 @@ class ASN1UTCTime (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UTCTIME) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1GeneralizedTime (ASN1Atom):
@@ -768,7 +824,12 @@ class ASN1GeneralizedTime (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALIZEDTIME) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1GraphicString (ASN1Atom):
@@ -781,7 +842,12 @@ class ASN1VisibleString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VISIBLESTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1GeneralString (ASN1Atom):
@@ -789,7 +855,12 @@ class ASN1GeneralString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALSTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1UniversalString (ASN1Atom):
@@ -797,7 +868,12 @@ class ASN1UniversalString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UNIVERSALSTRING) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		return '"' + self.get () + '"'
+		retval = self.get ()
+		if retval:
+			retval = '"' + self.get () + '"'
+		else:
+			retval = 'None'
+		return retval
 
 
 class ASN1Any (ASN1Atom):
@@ -814,7 +890,6 @@ class ASN1Any (ASN1Atom):
 		   headers, simply because there was nothing to match them
 		   against -- so all validating parsing remains to be done.
 		"""
-		print 'Looking at offset', self._offset, '/', len (self._bindata)
 		self._value = self._bindata [self._offset]
 
 	_der_packer = chr(DER_PACK_ANY) + chr(DER_PACK_END)
@@ -913,7 +988,6 @@ def build_asn1 (context, recipe, bindata=[], ofs=0, outer_class=None):
 			recipe [1] [0] = subcls		# memorise
 		assert issubclass (subcls, ASN1Object), 'Recipe ' + repr (recipe) + ' does not subclass ASN1Object'
 		assert type (subofs) == int, 'Recipe ' + repr (recipe) + ' does not have an integer sub-offset'
-		print 'BUILDING _TYPTR CLASS', subcls.__name__
 		return subcls (
 					recipe = subcls._recipe,
 					der_packer = subcls._der_packer,
