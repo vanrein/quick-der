@@ -813,8 +813,8 @@ class QuickDER2py (QuickDERgeneric):
 		else:
 			val = 'MAP2DER("""' + str (node.value) + '""")'
 		self.comment (str (node))
-		# Must provide a context for name resolution, any non-None value will do.
-		self.writeln (var + ' = ' + cls + ' (' + val + ', context=False)')
+		# Must provide a context for name resolution, even {} will do
+		self.writeln (var + ' = ' + cls + ' (' + val + ', context={})')
 		self.writeln ()
 
 	def pyvalInteger (self, valnode):

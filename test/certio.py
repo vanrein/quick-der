@@ -4,7 +4,9 @@ import sys
 
 sys.path = [ '../../python', '../python', 'quick-der', '../rfc/quick-der' ] + sys.path
 
-from quick_der.rfc5280 import Certificate
+# Normal programming uses the package name, but in the build tree we don't
+# from quick_der.rfc5280 import Certificate
+from rfc5280 import Certificate
 
 der = open (sys.argv [1]).read ()
 crt = Certificate (derblob=der)
