@@ -1,6 +1,6 @@
-# Conversion of ASN.1 specs to convenient header files
-include(MacroASN1Header)
+# Conversion of ASN.1 specs to convenient C header files and Python packages
+include(MacroASN1Module)
 
-add_custom_target(itu-headers ALL)
-add_asn1_headers(itu-headers
+add_custom_target(itu-modules ALL)
+add_asn1_modules(itu-modules
 	)

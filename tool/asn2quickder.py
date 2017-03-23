@@ -12,7 +12,7 @@
 #
 # Copyright (c) 2016-2017 OpenFortress B.V. and InternetWide.org
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #     * Redistributions of source code must retain the above copyright
@@ -31,7 +31,9 @@ import os.path
 import getopt
 
 from asn1ate import parser
-from asn1ate.sema import * 
+from asn1ate.sema import *
+
+from quick_der import api
 
 
 def tosym(name):
@@ -39,7 +41,68 @@ def tosym(name):
     return str(name).replace(' ', '').replace('-', '_')
 
 
-class QuickDERgen():
+api_prefix = '_api'
+
+dertag2atomsubclass = {
+	api.DER_TAG_BOOLEAN: 'ASN1Boolean',
+	api.DER_TAG_INTEGER: 'ASN1Integer',
+	api.DER_TAG_BITSTRING: 'ASN1BitString',
+	api.DER_TAG_OCTETSTRING: 'ASN1OctetString',
+	api.DER_TAG_NULL: 'ASN1Null',
+	api.DER_TAG_OID: 'ASN1OID',
+	api.DER_TAG_REAL: 'ASN1Real',
+	api.DER_TAG_ENUMERATED: 'ASN1Enumerated',
+	api.DER_TAG_UTF8STRING: 'ASN1UTF8String',
+	api.DER_TAG_RELATIVEOID: 'ASN1RelativeOID',
+	api.DER_TAG_NUMERICSTRING: 'ASN1NumericString',
+	api.DER_TAG_PRINTABLESTRING: 'ASN1PrintableString',
+	api.DER_TAG_TELETEXSTRING: 'ASN1TeletexString',
+	api.DER_TAG_VIDEOTEXSTRING: 'ASN1VideoTexString',
+	api.DER_TAG_IA5STRING: 'ASN1IA5String',
+	api.DER_TAG_UTCTIME: 'ASN1UTCTime',
+	api.DER_TAG_GENERALIZEDTIME: 'ASN1GeneralizedTime',
+	api.DER_TAG_GRAPHICSTRING: 'ASN1GraphicString',
+	api.DER_TAG_VISIBLESTRING: 'ASN1VisibleString',
+	api.DER_TAG_GENERALSTRING: 'ASN1GeneralString',
+	api.DER_TAG_UNIVERSALSTRING: 'ASN1UniversalString',
+	api.DER_PACK_ANY: 'ASN1Any'
+}
+
+
+class QuickDERgeneric (object):
+
+    def __init__ (self, outfn, outext):
+        self.unit, curext = os.path.splitext (outfn)
+        if curext == '.h':
+            raise Exception('File cannot overwrite itself -- use another extension than ' + outext + ' for input files')
+        self.outfile = open(self.unit + outext, 'w')
+
+    def write(self, txt):
+        self.outfile.write(txt)
+
+    def writeln(self, txt=''):
+        self.outfile.write(txt + '\n')
+
+    def newcomma(self, comma, firstcomma=''):
+        self.comma0 = firstcomma
+        self.comma1 = comma
+
+    def comma(self):
+        self.write(self.comma0)
+        self.comma0 = self.comma1
+
+    def getcomma(self):
+        return (self.comma1, self.comma0)
+
+    def setcomma(self, (comma1,comma0)):
+        self.comma1 = comma1
+        self.comma0 = comma0
+
+    def close(self):
+        self.outfile.close()
+
+
+class QuickDER2c (QuickDERgeneric):
     """Generate the C header files for Quick DER, a.k.a. Quick and Easy DER.
 
        There are two things that are generated for each of the ASN.1 syntax
@@ -92,10 +155,8 @@ class QuickDERgen():
     def __init__(self, semamod, outfn, refmods):
         self.semamod = semamod
         self.refmods = refmods
-        self.unit, outext = os.path.splitext (outfn)
-        if outext == '.h':
-            raise Exception('File cannot overwrite itself -- use another extension than .h for input files')
-        self.outfile = open(self.unit + '.h', 'w')
+	# Open the output file
+	super (QuickDER2c,self).__init__ (outfn, '.h')
         # Setup function maps
         self.overlay_funmap = {
             DefinedType: self.overlayDefinedType,
@@ -144,37 +205,11 @@ class QuickDERgen():
         }
         self.issued_typedefs = {}  # typedef b a adds a: b to this dict, to weed out dups
 
-    def write(self, txt):
-        self.outfile.write(txt)
-
-    def writeln(self, txt=''):
-        self.outfile.write(txt + '\n')
-
-    def newcomma(self, comma, firstcomma=''):
-        self.comma0 = firstcomma
-        self.comma1 = comma
-
-    def comma(self):
-        self.write(self.comma0)
-        self.comma0 = self.comma1
-
-    def getcomma(self):
-        return (self.comma1, self.comma0)
-
-    def setcomma(self, (comma1,comma0)):
-        self.comma1 = comma1
-        self.comma0 = comma0
-
-    def close(self):
-        self.outfile.close()
-
     def generate_head(self):
         self.writeln('/*')
         self.writeln(' * asn2quickder output for ' + self.semamod.name + ' -- automatically generated')
         self.writeln(' *')
-        self.writeln(' * For information on Quick `n\' Easy DER, see https://github.com/vanrein/quick-der')
-        self.writeln(' *')
-        self.writeln(' * For information on the code generator, see https://github.com/vanrein/asn2quickder')
+        self.writeln(' * Read more about Quick `n\' Easy DER on https://github.com/vanrein/quick-der')
         self.writeln(' *')
         self.writeln(' */')
         self.writeln()
@@ -424,7 +459,7 @@ class QuickDERgen():
         return []
 
     def overlayTaggedType(self, node, tp, fld):
-        # tag = str(node) 
+        # tag = str(node)
         # tag = tag [:tag.find(']')] + ']'
         # self.write('/* ' + tag + ' */ ')
         # if node.implicity == TagImplicity.IMPLICIT:
@@ -543,7 +578,7 @@ class QuickDERgen():
                 self.comma()
                 self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
-            if comp.optional:
+            if comp.optional or comp.default_value:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
@@ -567,7 +602,7 @@ class QuickDERgen():
                 self.comma()
                 self.writeln('DER_PIMP_' + tosym(self.unit) + '_' + tosym(comp.components_of_type.type_name) + '\t/* COMPONENTS OF ' + str(comp.components_of_type) + ' */')
                 continue
-            if comp.optional:
+            if comp.optional or comp.default_value:
                 self.comma()
                 self.write('DER_PACK_OPTIONAL')
             if comp.type_decl is not None:
@@ -665,6 +700,399 @@ class QuickDERgen():
         self.write('DER_PACK_STORE | ' + outer_tag)
 
 
+class QuickDER2py (QuickDERgeneric):
+	"""Generate Python modules with Quick DER definitions, based on
+	   generic definitions in the quick_der module.  The main task of
+	   this generator is to provide class definitions that subclass
+	   ASN1Object (usually through an intermediate subclass such as
+	   ASN1StructuredType) and can be invoked with a binary string
+	   holding DER-encoded data, or without any argument to create
+	   an empty structure.  The resulting classes support both the
+	   der_pack() and der_unpack() operations.  See PYTHON.MD!
+
+	   The recursion model strives for two, overlapping, goals and
+	   must therefore be stopped explicitly.  First, it constructs
+	   packer code up to a SEQUENCE OF or SET OF or ANY and cannot
+	   support recursion (yet).  This form of recursion can stop as
+	   soon as any of the packer-terminal codes is reached, but it
+	   needs to follow type references via DefinedType elements.
+	   The second reason for recursion is to produce class code,
+	   and this passes through SEQUENCE OF and SET OF (but not ANY)
+	   to complete the class definition.  It does not need to
+	   traverse to other classes by following DefinedType elements,
+	   however.  Each of these discards certain information from
+	   their continued explorations, and when both kinds of
+	   traversal were crossed, the data would only be collected to
+	   be discarded.  This can be avoided by knowing whether both
+	   forms have been crossed, and stopping the further traversal
+	   if this is indeed the case.  In terms of code, once the
+	   execution reaches a point where it would set one flag, it
+	   would check the other flag and return trivially if this
+	   is already/also set.  Flags are only raised for the
+	   duration of the recursive traversal, and they may be set
+	   multiple times before the other flag is set, so they are
+	   subjected to a stack-based regimen -- or, even simpler,
+	   to nesting counters.  The first form is managed with
+	   nested_typecuts, the second with nested_typerefs.
+	"""
+
+	def __init__(self, semamod, outfn, refmods):
+		self.semamod = semamod
+		self.refmods = refmods
+		# Open the output file
+		super (QuickDER2py,self).__init__ (outfn, '.py')
+		# Setup the function maps for generating Python
+		self.funmap_pytype = {
+			DefinedType: self.pytypeDefinedType,
+			SimpleType: self.pytypeSimple,
+			BitStringType: self.pytypeSimple,
+			ValueListType: self.pytypeSimple,
+			NamedType: self.pytypeNamedType,
+			TaggedType: self.pytypeTagged,
+			ChoiceType: self.pytypeChoice,
+			SequenceType: self.pytypeSequence,
+			SetType: self.pytypeSet,
+			SequenceOfType: self.pytypeSequenceOf,
+			SetOfType: self.pytypeSetOf,
+		}
+
+	def comment (self, text):
+		for ln in str (text).split ('\n'):
+			self.writeln ('# ' + ln)
+
+	def generate_head (self):
+		self.writeln ('#')
+		self.writeln ('# asn2quickder output for ' + self.semamod.name + ' -- automatically generated')
+		self.writeln ('#')
+		self.writeln ('# Read more about Quick `n\' Easy DER on https://github.com/vanrein/quick-der')
+		self.writeln ('#')
+		self.writeln ()
+		self.writeln ()
+		self.writeln ('#')
+		self.writeln ('# Import general definitions and package dependencies')
+		self.writeln ('#')
+		self.writeln ()
+		self.writeln ('import quick_der.api as ' + api_prefix)
+		self.writeln ()
+		imports = self.semamod.imports.symbols_imported
+		for rm in imports.keys ():
+			pymod = tosym(rm.rsplit('.', 1) [0]).lower()
+			self.write ('from ' + pymod + ' import ')
+			self.writeln (', '.join (map (tosym, imports [rm])))
+		self.writeln ()
+		self.writeln ()
+
+	def generate_tail (self):
+		self.writeln()
+		self.writeln('# asn2quickder output for ' + self.semamod.name + ' ends here')
+
+	def generate_values (self):
+		self.writeln ('#')
+		self.writeln ('# Variables with ASN.1 value assignments')
+		self.writeln ('#')
+		self.writeln ()
+		for assigncompos in dependency_sort(self.semamod.assignments):
+			for assign in assigncompos:
+				if type (assign) != ValueAssignment:
+					# TypeAssignemnts: generate_classes()
+					continue
+				#TODO# Need generic mapping to DER values
+				self.pygenValueAssignment (assign)
+
+	def pygenValueAssignment (self, node):
+		# We only found INTEGER and OBJECTIDENTIFIER in RFCs
+		# Note that these forms are computed while loading, so not fast
+		cls = tosym (node.type_decl)
+		var = tosym (node.value_name)
+		if cls == 'INTEGER':
+			val = self.pyvalInteger (node.value)
+			cls = api_prefix + '.ASN1Integer'
+		elif cls == 'OBJECTIDENTIFIER':
+			val = self.pyvalOID (node.value)
+			cls = api_prefix + '.ASN1OID'
+		else:
+			val = 'MAP2DER("""' + str (node.value) + '""")'
+		self.comment (str (node))
+		# Must provide a context for name resolution, even {} will do
+		self.writeln (var + ' = ' + cls + ' (' + val + ', context={})')
+		self.writeln ()
+
+	def pyvalInteger (self, valnode):
+		return api_prefix + '.der_pack_INTEGER (' + str (int (valnode)) + ', hdr=True)'
+
+	def pyvalOID (self, valnode):
+		retc = []
+		for oidcompo in valnode.components:
+			if type (oidcompo) == NameForm:
+				retc.append (api_prefix + '.der_unpack_OID (' + tosym (oidcompo.name) + '.get())')
+			elif type (oidcompo) == NumberForm:
+				retc.append ("'" + str (oidcompo.value) + "'")
+			elif type (oidcompo) == NameAndNumberForm:
+				retc.append ("'" + str (oidcompo.number) + "'")
+		retval = " + '.' + ".join (retc)
+		retval = api_prefix + '.der_pack_OID (' + retval.replace ("' + '", '') + ', hdr=True)'
+		return retval
+
+	def generate_classes (self):
+		self.writeln ('#')
+		self.writeln ('# Classes for ASN.1 type assignments')
+		self.writeln ('#')
+		self.writeln ()
+		for assigncompos in dependency_sort(self.semamod.assignments):
+			for assign in assigncompos:
+				if type (assign) != TypeAssignment:
+					# ValueAssignment: generate_values()
+					continue
+				self.pygenTypeAssignment (assign)
+
+	def pygenTypeAssignment (self, node):
+
+		def pymap_packer (pck, ln='\n        '):
+			retval = '(' + ln
+			pck = pck + [ 'DER_PACK_END' ]
+			comma = ''
+			for pcke in pck:
+				pcke = pcke.replace ('DER_', api_prefix + '.DER_')
+				retval += comma + 'chr(' + pcke + ')'
+				comma = ' +' + ln
+			retval += ' )'
+			return retval
+
+		def pymap_recipe (recp, ctxofs, ln='\n    '):
+			if type (recp) == int:
+				retval = str (recp + ctxofs)
+			elif recp [0] == '_NAMED':
+				(_NAMED,map) = recp
+				ln += '    '
+				retval = "('_NAMED', {"
+				comma = False
+				for (fld,fldrcp) in map.items ():
+					if comma:
+						retval += ',' + ln
+					else:
+						retval += ln
+					retval += "'" + tosym (fld) + "': "
+					retval += pymap_recipe (fldrcp, ctxofs, ln)
+					comma = True
+				retval += ' } )'
+			elif recp [0] in ['_SEQOF','_SETOF']:
+				(_STHOF,allidx,pck,num,inner_recp) = recp
+				ln += '    '
+				retval = "('" + _STHOF + "', "
+				retval += str (allidx) + ', '
+				retval += pymap_packer (pck, ln) + ','
+				retval += str (num) + ',' + ln
+				retval += pymap_recipe (inner_recp, 0, ln) + ' )'
+			elif recp [0] == '_TYPTR':
+				(_TYPTR,[clsnm],ofs) = recp
+				retval = repr (recp)
+			else:
+				assert False, 'Unexpected recipe tag ' + str (recp [0])
+				retval = repr (recp)
+			return retval
+
+		def pygen_class (clsnm, tp, ctxofs, pck, recp, numcrs):
+			#TODO# Sometimes, ASN1Atom may have a specific supertp
+			supertp = tosym (tp)
+			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
+			atom = type (recp) == int
+			subatom = atom and tp != 'ASN1Atom'
+			said_sth = False
+			if tp not in ['ASN1SequenceOf','ASN1SetOf'] and not subatom:
+				self.writeln ('    _der_packer = ' + pymap_packer (pck))
+				said_sth = True
+			if not atom:
+				self.writeln ('    _recipe = ' + pymap_recipe (recp, ctxofs))
+				said_sth = True
+			if False:
+				#TODO# Always fixed or computed
+				self.writeln ('    _numcursori = ' + str (numcrs))
+				said_sth = True
+			if not atom:
+				self.writeln ('    _context = globals ()')
+				self.writeln ('    _numcursori = ' + str (numcrs))
+				said_sth = True
+			elif subatom:
+				self.writeln ('    _context = ' + api_prefix + '.__dict__')
+			if not said_sth:
+				self.writeln ('    pass')
+			self.writeln ()
+
+		#
+		# body of pygenTypeAssignment
+		#
+		self.cursor_offset = 0
+		self.nested_typerefs = 0
+		self.nested_typecuts = 0
+		self.comment (str (node))
+		(pck,recp) = self.generate_pytype (node.type_decl)
+		ofs = 0
+		if type (recp) == int:
+			dertag = eval (pck [0], api.__dict__)
+			if dertag2atomsubclass.has_key (dertag):
+				tp = dertag2atomsubclass [dertag]
+			else:
+				tp = 'ASN1Atom'
+			tp = api_prefix + '.' + tp
+		elif recp [0] == '_NAMED':
+			tp = api_prefix + '.ASN1ConstructedType'
+		elif recp [0] == '_SEQOF':
+			tp = api_prefix + '.ASN1SequenceOf'
+		elif recp [0] == '_SETOF':
+			tp = api_prefix + '.ASN1SetOf'
+		elif recp [0] == '_TYPTR':
+			(_TYPTR,[cls],ofs) = recp
+			tp = str (cls)
+			#TODO:GONE# if tp [:len(api_prefix)+1] == api_prefix + '.':
+			#TODO:GONE# 	# Strip off api_prefix to avoid duplication
+			#TODO:GONE# 	tp = tp [len(api_prefix)+1:]
+		else:
+			assert Fail, 'Unknown recipe tag ' + str (recp [0])
+		numcrs = self.cursor_offset
+		pygen_class (tosym (node.type_name), tp, ofs, pck, recp, numcrs)
+
+	def generate_pytype (self, node, **subarg):
+		#DEBUG# sys.stderr.write ('Node = ' + str (node) + '\n')
+		tnm = type (node)
+		if tnm not in self.funmap_pytype.keys ():
+			raise Exception ('Failure to generate a python type for ' + str (tnm))
+		return self.funmap_pytype [tnm] (node, **subarg)
+
+	def pytypeDefinedType (self, node, **subarg):
+		modnm = node.module_name
+		if modnm is None:
+			syms = self.semamod.imports.symbols_imported
+			for mod in syms.keys ():
+				if node.type_name in syms [mod]:
+					modnm = mod.lower ()
+					break
+		if modnm is None:
+			modnm = self.unit.lower ()
+		if not self.refmods.has_key (modnm):
+			raise Exception ('Module name "%s" not found' % modnm)
+		popunit = self.unit
+		popsema = self.semamod
+		popcofs = self.cursor_offset
+		self.unit = modnm
+		self.semamod = self.refmods [modnm]
+		#TODO:BAD# self.cursor_offset = 0
+		if self.nested_typecuts > 0:
+			self.nested_typerefs += 1
+		thetype = self.refmods [modnm].user_types () [node.type_name]
+		(pck,recp) = self.generate_pytype (thetype, **subarg)
+		# if self.nested_typecuts > 0:
+		if True:
+			recp = ('_TYPTR',[node.type_name],popcofs)
+			self.nested_typerefs -= 1
+		#TODO:BAD# self.cursor_offset += popcofs
+		self.semamod = popsema
+		self.unit = popunit
+		return (pck,recp)
+
+	def pytypeSimple (self, node, implicit_tag=None):
+		simptp = node.type_name.replace (' ', '').upper ()
+		if simptp == 'ANY':
+			# ANY counts as self.nested_typecuts but does not
+			# have subtypes to traverse, so no attention to
+			# recursion cut-off is needed or even possible here
+			pck = [ 'DER_PACK_ANY' ]
+			simptag = api.DER_PACK_ANY
+			if implicit_tag:
+				# Can't have an implicit tag around ANY
+				pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		else:
+			if not implicit_tag:
+				implicit_tag = 'DER_TAG_' + simptp
+			pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
+			simptag = eval ('DER_TAG_' + simptp, api.__dict__)
+		recp = self.cursor_offset
+		self.cursor_offset += 1
+		if dertag2atomsubclass.has_key (simptag):
+			recp = ('_TYPTR', [api_prefix + '.' + dertag2atomsubclass [simptag]], recp)
+		return (pck,recp)
+
+	def pytypeTagged (self, node, implicit_tag=None):
+		mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
+		if self.semamod.resolve_tag_implicity (node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
+			# Tag implicitly by handing mytag down to type_decl
+			(pck,recp) = self.generate_pytype (node.type_decl,
+							implicit_tag=mytag)
+		else:
+			# Tag explicitly by wrapping mytag around the type_decl
+			(pck,recp) = self.generate_pytype (node.type_decl)
+			pck = [ 'DER_PACK_ENTER | ' + mytag ] + pck + [ 'DER_PACK_LEAVE' ]
+		if implicit_tag:
+			# Can't nest implicit tags, so wrap surrounding ones
+			pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (pck,recp)
+
+	def pytypeNamedType (self, node,**subarg):
+		#TODO# Ignore field name... or should we use it any way?
+		return self.generate_pytype (node.type_decl,**subarg)
+
+	def pyhelpConstructedType (self, node):
+		pck = []
+		recp = {}
+		for comp in node.components:
+			if isinstance(comp, ExtensionMarker):
+				#TODO# ...ASN.1 extensions...
+				continue
+			if isinstance (comp, ComponentType) and comp.components_of_type is not None:
+				#TODO# ...COMPONENTS OF...
+				continue
+			(pck1,stru1) = self.generate_pytype (comp.type_decl)
+			if isinstance (comp, ComponentType):
+				if comp.optional or comp.default_value:
+					pck1 = [ 'DER_PACK_OPTIONAL' ] + pck1
+			pck = pck + pck1
+			recp [tosym (comp.identifier)] = stru1
+		return (pck,('_NAMED',recp))
+
+	def pytypeChoice (self, node, implicit_tag=None):
+		(pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_CHOICE_BEGIN' ] + pck + [ 'DER_PACK_CHOICE_END' ]
+		if implicit_tag:
+			# Can't have an implicit tag around a CHOICE
+			pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (pck,recp)
+
+	def pytypeSequence (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+		(pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (pck,recp)
+
+	def pytypeSet (self, node, implicit_tag='DER_TAG_SET'):
+		(pck,recp) = self.pyhelpConstructedType (node)
+		pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+		return (pck,recp)
+
+	def pyhelpRepeatedType (self, node, dertag, recptag):
+		allidx = self.cursor_offset
+		self.cursor_offset += 1
+		if self.nested_typerefs > 0 and self.nested_typecuts > 0:
+			# We are about to recurse on self.nested_typecuts
+			# but the recursion for self.nested_typerefs
+			# has also occurred, so we can cut off recursion
+			subpck = ['DER_ERROR_RECURSIVE_USE_IN' + recptag]
+			subrcp = ('_ERROR', 'Recursive use in ' + recptag)
+			subnum = 0
+		else:
+			self.nested_typecuts = self.nested_typecuts + 1
+			popcofs = self.cursor_offset
+			self.cursor_offset = 0
+			(subpck,subrcp) = self.generate_pytype (node.type_decl)
+			subnum = self.cursor_offset
+			self.cursor_offset = popcofs
+			self.nested_typecuts = self.nested_typecuts - 1
+		pck = [ 'DER_PACK_STORE | ' + dertag ]
+		return (pck,(recptag,allidx,subpck,subnum,subrcp))
+
+	def pytypeSequenceOf (self, node, implicit_tag='DER_TAG_SEQUENCE'):
+		return self.pyhelpRepeatedType (node, implicit_tag, '_SEQOF')
+
+	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
+		return self.pyhelpRepeatedType (node, implicit_tag, '_SETOF')
+
 """The main program asn2quickder is called with one or more .asn1 files,
    the first of which is mapped to a C header file and the rest is
    loaded to fulfil dependencies.
@@ -720,14 +1148,27 @@ while len (imports) > 0:
 	    refmods [rm] = asn1sem [0]
 	    imports.append (rm)
 	    #TODO:DEBUG# print('Realised semantic model for "%s"' % rm)
-# cogen = QuickDERgen(mods [-1], os.path.basename(sys.argv [1]), mods [1:])
+
+# Generate C header files
 for modnm in defmods.keys ():
-    #TODO:DEBUG# print ('Generating include file for "%s"' % modnm)
-    cogen = QuickDERgen(defmods [modnm], modnm, refmods)
-    cogen.generate_head()
-    cogen.generate_overlay()
-    cogen.generate_pack()
-    cogen.generate_psub()
-    cogen.generate_tail()
-    cogen.close()
-    #TODO:DEBUG# print ('Ready with include file for "%s"' % modnm)
+	#TODO:DEBUG# print ('Generating C header file for "%s"' % modnm)
+	cogen = QuickDER2c (defmods [modnm], modnm, refmods)
+	cogen.generate_head ()
+	cogen.generate_overlay ()
+	cogen.generate_pack ()
+	cogen.generate_psub ()
+	cogen.generate_tail ()
+	cogen.close ()
+	#TODO:DEBUG# print ('Ready with C header file for "%s"' % modnm)
+
+# Generate Python modules
+for modnm in defmods.keys ():
+	#TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
+	cogen = QuickDER2py (defmods [modnm], modnm, refmods)
+	cogen.generate_head ()
+	cogen.generate_classes ()
+	cogen.generate_values ()
+	cogen.generate_tail ()
+	cogen.close ()
+	#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
+

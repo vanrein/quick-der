@@ -117,7 +117,8 @@ BEGIN
 
    id-ce-certificatePolicies OBJECT IDENTIFIER ::=  { id-ce 32 }
 
-   anyPolicy OBJECT IDENTIFIER ::= { id-ce-certificate-policies 0 }
+   -- asn1ate or error: anyPolicy OBJECT IDENTIFIER ::= { id-ce-certificate-policies 0 }
+   anyPolicy OBJECT IDENTIFIER ::= { id-ce-certificatePolicies 0 }
 
    -- asn1ate certificatePolicies ::= SEQUENCE SIZE (1..MAX) OF PolicyInformation
    -- Capital for type name

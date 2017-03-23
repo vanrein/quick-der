@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+from distutils.core import setup, Extension
+
+sharedlib = Extension (
+	"_quickder",
+	[ "@CMAKE_CURRENT_SOURCE_DIR@/_quickder.c", "@CMAKE_SOURCE_DIR@/lib/der_header.c", "@CMAKE_SOURCE_DIR@/lib/der_unpack.c", "@CMAKE_SOURCE_DIR@/lib/der_pack.c" ],
+	# library_dirs=[ '/usr/local/lib' ],	#TODO#
+	# libraries = [ "quickder" ],
+	# extra_objects = [
+	# 	"unix/x86_64/_quickder.so"
+	# ]
+	include_dirs = [ "@CMAKE_SOURCE_DIR@/include" ],
+)
+
+if __name__ == '__main__':
+	setup (
+		name='quick_der',
+		version='@CMAKE_PACKAGE_VERSION@',
+		#TODO# package_dir={ '': '@CMAKE_CURRENT_SOURCE_DIR@' },
+		package_dir={ '': '.' },
+		ext_modules=[ sharedlib ],
+		packages=['@CMAKE_CURRENT_SOURCE_DIR@']
+	)
+
