@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
+import sys
+
+sys.path = [ '../../python', '../python', 'quick-der', '../rfc/quick-der' ] + sys.path
+
 from quick_der.rfc5280 import Certificate
 
-der = open ('../test/verisign.der').read ()
+der = open (sys.argv [1]).read ()
 crt = Certificate (derblob=der)
 
 print 'WHOLE CERT:'

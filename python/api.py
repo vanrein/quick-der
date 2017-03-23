@@ -355,6 +355,7 @@ class ASN1ConstructedType (ASN1Object):
 		for (subfld,subrcp) in recp.items ():
 			if type (subfld) != str:
 				raise Exception ("ASN.1 recipe keys can only be strings")
+			print 'BUILDING FIELD', subfld
 			# Interned strings yield faster dictionary lookups
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
@@ -503,7 +504,7 @@ class ASN1SetOf (ASN1Object,set):
 			if len (derblob) < hlen+ilen:
 				raise Exception ('SET OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
-			subcrs = _quickder.der_unpack (subpck,subdta,1)
+			subcrs = _quickder.der_unpack (subpck,subdta,subnum)
 			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
 			subval = build_asn1 (self._context, subrcp, subcrs, 0)
 			self.add (subval)
@@ -649,7 +650,7 @@ class ASN1Integer (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
 
 	def __int__ (self):
-		return der_unpack_INTEGER (str (self))
+		return der_unpack_INTEGER (self.get ())
 
 	def __str__ (self):
 		return str (__int__ (self))
@@ -799,7 +800,53 @@ class ASN1UniversalString (ASN1Atom):
 		return '"' + self.get () + '"'
 
 
-def build_asn1 (context, recipe, bindata=[], ofs=0):
+class ASN1Any (ASN1Atom):
+
+	def __init_bindata__ (self):
+		"""The object has been setup with structural information in
+		   _der_packer and _recipe, as well as instance data in
+		   _bindata [_offset].  Since this is the ANY object, any
+		   parsing of its value is deferred until after set_class()
+		   has been invoked.
+
+		   Note that ANY is treated in a slightly different manner
+		   from "normal" data; it is stored with the inclusion of
+		   headers, simply because there was nothing to match them
+		   against -- so all validating parsing remains to be done.
+		"""
+		print 'Looking at offset', self._offset, '/', len (self._bindata)
+		self._value = self._bindata [self._offset]
+
+	_der_packer = chr(DER_PACK_ANY) + chr(DER_PACK_END)
+	_class = None
+
+	def set (self, val):
+		"""You cannot set the value of an ANY type object.  You may
+		   however get() it and then you may try to use set() on the
+		   result.  In other words, ANY will always remain an
+		   intermediate step in the data path.
+		"""
+		assert False, 'You cannot set the value of an ANY type object'
+
+	def set_class (self, cls):
+		"""Set the class of an ANY type object.  This can be done at
+		   most once.  The operation involves parsing the data with
+		   the provided class and forming an instance from it, which
+		   is made available through the get() method.  Note that the
+		   class must be a subclass of ASN1Object.
+		"""
+		assert issubclass (cls, ASN1Object), 'ANY must be made concrete with a subtype of ASN1Object'
+		assert self._class == None, 'ANY type has already been made concrete'
+		self._class = cls
+		self._value = cls (
+					recipe = cls._recipe,
+					der_packer = cls._der_packer,
+					derblob = self._bindata [self._offset],
+					offset = 0,
+					context = cls._context )
+
+
+def build_asn1 (context, recipe, bindata=[], ofs=0, outer_class=None):
 	"""Construct an ASN.1 structural element from a recipe and bindata.
 	   with ofset.  The result can either be an ASN1Object subclass
 	   instance or an offset into bindata.  The context is used to lookup
@@ -823,7 +870,12 @@ def build_asn1 (context, recipe, bindata=[], ofs=0):
 					context = context )
 	elif recipe [0] in ['_SEQOF', '_SETOF']:
 		(_STHOF,allidx,subpck,subnum,subrcp) = recipe
-		cls = ASN1SequenceOf if _STHOF == '_SEQOF' else ASN1SetOf
+		if outer_class:
+			cls = outer_class
+		elif _STHOF == '_SEQOF':
+			cls = ASN1SequenceOf
+		else:
+			cls = ASN1SetOf
 		packer = subpck [0]
 		if packer is None:
 			# Lazy linking:
@@ -859,8 +911,9 @@ def build_asn1 (context, recipe, bindata=[], ofs=0):
 				context = context ['_api'].__dict__
 			subcls = context [subcls]	# lazy link
 			recipe [1] [0] = subcls		# memorise
-		assert (issubclass (subcls, ASN1Object))
-		assert (type (subofs) == int)
+		assert issubclass (subcls, ASN1Object), 'Recipe ' + repr (recipe) + ' does not subclass ASN1Object'
+		assert type (subofs) == int, 'Recipe ' + repr (recipe) + ' does not have an integer sub-offset'
+		print 'BUILDING _TYPTR CLASS', subcls.__name__
 		return subcls (
 					recipe = subcls._recipe,
 					der_packer = subcls._der_packer,

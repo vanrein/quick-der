@@ -64,7 +64,8 @@ dertag2atomsubclass = {
 	api.DER_TAG_GRAPHICSTRING: 'ASN1GraphicString',
 	api.DER_TAG_VISIBLESTRING: 'ASN1VisibleString',
 	api.DER_TAG_GENERALSTRING: 'ASN1GeneralString',
-	api.DER_TAG_UNIVERSALSTRING: 'ASN1UniversalString'
+	api.DER_TAG_UNIVERSALSTRING: 'ASN1UniversalString',
+	api.DER_PACK_ANY: 'ASN1Any'
 }
 
 
@@ -893,7 +894,7 @@ class QuickDER2py (QuickDERgeneric):
 		def pygen_class (clsnm, tp, ctxofs, pck, recp, numcrs):
 			#TODO# Sometimes, ASN1Atom may have a specific supertp
 			supertp = tp
-			self.writeln ('class ' + clsnm + ' (' + api_prefix + '.' + supertp + '):')
+			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
 			atom = type (recp) == int
 			subatom = atom and tp != 'ASN1Atom'
 			said_sth = False
@@ -932,18 +933,19 @@ class QuickDER2py (QuickDERgeneric):
 				tp = dertag2atomsubclass [dertag]
 			else:
 				tp = 'ASN1Atom'
+			tp = api_prefix + '.' + tp
 		elif recp [0] == '_NAMED':
-			tp = 'ASN1ConstructedType'
+			tp = api_prefix + '.ASN1ConstructedType'
 		elif recp [0] == '_SEQOF':
-			tp = 'ASN1SequenceOf'
+			tp = api_prefix + '.ASN1SequenceOf'
 		elif recp [0] == '_SETOF':
-			tp = 'ASN1SetOf'
+			tp = api_prefix + '.ASN1SetOf'
 		elif recp [0] == '_TYPTR':
 			(_TYPTR,[cls],ofs) = recp
 			tp = str (cls)
-			if tp [:len(api_prefix)+1] == api_prefix + '.':
-				# Strip off api_prefix to avoid duplication
-				tp = tp [len(api_prefix)+1:]
+			#TODO:GONE# if tp [:len(api_prefix)+1] == api_prefix + '.':
+			#TODO:GONE# 	# Strip off api_prefix to avoid duplication
+			#TODO:GONE# 	tp = tp [len(api_prefix)+1:]
 		else:
 			assert Fail, 'Unknown recipe tag ' + str (recp [0])
 		numcrs = self.cursor_offset
@@ -994,17 +996,17 @@ class QuickDER2py (QuickDERgeneric):
 			# have subtypes to traverse, so no attention to
 			# recursion cut-off is needed or even possible here
 			pck = [ 'DER_PACK_ANY' ]
+			simptag = api.DER_PACK_ANY
 			if implicit_tag:
 				# Can't have an implicit tag around ANY
 				pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
-			simptag = -1
 		else:
 			if not implicit_tag:
 				implicit_tag = 'DER_TAG_' + simptp
 			pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
 			simptag = eval ('DER_TAG_' + simptp, api.__dict__)
 		recp = self.cursor_offset
-		self.cursor_offset = recp + 1
+		self.cursor_offset += 1
 		if dertag2atomsubclass.has_key (simptag):
 			recp = ('_TYPTR', [api_prefix + '.' + dertag2atomsubclass [simptag]], recp)
 		return (pck,recp)
