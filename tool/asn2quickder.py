@@ -893,7 +893,7 @@ class QuickDER2py (QuickDERgeneric):
 
 		def pygen_class (clsnm, tp, ctxofs, pck, recp, numcrs):
 			#TODO# Sometimes, ASN1Atom may have a specific supertp
-			supertp = tp
+			supertp = tosym (tp)
 			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
 			atom = type (recp) == int
 			subatom = atom and tp != 'ASN1Atom'

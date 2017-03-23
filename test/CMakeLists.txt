@@ -5,9 +5,9 @@ add_executable (certio.test
 	certio.c)
 target_link_libraries (certio.test
 	quickderStatic)
-add_test(certio.c.test
+add_test(certio-c-test
 	certio.test ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
-add_test(certio.py.test
+add_test(certio-py-test
 	python ${CMAKE_CURRENT_SOURCE_DIR}/certio.py ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
 
 add_executable (ldap.test
