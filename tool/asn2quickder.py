@@ -41,6 +41,8 @@ def tosym(name):
     return str(name).replace(' ', '').replace('-', '_')
 
 
+api_prefix = '_api'
+
 dertag2atomsubclass = {
 	api.DER_TAG_BOOLEAN: 'ASN1Boolean',
 	api.DER_TAG_INTEGER: 'ASN1Integer',
@@ -769,7 +771,7 @@ class QuickDER2py (QuickDERgeneric):
 		self.writeln ('# Import general definitions and package dependencies')
 		self.writeln ('#')
 		self.writeln ()
-		self.writeln ('import quick_der.api as _api')
+		self.writeln ('import quick_der.api as ' + api_prefix)
 		self.writeln ()
 		imports = self.semamod.imports.symbols_imported
 		for rm in imports.keys ():
@@ -803,10 +805,10 @@ class QuickDER2py (QuickDERgeneric):
 		var = tosym (node.value_name)
 		if cls == 'INTEGER':
 			val = self.pyvalInteger (node.value)
-			cls = '_api.ASN1Integer'
+			cls = api_prefix + '.ASN1Integer'
 		elif cls == 'OBJECTIDENTIFIER':
 			val = self.pyvalOID (node.value)
-			cls = '_api.ASN1OID'
+			cls = api_prefix + '.ASN1OID'
 		else:
 			val = 'MAP2DER("""' + str (node.value) + '""")'
 		self.comment (str (node))
@@ -815,19 +817,19 @@ class QuickDER2py (QuickDERgeneric):
 		self.writeln ()
 
 	def pyvalInteger (self, valnode):
-		return '_api.der_pack_INTEGER (' + str (int (valnode)) + ', hdr=True)'
+		return api_prefix + '.der_pack_INTEGER (' + str (int (valnode)) + ', hdr=True)'
 
 	def pyvalOID (self, valnode):
 		retc = []
 		for oidcompo in valnode.components:
 			if type (oidcompo) == NameForm:
-				retc.append ('_api.der_unpack_OID (' + tosym (oidcompo.name) + '.get())')
+				retc.append (api_prefix + '.der_unpack_OID (' + tosym (oidcompo.name) + '.get())')
 			elif type (oidcompo) == NumberForm:
 				retc.append ("'" + str (oidcompo.value) + "'")
 			elif type (oidcompo) == NameAndNumberForm:
 				retc.append ("'" + str (oidcompo.number) + "'")
 		retval = " + '.' + ".join (retc)
-		retval = '_api.der_pack_OID (' + retval.replace ("' + '", '') + ', hdr=True)'
+		retval = api_prefix + '.der_pack_OID (' + retval.replace ("' + '", '') + ', hdr=True)'
 		return retval
 
 	def generate_classes (self):
@@ -849,15 +851,15 @@ class QuickDER2py (QuickDERgeneric):
 			pck = pck + [ 'DER_PACK_END' ]
 			comma = ''
 			for pcke in pck:
-				pcke = pcke.replace ('DER_', '_api.DER_')
+				pcke = pcke.replace ('DER_', api_prefix + '.DER_')
 				retval += comma + 'chr(' + pcke + ')'
 				comma = ' +' + ln
 			retval += ' )'
 			return retval
 
-		def pymap_recipe (recp, ln='\n    '):
+		def pymap_recipe (recp, ctxofs, ln='\n    '):
 			if type (recp) == int:
-				retval = str (recp)
+				retval = str (recp + ctxofs)
 			elif recp [0] == '_NAMED':
 				(_NAMED,map) = recp
 				ln += '    '
@@ -869,7 +871,7 @@ class QuickDER2py (QuickDERgeneric):
 					else:
 						retval += ln
 					retval += "'" + tosym (fld) + "': "
-					retval += pymap_recipe (fldrcp, ln)
+					retval += pymap_recipe (fldrcp, ctxofs, ln)
 					comma = True
 				retval += ' } )'
 			elif recp [0] in ['_SEQOF','_SETOF']:
@@ -879,19 +881,20 @@ class QuickDER2py (QuickDERgeneric):
 				retval += str (allidx) + ', '
 				retval += pymap_packer (pck, ln) + ','
 				retval += str (num) + ',' + ln
-				retval += pymap_recipe (inner_recp, ln) + ' )'
+				retval += pymap_recipe (inner_recp, 0, ln) + ' )'
 			elif recp [0] == '_TYPTR':
 				(_TYPTR,[clsnm],ofs) = recp
-				retval = "('_TYPTR',[" + repr (clsnm) + '],' + str (ofs) + ')'
+				# retval = "('_TYPTR',[" + repr (clsnm) + '],' + str (ofs + ctxofs) + ')'
+				retval = repr (recp)
 			else:
 				assert False, 'Unexpected recipe tag ' + str (recp [0])
 				retval = repr (recp)
 			return retval
 
-		def pygen_class (clsnm, tp, pck, recp, numcrs):
+		def pygen_class (clsnm, tp, ctxofs, pck, recp, numcrs):
 			#TODO# Sometimes, ASN1Atom may have a specific supertp
-			supertp = '_api.' + tp
-			self.writeln ('class ' + clsnm + ' (' + supertp + '):')
+			supertp = tp
+			self.writeln ('class ' + clsnm + ' (' + api_prefix + '.' + supertp + '):')
 			atom = type (recp) == int
 			subatom = atom and tp != 'ASN1Atom'
 			said_sth = False
@@ -899,7 +902,7 @@ class QuickDER2py (QuickDERgeneric):
 				self.writeln ('    _der_packer = ' + pymap_packer (pck))
 				said_sth = True
 			if not atom:
-				self.writeln ('    _recipe = ' + pymap_recipe (recp))
+				self.writeln ('    _recipe = ' + pymap_recipe (recp, ctxofs))
 				said_sth = True
 			if False:
 				#TODO# Always fixed or computed
@@ -909,6 +912,8 @@ class QuickDER2py (QuickDERgeneric):
 				self.writeln ('    _context = globals ()')
 				self.writeln ('    _numcursori = ' + str (numcrs))
 				said_sth = True
+			elif subatom:
+				self.writeln ('    _context = ' + api_prefix + '.__dict__')
 			if not said_sth:
 				self.writeln ('    pass')
 			self.writeln ()
@@ -921,6 +926,7 @@ class QuickDER2py (QuickDERgeneric):
 		self.nested_typecuts = 0
 		self.comment (str (node))
 		(pck,recp) = self.generate_pytype (node.type_decl)
+		ofs = 0
 		if type (recp) == int:
 			dertag = eval (pck [0], api.__dict__)
 			if dertag2atomsubclass.has_key (dertag):
@@ -936,10 +942,13 @@ class QuickDER2py (QuickDERgeneric):
 		elif recp [0] == '_TYPTR':
 			(_TYPTR,[cls],ofs) = recp
 			tp = str (cls)
+			if tp [:len(api_prefix)+1] == api_prefix + '.':
+				# Strip off api_prefix to avoid duplication
+				tp = tp [len(api_prefix)+1:]
 		else:
 			assert Fail, 'Unknown recipe tag ' + str (recp [0])
 		numcrs = self.cursor_offset
-		pygen_class (tosym (node.type_name), tp, pck, recp, numcrs)
+		pygen_class (tosym (node.type_name), tp, ofs, pck, recp, numcrs)
 
 	def generate_pytype (self, node, **subarg):
 		#DEBUG# sys.stderr.write ('Node = ' + str (node) + '\n')
@@ -988,12 +997,16 @@ class QuickDER2py (QuickDERgeneric):
 			if implicit_tag:
 				# Can't have an implicit tag around ANY
 				pck = [ 'DER_PACK_ENTER | ' + implicit_tag ] + pck + [ 'DER_PACK_LEAVE' ]
+			simptag = -1
 		else:
 			if not implicit_tag:
 				implicit_tag = 'DER_TAG_' + simptp
 			pck = [ 'DER_PACK_STORE | ' + implicit_tag ]
+			simptag = eval ('DER_TAG_' + simptp, api.__dict__)
 		recp = self.cursor_offset
 		self.cursor_offset = recp + 1
+		if dertag2atomsubclass.has_key (simptag):
+			recp = ('_TYPTR', [api_prefix + '.' + dertag2atomsubclass [simptag]], recp)
 		return (pck,recp)
 
 	def pytypeTagged (self, node, implicit_tag=None):

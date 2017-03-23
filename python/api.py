@@ -171,21 +171,21 @@ def der_unpack_BITSTRING (derblob):
 
 
 def der_pack_UTCTIME (tstamp):
-	return time.strftime ('%g%m%d%H%M%SZ', tstamp)
+	return time.strftime (pstamp, '%y%m%d%H%M%SZ')
 
 
 def der_unpack_UTCTIME (derblob):
-	return time.strptime ('%g%m%d%H%M%SZ', derblob)
+	return time.strptime (derblob, '%y%m%d%H%M%SZ')
 
 
 def der_pack_GENERALIZEDTIME (tstamp):
 	#TODO# No support for fractional seconds
-	return time.strftime ('%G%m%d%H%M%SZ', tstamp)
+	return time.strftime (tstamp, '%Y%m%d%H%M%SZ')
 
 
 def der_unpack_GENERALIZEDTIME (derblob):
 	#TODO# No support for fractional seconds
-	return time.strptime ('%G%m%d%H%M%SZ', derblob)
+	return time.strptime (derblob, '%Y%m%d%H%M%SZ')
 
 
 def der_pack_BOOLEAN (bval):
@@ -358,6 +358,7 @@ class ASN1ConstructedType (ASN1Object):
 			# Interned strings yield faster dictionary lookups
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
+			self._fields [subfld] = self._offset  # fallback
 			subval = build_asn1 (self._context, subrcp, self._bindata, self._offset)
 			if type (subval) == int:
 				# Primitive: Index into _bindata; set in _fields
@@ -656,16 +657,16 @@ class ASN1Integer (ASN1Atom):
 
 class ASN1BitString (ASN1Atom):
 
-	_der_pack = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
+	_der_packer = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
 
 	def test (self, bit):
-		return bit in self._bindata [self._index]
+		return bit in self._bindata [self._offset]
 
 	def set (self, bit):
-		self._bindata [self._index].add (bit)
+		self._bindata [self._offset].add (bit)
 
 	def clear (self, bit):
-		self._bindata [self._index].remove (bit)
+		self._bindata [self._offset].remove (bit)
 
 
 class ASN1OctetString (ASN1Atom):
@@ -851,6 +852,11 @@ def build_asn1 (context, recipe, bindata=[], ofs=0):
 		# Reference to an ASN1Object subclass
 		(_TYPTR,[subcls],subofs) = recipe
 		if type (subcls) == str:
+			if subcls [:5] == '_api.':
+				context = context ['_api'].__dict__
+				subcls = subcls [5:]
+			elif subcls [:4] == 'ASN1':
+				context = context ['_api'].__dict__
 			subcls = context [subcls]	# lazy link
 			recipe [1] [0] = subcls		# memorise
 		assert (issubclass (subcls, ASN1Object))
@@ -859,7 +865,7 @@ def build_asn1 (context, recipe, bindata=[], ofs=0):
 					recipe = subcls._recipe,
 					der_packer = subcls._der_packer,
 					bindata = bindata,
-					offset = ofs,
+					offset = ofs + subofs,
 					context = context )
 	else:
 		assert False, 'Unknown recipe tag ' + str (recipe [0])
