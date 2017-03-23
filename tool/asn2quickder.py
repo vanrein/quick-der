@@ -884,7 +884,6 @@ class QuickDER2py (QuickDERgeneric):
 				retval += pymap_recipe (inner_recp, 0, ln) + ' )'
 			elif recp [0] == '_TYPTR':
 				(_TYPTR,[clsnm],ofs) = recp
-				# retval = "('_TYPTR',[" + repr (clsnm) + '],' + str (ofs + ctxofs) + ')'
 				retval = repr (recp)
 			else:
 				assert False, 'Unexpected recipe tag ' + str (recp [0])
@@ -979,7 +978,8 @@ class QuickDER2py (QuickDERgeneric):
 			self.nested_typerefs += 1
 		thetype = self.refmods [modnm].user_types () [node.type_name]
 		(pck,recp) = self.generate_pytype (thetype, **subarg)
-		if self.nested_typecuts > 0:
+		# if self.nested_typecuts > 0:
+		if True:
 			recp = ('_TYPTR',[node.type_name],popcofs)
 			self.nested_typerefs -= 1
 		#TODO:BAD# self.cursor_offset += popcofs
