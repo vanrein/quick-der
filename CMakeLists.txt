@@ -49,6 +49,8 @@ endif ()
 # BUILDING
 #
 add_subdirectory (lib)
+add_subdirectory (tool)
+add_subdirectory (python)
 if (SPEC_RFC)
 	add_subdirectory (rfc)
 endif ()
@@ -58,9 +60,7 @@ endif ()
 if (SPEC_ARPA2)
 	add_subdirectory (arpa2)
 endif ()
-add_subdirectory (tool)
 add_subdirectory (test)
-add_subdirectory (python)
 
 add_uninstall_target ()
 

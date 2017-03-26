@@ -50,7 +50,7 @@ macro(add_asn1_module _modulename _groupname)
 # and install the header file to include/quick-der/modulename.h.
 # and install the Python module to lib/python/site-packages/quick_der/modulename.py
 	add_custom_command (OUTPUT quick-der/${_modulename}.h quick-der/${_modulename}.py
-		COMMAND ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/python ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_modulename}.h from ASN.1 spec")
