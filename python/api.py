@@ -418,6 +418,14 @@ class ASN1ConstructedType (ASN1Object):
 			bindata.append (bd)
 		return _quickder.der_pack (self._der_packer, bindata)
 
+	def __dir__ (self):
+		"""Explicitly list the contents of the ASN1ConstructedType.
+		   Not sure why, but dir() ends in an infinite loop, probably
+		   due to the __getattr__ definition in this class.  Setting
+		   an explicit __dir__() method helps.
+		"""
+		return ['_der_packer','_numcursori','_recipe','_context','_bindata','_offset','_fields'] + self._fields.keys ()
+
 	def __str__ (self):
 		retval = '{\n    '
 		comma = ''
