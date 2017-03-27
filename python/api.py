@@ -685,13 +685,18 @@ class ASN1Integer (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
 
 	def get (self):
-		return der_unpack_INTEGER (super (ASN1Integer,self).get ())
+		val = super (ASN1Integer,self).get ()
+		if val is not None:
+			val = der_unpack_INTEGER (val)
+		return val
 
 	def set (self, val):
-		super (ASN1Integer, self).set (der_pack_INTEGER (val))
+		if val is not None:
+			val = der_pack_INTEGER (val)
+		super (ASN1Integer, self).set (val)
 
 	def __int__ (self):
-		return self.get ()
+		return (self.get () or 0)
 
 	def __str__ (self):
 		return str (self.__int__ ())
