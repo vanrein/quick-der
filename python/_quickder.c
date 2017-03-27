@@ -56,35 +56,34 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 	binput.derlen = binlen;
 	if (der_unpack (&binput, (derwalk *)pck, cursori, 1)) {
 		PyErr_SetFromErrno (PyExc_OSError);
-		//TODO// refctr
 		return NULL;
 	}
 	//
 	// Construct the structure of cursori to be returned
 	retval = PyList_New (numcursori);
 	if (retval == NULL) {
-		//TODO// refctr
 		return NULL;
 	}
 	while (numcursori-- > 0) {
 		PyObject *elem;
 		if (cursori [numcursori].derptr == NULL) {
+			Py_INCREF (Py_None);
 			elem = Py_None;
 		} else {
 			elem = PyString_FromStringAndSize ((char *)cursori [numcursori].derptr, cursori [numcursori].derlen);
 			if (elem == NULL) {
-				//TODO// refctr
+				Py_DECREF (retval); // not returned, so discard
 				return NULL;
 			}
 		}
 		if (PyList_SetItem (retval, numcursori, elem)) {
-			//TODO// refctr
+			Py_DECREF (elem);	// not inserted, so discard
+			Py_DECREF (retval);	// not returned, so discard
 			return NULL;
 		}
 	}
 	//
 	// Cleanup and return
-	//TODO// refctr
 	return retval;
 }
 
@@ -101,8 +100,8 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple (args, "s#O", &pck, &pcklen, &bins)) {
 		return NULL;
 	}
+	// "bins" is refct'd by "args", which is held during this function call
 	if (!PyList_Check (bins)) {
-		//TODO// refctr
 		return NULL;
 	}
 	binslen = PyList_Size (bins);
@@ -111,6 +110,7 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	dercursor cursori [binslen];
 	while (binslen-- > 0) {
 		PyObject *elem = PyList_GetItem (bins, binslen);
+		// "elem" is a borrowed reference; theory of race condition?!?
 		if (elem == Py_None) {
 			memset (&cursori [binslen], 0, sizeof (*cursori));
 		} else if (PyString_Check (elem)) {
@@ -121,7 +121,6 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 			cursori [binslen].derptr = (uint8_t *)buf;
 			cursori [binslen].derlen = buflen;
 		} else {
-			//TODO// refctr
 			return NULL;
 		}
 	}
@@ -130,15 +129,17 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	ssize_t packedlen = der_pack ((derwalk *)pck, cursori, NULL);
 	if (packedlen < 0) {
 		PyErr_SetFromErrno (PyExc_OSError);
-		//TODO// refctr
 		return NULL;
 	}
 	uint8_t packed [packedlen];
 	der_pack ((derwalk *)pck, cursori, packed + packedlen);
 	retval = PyString_FromStringAndSize ((char *)packed, packedlen);
+	if (retval == NULL) {
+		return NULL;
+	}
+	// "retval" is a new reference, with a copy of packed
 	//
 	// Cleanup and return
-	//TODO// refctr
 	return retval;
 }
 
@@ -163,7 +164,6 @@ static PyObject *quickder_header (PyObject *self, PyObject *args) {
 	uint8_t hlen;
 	if (der_header (&crs, &tag, &len, &hlen)) {
 		PyErr_SetFromErrno (PyExc_OSError);
-		//TODO// refctr
 		return NULL;
 	}
 	//
@@ -173,12 +173,11 @@ static PyObject *quickder_header (PyObject *self, PyObject *args) {
 			(int) len,
 			(int) hlen);
 	if (retval == NULL) {
-		//TODO// refctr
 		return NULL;
 	}
+	// "retval" is a new reference
 	//
 	// Cleanup and return
-	//TODO// refctr
 	return retval;
 }
 
