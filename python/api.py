@@ -387,7 +387,10 @@ class ASN1ConstructedType (ASN1Object):
 	def __setattr__ (self, name, val):
 		if name [0] != '_':
 			idx = self._name2idx (name)
-			self._bindata [idx] = val
+			if type (idx) == int:
+				self._bindata [idx] = val
+			else:
+				idx.set (val)
 		else:
 			self.__dict__ [name] = val
 
@@ -673,8 +676,14 @@ class ASN1Integer (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
 
+	def get (self):
+		return der_unpack_INTEGER (super (ASN1Integer,self).get ())
+
+	def set (self, val):
+		super (ASN1Integer, self).set (der_pack_INTEGER (val))
+
 	def __int__ (self):
-		return der_unpack_INTEGER (self.get ())
+		return self.get ()
 
 	def __str__ (self):
 		return str (self.__int__ ())
