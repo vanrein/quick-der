@@ -347,6 +347,9 @@ class ASN1ConstructedType (ASN1Object):
 		   _bindata [_offset], so as to support future _der_pack()
 		   calls.
 		"""
+		if self._recipe [0] != '_NAMED':
+			import sys
+			sys.exit (1)
 		assert self._recipe [0] == '_NAMED', 'ASN1ConstructedType instances must have a dictionary in their _recipe'
 		(_NAMED,recp) = self._recipe
 		self._fields = {}
@@ -456,7 +459,7 @@ class ASN1SequenceOf (ASN1Object,list):
 		(_SEQOF,allidx,subpck,subnum,subrcp) = self._recipe
 		#TODO:DEBUG# print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
 		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
-		derblob = self._bindata [self._offset]
+		derblob = self._bindata [self._offset] or ''
 		while len (derblob) > 0:
 			#TODO:DEBUG# print 'Getting the header from ' + ' '.join (map (lambda x: x.encode ('hex'), derblob [:5])) + '...'
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
@@ -506,7 +509,7 @@ class ASN1SetOf (ASN1Object,set):
 		(_SETOF,allidx,subpck,subnum,subrcp) = self._recipe
 		#TODO:DEBUG# print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
 		#TODO:DEBUG# print 'len(_bindata) =', len (self._bindata), '_offset =', self._offset, 'allidx =', allidx
-		derblob = self._bindata [self._offset]
+		derblob = self._bindata [self._offset] or ''
 		while len (derblob) > 0:
 			(tag,ilen,hlen) = _quickder.der_header (derblob)
 			if len (derblob) < hlen+ilen:
@@ -977,22 +980,30 @@ def build_asn1 (context, recipe, bindata=[], ofs=0, outer_class=None):
 					context = context )
 	elif recipe [0] == '_TYPTR':
 		# Reference to an ASN1Object subclass
-		(_TYPTR,[subcls],subofs) = recipe
-		if type (subcls) == str:
-			if subcls [:5] == '_api.':
-				context = context ['_api'].__dict__
-				subcls = subcls [5:]
-			elif subcls [:4] == 'ASN1':
-				context = context ['_api'].__dict__
-			subcls = context [subcls]	# lazy link
-			recipe [1] [0] = subcls		# memorise
-		assert issubclass (subcls, ASN1Object), 'Recipe ' + repr (recipe) + ' does not subclass ASN1Object'
-		assert type (subofs) == int, 'Recipe ' + repr (recipe) + ' does not have an integer sub-offset'
-		return subcls (
+		instme = None
+		while type (recipe) == tuple and recipe [0] == '_TYPTR':
+			(_TYPTR,[subcls],subofs) = recipe
+			ofs += subofs
+			if type (subcls) == str:
+				#TODO# Try to remove these, since we now generate it?
+				if subcls [:5] == '_api.':
+					context = context ['_api'].__dict__
+					subcls = subcls [5:]
+				elif subcls [:4] == 'ASN1':
+					context = context ['_api'].__dict__
+				#TODO# End try-to-remove-these
+				subcls = context [subcls]	# lazy link
+				recipe [1] [0] = subcls		# memorise
+			assert issubclass (subcls, ASN1Object), 'Recipe ' + repr (recipe) + ' does not subclass ASN1Object'
+			assert type (subofs) == int, 'Recipe ' + repr (recipe) + ' does not have an integer sub-offset'
+			if instme is None:
+				instme = subcls
+			recipe = subcls._recipe
+		return instme (
 					recipe = subcls._recipe,
 					der_packer = subcls._der_packer,
 					bindata = bindata,
-					offset = ofs + subofs,
+					offset = ofs,
 					context = context )
 	else:
 		assert False, 'Unknown recipe tag ' + str (recipe [0])

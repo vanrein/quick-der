@@ -10,6 +10,10 @@ add_test(certio-c-test
 add_test(certio-py-test
 	python ${CMAKE_CURRENT_SOURCE_DIR}/certio.py ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
 
+# Test construction of an empty instance
+add_test(empty-py-test
+	python ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
+
 add_executable (ldap.test
 	ldapsearch.c)
 target_include_directories(ldap.test PUBLIC ${CMAKE_BINARY_DIR}/rfc)
