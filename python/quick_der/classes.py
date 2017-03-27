@@ -1,242 +1,19 @@
-#DONE# share the bindata and ofslen structures with sub-objects (w/o cycles)
-#DONE# add the packer data to the ASN1Object
-#DONE# add a der_pack() method
-#DONE# deliver ASN1Object from the der_unpack() called on rfc1234.TypeName
-#DONE# manually program a module _quickder.so to adapt Quick DER to Python
-#DONE# support returning None from OPTIONAL fields
-#DONE# support a __delattr__ method (useful for OPTIONAL field editing)
-#DONE# is there a reason, any reason, to maintain the (ofs,len) form in Python?
-#DONE# enjoy faster dict lookups with string interning (also done for fields)
-#DONE# Created support for SEQUENCE OF and SET OF through post-processors
-#DONE# SEQUENCE OF and SET OF for non-class-named objects cannot use ASN1Object
-#DONE# split ASN1Object into abstract and ASN1ConstructedType (and more?)
-#DONE# unpack INTEGER types to Python anysize integers (unpack_der_INTEGER?)
-#DONE# (re)pack mapped Python types in der_pack(): int, set ([]), []
-#DONE# define names like DER_PACK_xxx and DER_TAG_xxx in quick_der.api
-#DONE# need to distinguish DER NULL; represent not as None but a data object
-#DONE# generate rfc1234.TypeName classes (or modules, or der_unpack functions)
-#DONE# parse the ASN.1 value notations used in RFCs: only INTEGER and OID
-#DONE# resolve recursion by introducing typerefs (and lazy link + substitute)
-#DONE# gen & ref _context variable in each generated class, set to _globals()
-#TODO# construct the __str__ value following ASN.1 value notation
+# classes.py -- The various classes in the ASN.1 supportive hierarchy
 
 
-import string
-import time
+import _quickder
+
+from packstx import *
+
+import primitive
+import builder
+
 
 if not 'intern' in dir (globals () ['__builtins__']):
 	try:
 		from sys import intern
 	except:
 		intern = lambda s: s
-
-# We need three methods with Python wrapping in C plugin module _quickder:
-# der_pack() and der_unpack() with proper memory handling, plus der_header()
-#  * Arrays of dercursor are passed as arrays of (copied) Python strings
-#  * Bindata is passed as Python strings
-import _quickder
-
-
-# Special markers for instructions for (un)packing syntax
-DER_PACK_LEAVE = 0x00
-DER_PACK_END = 0x00
-DER_PACK_OPTIONAL = 0x3f
-DER_PACK_CHOICE_BEGIN = 0x1f
-DER_PACK_CHOICE_END = 0x1f
-DER_PACK_ANY = 0xdf
-
-# Flags to add to tags to indicate entering or storing them while (un)packing
-DER_PACK_ENTER = 0x20
-DER_PACK_STORE = 0x00
-DER_PACK_MATCHBITS = (~ (DER_PACK_ENTER | DER_PACK_STORE) )
-
-# Universal tags and macros for application, contextual, private tags
-DER_TAG_BOOLEAN = 0x01
-DER_TAG_INTEGER = 0x02
-DER_TAG_BITSTRING = 0x03
-DER_TAG_BIT_STRING = 0x03
-DER_TAG_OCTETSTRING = 0x04
-DER_TAG_OCTET_STRING = 0x04
-DER_TAG_NULL = 0x05
-DER_TAG_OBJECTIDENTIFIER = 0x06
-DER_TAG_OBJECT_IDENTIFIER = 0x06
-DER_TAG_OID = 0x06
-DER_TAG_OBJECT_DESCRIPTOR = 0x07
-DER_TAG_EXTERNAL = 0x08
-DER_TAG_REAL = 0x09
-DER_TAG_ENUMERATED = 0x0a
-DER_TAG_EMBEDDEDPDV = 0x0b
-DER_TAG_EMBEDDED_PDV = 0x0b
-DER_TAG_UTF8STRING = 0x0c
-DER_TAG_RELATIVEOID = 0x0d
-DER_TAG_RELATIVE_OID = 0x0d
-DER_TAG_SEQUENCE = 0x10
-DER_TAG_SEQUENCEOF = 0x10
-DER_TAG_SEQUENCE_OF = 0x10
-DER_TAG_SET = 0x11
-DER_TAG_SETOF = 0x11
-DER_TAG_SET_OF = 0x11
-DER_TAG_NUMERICSTRING = 0x12
-DER_TAG_PRINTABLESTRING = 0x13
-DER_TAG_T61STRING = 0x14
-DER_TAG_TELETEXSTRING = 0x14
-DER_TAG_VIDEOTEXSTRING = 0x15
-DER_TAG_IA5STRING = 0x16
-DER_TAG_UTCTIME = 0x17
-DER_TAG_GENERALIZEDTIME = 0x18
-DER_TAG_GRAPHICSTRING = 0x19
-DER_TAG_VISIBLESTRING = 0x1a
-DER_TAG_GENERALSTRING = 0x1b
-DER_TAG_UNIVERSALSTRING = 0x1c
-DER_TAG_CHARACTERSTRING = 0x1d
-DER_TAG_CHARACTER_STRING = 0x1d
-DER_TAG_BMPSTRING = 0x1e
-
-DER_TAG_APPLICATION = lambda n: 0x40 | n
-DER_TAG_CONTEXT = lambda n: 0x80 | n
-DER_TAG_PRIVATE = lambda n: 0xc0 | n
-
-
-#
-# Mappings for primitive DER elements that map to native Python objects
-#
-
-
-def der_pack_STRING (sval):
-	return sval
-
-
-def der_unpack_STRING (derblob):
-	return derblob
-
-
-def der_pack_OID (oidstr, hdr=False):
-	oidvals = map (int, oidstr.split ('.'))
-	oidvals [1] += 40 * oidvals [0]
-	enc = ''
-	for oidx in range (len (oidvals)-1, 0, -1):
-		oidval = oidvals [oidx]
-		enc = chr (oidval & 0x7f) + enc
-		while oidval > 127:
-			oidval >>= 7
-			enc = chr (0x80 | (oidval & 0x7f)) + enc
-	if hdr:
-		enc = _quickder.der_pack ('\x06\x00', [enc])
-	return enc
-
-
-def der_unpack_OID (derblob):
-	oidvals = [0]
-	for byte in map (ord, derblob):
-		if byte & 0x80 != 0x00:
-			oidvals [-1] = (oidvals [-1] << 7) | (byte & 0x7f)
-		else:
-			oidvals [-1] = (oidvals [-1] << 7) |  byte
-			oidvals.append (0)
-	fst = oidvals [0] / 40
-	snd = oidvals [0] % 40
-	oidvals = [fst, snd] + oidvals [1:-1]
-	retval = '.'.join (map (str, oidvals))
-	return intern (retval)
-
-
-def der_pack_RELATIVE_OID (oidstr):
-	raise NotImplementedError ('der_pack_RELATIVE_OID')
-
-
-def der_unpack_RELATIVE_OID (oidstr):
-	raise NotImplementedError ('der_unpack_RELATIVE_OID')
-
-
-def der_pack_BITSTRING (bitset):
-	bits = [0]
-	for bit in bitset:
-		byte = 1 + (bit >> 3)
-		if len (bits) < byte + 1:
-			bits = bits + [0] * (byte + 1 - len (bits))
-		bits [byte] |= (1 << (bit & 0x07))
-	return ''.join (map (chr,bits))
-
-
-def der_unpack_BITSTRING (derblob):
-	#TODO# Consider support of constructed BIT STRING types
-	assert len (derblob) >= 1, 'Empty BIT STRING values cannot occur in DER'
-	assert ord (derblob [0]) <= 7, 'BIT STRING values must have a first byte up to 7'
-	bitnum = 8 * len (derblob) - 8 - ord (derblob [0])
-	bitset = set ()
-	for bit in range (bitnum):
-		if ord (derblob [(bit >> 3) + 1]) & (1 << (bit & 0x07)) != 0:
-			bitset.add (bit)
-	return bitset
-
-
-def der_pack_UTCTIME (tstamp):
-	return time.strftime (pstamp, '%y%m%d%H%M%SZ')
-
-
-def der_unpack_UTCTIME (derblob):
-	return time.strptime (derblob, '%y%m%d%H%M%SZ')
-
-
-def der_pack_GENERALIZEDTIME (tstamp):
-	#TODO# No support for fractional seconds
-	return time.strftime (tstamp, '%Y%m%d%H%M%SZ')
-
-
-def der_unpack_GENERALIZEDTIME (derblob):
-	#TODO# No support for fractional seconds
-	return time.strptime (derblob, '%Y%m%d%H%M%SZ')
-
-
-def der_pack_BOOLEAN (bval):
-	return '\xff' if bval else '\x00'
-
-
-def der_unpack_BOOLEAN (derblob):
-	return derblob != '\x00' * len (derblob)
-
-
-def der_pack_INTEGER (ival, hdr=False):
-	retval = ''
-	while ival not in [0,-1]:
-		byt = ival & 0xff
-		ival = ival >> 8
-		retval = chr (byt) + retval
-	if ival == 0:
-		if len (retval) > 0 and byt & 0x80 == 0x80:
-			retval = chr (0x00) + retval
-	else:
-		if len (retval) == 0 or byt & 0x80 == 0x00:
-			retval = chr (0xff) + retval
-	if hdr:
-		retval = _quickder.der_pack ('\x02\x00', [retval])
-	return retval
-
-
-def der_unpack_INTEGER (derblob):
-	if derblob == '':
-		return 0
-	retval = 0
-	if ord (derblob [0]) & 0x80:
-		retval = -1
-	for byt in map (ord, derblob):
-		retval = (retval << 8) + byt
-	return retval
-
-
-def der_pack_REAL (rval):
-	raise NotImplementedError ('der_pack_REAL -- too many variations')
-	# See X.690 section 8.5 -- base2, base10, ... yikes!
-	if rval == 0.0:
-		return ''
-	else:
-		pass
-
-def der_unpack_REAL ():
-	raise NotImplementedError ('der_pack_REAL -- too many variations')
-	# See X.690 section 8.5 -- base2, base10, ... yikes!
-
-
 
 
 # The ASN1Object is the abstract base class for ASN.1 objects.
@@ -362,7 +139,7 @@ class ASN1ConstructedType (ASN1Object):
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
 			self._fields [subfld] = self._offset  # fallback
-			subval = build_asn1 (self._context, subrcp, self._bindata, self._offset)
+			subval = builder.build_asn1 (self._context, subrcp, self._bindata, self._offset)
 			if type (subval) == int:
 				# Primitive: Index into _bindata; set in _fields
 				self._fields [subfld] += subval
@@ -478,8 +255,8 @@ class ASN1SequenceOf (ASN1Object,list):
 				raise Exception ('SEQUENCE OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
 			subcrs = _quickder.der_unpack (subpck,subdta,subnum)
-			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
-			subval = build_asn1 (self._context, subrcp, subcrs, 0)
+			#TODO:ALLIDX# subval = builder.build_asn1 (self._context, subrcp, subcrs, allidx)
+			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
 			self.append (subval)
 			derblob = derblob [hlen+ilen:]
 		#TODO:GENERIC# self._bindata [self._offset] = self
@@ -527,8 +304,8 @@ class ASN1SetOf (ASN1Object,set):
 				raise Exception ('SET OF elements must line up to a neat whole')
 			subdta = derblob [:hlen+ilen]
 			subcrs = _quickder.der_unpack (subpck,subdta,subnum)
-			#TODO:ALLIDX# subval = build_asn1 (self._context, subrcp, subcrs, allidx)
-			subval = build_asn1 (self._context, subrcp, subcrs, 0)
+			#TODO:ALLIDX# subval = builder.build_asn1 (self._context, subrcp, subcrs, allidx)
+			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
 			self.add (subval)
 			derblob = derblob [hlen+ilen:]
 		#TODO:GENERIC# self._bindata [self._offset] = self
@@ -579,32 +356,32 @@ class ASN1Atom (ASN1Object):
 	# with get() and set() methods to see and change it.  The functions
 	# mapped to interpret DER content and map it to a native type.
 	_direct_data_map = {
-		DER_TAG_BOOLEAN: der_unpack_BOOLEAN,
-		DER_TAG_INTEGER: der_unpack_INTEGER,
-		DER_TAG_BITSTRING: der_unpack_BITSTRING,
-		DER_TAG_OCTETSTRING: der_unpack_STRING,
+		DER_TAG_BOOLEAN: primitive.der_unpack_BOOLEAN,
+		DER_TAG_INTEGER: primitive.der_unpack_INTEGER,
+		DER_TAG_BITSTRING: primitive.der_unpack_BITSTRING,
+		DER_TAG_OCTETSTRING: primitive.der_unpack_STRING,
 		#DEFAULT# DER_TAG_NULL: ASN1Atom,
-		DER_TAG_OID: der_unpack_OID,
+		DER_TAG_OID: primitive.der_unpack_OID,
 		#DEFAULT# DER_TAG_OBJECT_DESCRIPTOR: ASN1Atom,
 		#DEFAULT# DER_TAG_EXTERNAL:  ASN1Atom,
-		DER_TAG_REAL: der_unpack_REAL,
-		DER_TAG_ENUMERATED: der_unpack_INTEGER,	#TODO# der2enum???
+		DER_TAG_REAL: primitive.der_unpack_REAL,
+		DER_TAG_ENUMERATED: primitive.der_unpack_INTEGER,	#TODO# der2enum???
 		#DEFAULT# DER_TAG_EMBEDDED_PDV: ASN1Atom,
-		DER_TAG_UTF8STRING: der_unpack_STRING,
-		DER_TAG_RELATIVE_OID: der_unpack_RELATIVE_OID,
-		DER_TAG_NUMERICSTRING: der_unpack_STRING,
-		DER_TAG_PRINTABLESTRING: der_unpack_STRING,
-		DER_TAG_TELETEXSTRING: der_unpack_STRING,
-		DER_TAG_VIDEOTEXSTRING: der_unpack_STRING,
-		DER_TAG_IA5STRING: der_unpack_STRING,
-		DER_TAG_UTCTIME: der_unpack_UTCTIME,
-		DER_TAG_GENERALIZEDTIME: der_unpack_GENERALIZEDTIME,
-		DER_TAG_GRAPHICSTRING: der_unpack_STRING,
-		DER_TAG_VISIBLESTRING: der_unpack_STRING,
-		DER_TAG_GENERALSTRING: der_unpack_STRING,
-		DER_TAG_UNIVERSALSTRING: der_unpack_STRING,
-		DER_TAG_CHARACTERSTRING: der_unpack_STRING,
-		DER_TAG_BMPSTRING: der_unpack_STRING,
+		DER_TAG_UTF8STRING: primitive.der_unpack_STRING,
+		DER_TAG_RELATIVE_OID: primitive.der_unpack_RELATIVE_OID,
+		DER_TAG_NUMERICSTRING: primitive.der_unpack_STRING,
+		DER_TAG_PRINTABLESTRING: primitive.der_unpack_STRING,
+		DER_TAG_TELETEXSTRING: primitive.der_unpack_STRING,
+		DER_TAG_VIDEOTEXSTRING: primitive.der_unpack_STRING,
+		DER_TAG_IA5STRING: primitive.der_unpack_STRING,
+		DER_TAG_UTCTIME: primitive.der_unpack_UTCTIME,
+		DER_TAG_GENERALIZEDTIME: primitive.der_unpack_GENERALIZEDTIME,
+		DER_TAG_GRAPHICSTRING: primitive.der_unpack_STRING,
+		DER_TAG_VISIBLESTRING: primitive.der_unpack_STRING,
+		DER_TAG_GENERALSTRING: primitive.der_unpack_STRING,
+		DER_TAG_UNIVERSALSTRING: primitive.der_unpack_STRING,
+		DER_TAG_CHARACTERSTRING: primitive.der_unpack_STRING,
+		DER_TAG_BMPSTRING: primitive.der_unpack_STRING,
 	}
 
 	def __init_bindata__ (self):
@@ -687,12 +464,12 @@ class ASN1Integer (ASN1Atom):
 	def get (self):
 		val = super (ASN1Integer,self).get ()
 		if val is not None:
-			val = der_unpack_INTEGER (val)
+			val = primitive.der_unpack_INTEGER (val)
 		return val
 
 	def set (self, val):
 		if val is not None:
-			val = der_pack_INTEGER (val)
+			val = primitive.der_pack_INTEGER (val)
 		super (ASN1Integer, self).set (val)
 
 	def __int__ (self):
@@ -734,7 +511,7 @@ class ASN1OID (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		oidstr = der_unpack_OID (self.get ())
+		oidstr = primitive.der_unpack_OID (self.get ())
 		return '{ ' + oidstr.replace ('.', ' ') + ' }'
 
 
@@ -946,242 +723,3 @@ class ASN1Any (ASN1Atom):
 					context = cls._context )
 
 
-def build_asn1 (context, recipe, bindata=[], ofs=0, outer_class=None):
-	"""Construct an ASN.1 structural element from a recipe and bindata.
-	   with ofset.  The result can either be an ASN1Object subclass
-	   instance or an offset into bindata.  The context is used to lookup
-	   identifiers during lazy binding, normally it is set to self._context
-	   for a generated class, and it would reference the globals() context
-	   of that class definition.
-	"""
-	if type (recipe) == int:
-		# Numbers refer to a dercursor index number
-		offset = recipe
-		return ofs + offset
-	elif recipe [0] == '_NAMED':
-		# dictionaries are ASN.1 constructed types
-		#TODO:OLD# (_NAMED,pck,map) = recipe
-		(_NAMED,map) = recipe
-		return ASN1ConstructedType (
-					recipe = recipe,
-					#TODO:OLD# der_packer = pck,
-					bindata = bindata,
-					offset = ofs,
-					context = context )
-	elif recipe [0] in ['_SEQOF', '_SETOF']:
-		(_STHOF,allidx,subpck,subnum,subrcp) = recipe
-		if outer_class:
-			cls = outer_class
-		elif _STHOF == '_SEQOF':
-			cls = ASN1SequenceOf
-		else:
-			cls = ASN1SetOf
-		packer = subpck [0]
-		if packer is None:
-			# Lazy linking:
-			packer = ''
-			for idx in range (1, len (subpck)):
-				if subpck [idx] [:1] == '?':
-					new = context [subpck [idx] [1:]]
-				else:
-					new = 0x00
-					for elm in subpck [idx].split ('|'):
-						elm = elm.strip ()
-						new = new | globals () [elm]
-					new = chr (new)
-				packer += new
-			packer += chr (DER_PACK_END)
-			# Memorise linking result:
-			subpck [0] = packer
-			del subpck [1:]
-		return cls (
-					recipe = recipe,
-					der_packer = subpck [0],
-					bindata = bindata,
-					offset = allidx,
-					context = context )
-	elif recipe [0] == '_TYPTR':
-		# Reference to an ASN1Object subclass
-		instme = None
-		while type (recipe) == tuple and recipe [0] == '_TYPTR':
-			(_TYPTR,[subcls],subofs) = recipe
-			ofs += subofs
-			if type (subcls) == str:
-				#TODO# Try to remove these, since we now generate it?
-				if subcls [:5] == '_api.':
-					context = context ['_api'].__dict__
-					subcls = subcls [5:]
-				elif subcls [:4] == 'ASN1':
-					context = context ['_api'].__dict__
-				#TODO# End try-to-remove-these
-				subcls = context [subcls]	# lazy link
-				recipe [1] [0] = subcls		# memorise
-			assert issubclass (subcls, ASN1Object), 'Recipe ' + repr (recipe) + ' does not subclass ASN1Object'
-			assert type (subofs) == int, 'Recipe ' + repr (recipe) + ' does not have an integer sub-offset'
-			if instme is None:
-				instme = subcls
-			recipe = subcls._recipe
-		return instme (
-					recipe = subcls._recipe,
-					der_packer = subcls._der_packer,
-					bindata = bindata,
-					offset = ofs,
-					context = context )
-	else:
-		assert False, 'Unknown recipe tag ' + str (recipe [0])
-
-
-# Usually, the GeneratedTypeNameClass is generated by asn2quickder in a module
-# named by the specification, for instance, quick-der.rfc4511.LDAPMessage
-
-class GeneratedTypeNameClass (ASN1ConstructedType):
-
-	_der_packer = '\x30\x04\x04\x00\x00'
-	_recipe = { 'hello': 0, 'world': 1 }
-	_numcursori = 2
-
-
-
-def der_unpack (cls, derblob, ofs=0):
-	if not issubclass (cls, ASN1Object):
-		if cls == int:
-			return der_unpack_INTEGER (derblob)
-		elif cls == list:
-			return der_unpack_SEQUENCE_OF (derblob)
-		elif cls == set:
-			return der_unpack_SET_OF (derblob)
-		raise Exception ('You can only unpack to an ASN1ConstructedType')
-	if derblob is None:
-		raise Exception ('No DER data provided')
-	return cls (derblob=derblob, offset=ofs)
-
-
-def der_pack (pyval):
-	if isinstance (pyval, ASN1Object):
-		return pyval._der_pack ()
-	elif type (pyval) == int:
-		return der_pack_INTEGER (pyval)
-	elif type (pyval) == list:
-		return der_pack_SEQUENCE_OF (pyval)
-	elif type (pyval) == set:
-		return der_pack_SET_OF (pyval)
-	else:
-		raise Exception ('Only ASN1ConstructedType instances, integers, lists and sets work for der_pack()')
-
-
-# class LDAPMessage (ASN1ConstructedType):
-if True:
-
-	# _der_packer = '\x30\x04\x04\x00'
-	# recipe = { 'hello': 0, 'world': 1 }
-	# bindata = ['Hello', 'World']
-	derblob = '\x30\x0e\x04\x05\x48\x65\x6c\x6c\x6f\x04\x05\x57\x6f\x72\x6c\x64'
-
-	# def unpack (self):
-	# 	return ASN1ConstructedType (bindata=self.bindata)
-
-	def unpack ():
-		up = GeneratedTypeNameClass (derblob=derblob)
-		# up.hello = 'Hello'
-		# up.world = 'World'
-		return up
-
-
-# 
-# class LDAPMessage2 (ASN1ConstructedType):
-# 
-# 	bindata = 'Hello World'
-# 	ofslen = [ (0,5), (6,5) ]
-# 	recipe = { 'hello': 0, 'world': 1 }
-# 
-# 	def __init__ (self):
-# 		super (LDAPMessage2,self).__init__ (
-# 			bindata='Hello World',
-# 			ofslen=[ (0,5), (6,5) ],
-# 			recipe={ 'hello':0, 'world':1 })
-# 
-# 
-# # a1 = ASN1Wrapper (bindata, ofslen, recipe)
-# # a1 = ASN1ConstructedType (bindata, ofslen, recipe)
-# # a1 = LDAPMessage ()
-# a1 = LDAPMessage2 ()
-
-#TESTCODE:TODO:OLD# a1=GeneratedTypeNameClass (derblob='\x30\x0e\x04\x05\x48\x65\x6c\x6c\x6f\x04\x05\x57\x6f\x72\x6c\x64')
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print 'Created a1:', a1
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print a1.hello, a1.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# a1.world = 'Wereld'
-#TESTCODE:TODO:OLD# a1.hello = 'Motjo'
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print a1.hello, a1.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# del a1.hello
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print a1.hello, a1.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# a1.hello = 'Hoi'
-#TESTCODE:TODO:OLD# print a1.hello, a1.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# pepe = a1._der_pack ()
-#TESTCODE:TODO:OLD# print 'pepe.length =', len (pepe)
-#TESTCODE:TODO:OLD# print 'pepe.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe))
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# (tag,ilen,hlen) = _quickder.der_header (pepe)
-#TESTCODE:TODO:OLD# print 'der_header (pepe) =', (tag,ilen,hlen)
-#TESTCODE:TODO:OLD# pepe2 = pepe [hlen:]
-#TESTCODE:TODO:OLD# while len (pepe2) > 0:
-#TESTCODE:TODO:OLD# 	print 'pepe2.length =', len (pepe2)
-#TESTCODE:TODO:OLD# 	print 'pepe2.data =', ''.join (map (lambda c:'%02x '%ord(c), pepe2))
-#TESTCODE:TODO:OLD# 	(tag2,ilen2,hlen2) = _quickder.der_header (pepe2)
-#TESTCODE:TODO:OLD# 	print 'der_header (pepe2) =', (tag2,ilen2,hlen2)
-#TESTCODE:TODO:OLD# 	if len (pepe2) == hlen2+ilen2:
-#TESTCODE:TODO:OLD# 		print 'Will exactly reach the end of pepe2'
-#TESTCODE:TODO:OLD# 	pepe2 = pepe2 [hlen2+ilen2:]
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# #TODO:FUNGONE# pepe3 = der_unpack_SEQUENCE_OF (ASN1OctetString, pepe [hlen:], 0)
-#TESTCODE:TODO:OLD# #TODO:FUNGONE# print 'pepe3 =', pepe3
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# #TODO:FUNGONE# pepe4 = der_unpack_SET_OF (ASN1OctetString, pepe [hlen:], 0)
-#TESTCODE:TODO:OLD# #TODO:FUNGONE# print 'pepe4 =', pepe4
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# pepe5 = ASN1SequenceOf (recipe=('_SEQOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=pepe)
-#TESTCODE:TODO:OLD# print 'pepe5 =', pepe5, '::', type (pepe5), '[0]::', type (pepe5 [0]), '[1]::', type (pepe5 [1])
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# pepe6 = ASN1SetOf (recipe=('_SETOF',ASN1OctetString._der_packer,ASN1OctetString._recipe), derblob=chr(0x31)+pepe[1:])
-#TESTCODE:TODO:OLD# print 'pepe6 =', pepe6, '::', type (pepe6)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# a3 = GeneratedTypeNameClass ()
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print 'EMPTY:', a3
-#TESTCODE:TODO:OLD# print 'FIELD:', a3.hello
-#TESTCODE:TODO:OLD# print 'FIELD:', a3.world
-#TESTCODE:TODO:OLD# print 'FIELD:', a3.hello, a3.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# a2 = der_unpack (GeneratedTypeNameClass, pepe)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# print 'PARSED:', a2.hello, a2.world
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# i1 = der_pack_INTEGER (12345)
-#TESTCODE:TODO:OLD# print 'Packed 12345 into', ''.join (map (lambda c:'%02x '%ord(c), i1))
-#TESTCODE:TODO:OLD# print 'Unpacking gives', der_unpack_INTEGER (i1)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# i2 = der_pack_INTEGER (-12345)
-#TESTCODE:TODO:OLD# print 'Packed -12345 into', ''.join (map (lambda c:'%02x '%ord(c), i2))
-#TESTCODE:TODO:OLD# print 'Unpacking gives', der_unpack_INTEGER (i2)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# # i3 = ASN1Atom (bindata=[i1], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
-#TESTCODE:TODO:OLD# i3 = ASN1Integer (derblob=chr(2) + chr(len(i1)) + i1)
-#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom with 12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i3))), 'length', len (i3)
-#TESTCODE:TODO:OLD# print 'Atom int is', i3, '::', type (i3), 'with value', int (i3)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# # i4 = ASN1Atom (bindata=[i2], der_packer=chr (DER_PACK_STORE | DER_TAG_INTEGER) + chr (DER_PACK_END), recipe=0 )
-#TESTCODE:TODO:OLD# i4 = ASN1Integer (derblob=chr(2) + chr(len(i2)) + i2)
-#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom with -12345 string is', ''.join (map (lambda c:'%02x '%ord(c), str (i4))), 'length', len (i4)
-#TESTCODE:TODO:OLD# print 'Atom int is', i4, '::', type (i4), 'with value', int (i4)
-#TESTCODE:TODO:OLD# 
-#TESTCODE:TODO:OLD# i0 = ASN1Integer ()
-#TESTCODE:TODO:OLD# #CHANGED_TYPE# print 'Atom without seting string is', ''.join (map (lambda c:'%02x '%ord(c), str (i0))), 'length', len (i0)
-#TESTCODE:TODO:OLD# print 'Atom int is', i0, '::', type (i0), 'with value', int (i0)
-#TESTCODE:TODO:OLD# 

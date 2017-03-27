@@ -40,24 +40,21 @@
 #    https://opensource.org/licenses/BSD-2-Clause
 #    SPDX short identifier: BSD-2-Clause
 
-execute_process(COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()"
-		OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
-		OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process (COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/python/quick_der)
 
 macro(add_asn1_module _modulename _groupname)
 # Generate the module file in <quick-der/modulename.h>
-# and quick-der/modulename.py
+# and python/quick_der/modulename.py
 # and install the header file to include/quick-der/modulename.h.
-# and install the Python module to lib/python/site-packages/quick_der/modulename.py
-	add_custom_command (OUTPUT quick-der/${_modulename}.h quick-der/${_modulename}.py
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/python ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+	add_custom_command (OUTPUT quick-der/${_modulename}.h ${CMAKE_BINARY_DIR}/python/quick_der/${_modulename}.py
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python ${CMAKE_SOURCE_DIR}/tool/asn2quickder.py ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E rename ${_modulename}.py ${CMAKE_BINARY_DIR}/python/quick_der/${_modulename}.py
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_modulename}.h from ASN.1 spec")
 	add_custom_target(${_modulename}_asn1_h DEPENDS quick-der/${_modulename}.h)
 	add_custom_target(${_modulename}_asn1_py DEPENDS quick-der/${_modulename}.py)
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h DESTINATION include/quick-der)
-	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.py DESTINATION ${PYTHON_SITE_PACKAGES}/quick_der)
 # Also add a test that builds against that module
 	set(ASN1_MODULE_NAME ${_modulename})
 	set(ASN1_HEADER_NAME quick-der/${_modulename})

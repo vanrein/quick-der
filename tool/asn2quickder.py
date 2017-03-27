@@ -33,7 +33,8 @@ import getopt
 from asn1ate import parser
 from asn1ate.sema import *
 
-from quick_der import api
+# from quick_der import api
+import quick_der.packstx as api
 
 
 def tosym(name):

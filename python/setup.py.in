@@ -20,6 +20,7 @@ if __name__ == '__main__':
 		#TODO# package_dir={ '': '@CMAKE_CURRENT_SOURCE_DIR@' },
 		package_dir={ '': '.' },
 		ext_modules=[ sharedlib ],
-		packages=['@CMAKE_CURRENT_SOURCE_DIR@']
+		# packages=['@CMAKE_CURRENT_SOURCE_DIR@']
+		packages = ['quick_der']
 	)
 
