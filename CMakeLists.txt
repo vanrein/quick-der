@@ -37,15 +37,6 @@ get_version_from_git (Quick-DER 0.0.0)
 enable_testing ()
 
 #
-# DEPENDENCIES
-#
-
-if (SPEC_RFC OR SPEC_ITU OR SPEC_ARPA2)
-	#TODO# depend on asn2quickder's "asn1ate" python package
-endif ()
-
-
-#
 # BUILDING
 #
 add_subdirectory (lib)

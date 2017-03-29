@@ -68,6 +68,7 @@ macro(add_asn1_module _modulename _groupname)
 endmacro()
 
 macro(add_asn1_modules _groupname)
+	add_dependencies(asn1-spec-modules ${_groupname})  # Target comes from the python/ subdir
 	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quick-der)
 	foreach (_module ${ARGN})
 		add_asn1_module(${_module} ${_groupname})
