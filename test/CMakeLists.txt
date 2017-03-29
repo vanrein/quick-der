@@ -13,6 +13,8 @@ add_test(certio-py-test
 # Test construction of an empty instance
 add_test(empty-py-test
 	python ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
+add_test(pack-py-test
+	python ${CMAKE_CURRENT_SOURCE_DIR}/der_pack.py)
 
 add_executable (ldap.test
 	ldapsearch.c)
