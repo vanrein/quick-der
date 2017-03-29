@@ -20,4 +20,11 @@ add_custom_target (quickder-shared-module ALL
 	#NOMORE# PRE_BUILD
 	#NOMORE# )
 
-install(CODE "execute_process(COMMAND python setup.py install WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+# Note special evaluation rules for if(); do not use ${CMAKE_INSTALL_PREFIX} in if() to test non-emptiness.
+if (CMAKE_INSTALL_PREFIX)
+	set(_python_install_args --prefix ${CMAKE_INSTALL_PREFIX})
+else ()
+	set(_python_install_args "")
+endif ()
+
+install(CODE "execute_process(COMMAND python setup.py install ${_python_install_args} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
