@@ -6,6 +6,7 @@ import _quickder
 from packstx import *
 
 import primitive
+import format
 import builder
 
 
@@ -70,8 +71,8 @@ class ASN1Object (object):
 			self.__init_bindata__ ()
 		elif derblob:
 			self._bindata    = _quickder.der_unpack (self._der_packer, derblob, self._numcursori)
-			assert len (self._bindata) == self._numcursori, 'Wrong number of values returned from der_unpack()'
 			self._offset     = 0
+			assert len (self._bindata) == self._numcursori, 'Wrong number of values returned from der_unpack()'
 			assert offset == 0, 'You supplied a derblob, so you cannot request any offset but 0'
 			self.__init_bindata__ ()
 		elif self._numcursori:
@@ -151,12 +152,11 @@ class ASN1ConstructedType (ASN1Object):
 				print 'Not placing field', subfld, 'subvalue ::', type (subval)
 			elif isinstance (subval, ASN1Object):
 				self._fields [subfld] = subval
-		#HUH:WHY:DROP# self._bindata [self._offset] = self
 
 	def _name2idx (self, name):
 		while not self._fields.has_key (name):
-			if name [-1:] == '_':
-				name = name [:1]
+			if name [:1] == '_':
+				name = name [1:]
 				continue
 			raise AttributeError (name)
 		return self._fields [name]
@@ -191,17 +191,26 @@ class ASN1ConstructedType (ASN1Object):
 		"""
 		bindata = []
 		for bd in self._bindata [self._offset:self._offset+self._numcursori]:
-			#TODO# list, set, ...
+			#TODO# set, list, atomic...
+			print 'bindata[] element is a', type (bd)
+			if bd is not None and type (bd) != str:
+				# Hope to map the value to DER without hints
+				#TODO# Currently fails on ASN1Objects
+				bd = format.der_format (bd)
 			bindata.append (bd)
 		return _quickder.der_pack (self._der_packer, bindata)
 
-	def __dir__ (self):
-		"""Explicitly list the contents of the ASN1ConstructedType.
-		   Not sure why, but dir() ends in an infinite loop, probably
-		   due to the __getattr__ definition in this class.  Setting
-		   an explicit __dir__() method helps.
+	def _der_format (self):
+		"""Format the current ASN1ConstructedType using DER notation,
+		   but withhold the DER header consisting of the outer tag
+		   and length.  This format is comparable to what is stored
+		   in bindata array elements.  To be able to produce proper
+		   DER, it needs some contextual information (specifically,
+		   the tag to prefix before the body).
 		"""
-		return ['_der_packer','_numcursori','_recipe','_context','_bindata','_offset','_fields'] + self._fields.keys ()
+		packed = self._der_pack (self)
+		(tag,ilen,hlen) = _quickder.der_header (packed)
+		return packed [hlen : hlen+ilen]
 
 	def __str__ (self):
 		retval = '{\n    '
@@ -259,9 +268,23 @@ class ASN1SequenceOf (ASN1Object,list):
 			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
 			self.append (subval)
 			derblob = derblob [hlen+ilen:]
-		#TODO:GENERIC# self._bindata [self._offset] = self
+		self._bindata [self._offset] = self
 
 	def _der_pack (self):
+		"""Return the result of the `der_pack()` operation on this
+		   element.
+		"""
+		return primitive.der_prefixhead (DER_PACK_ENTER | DER_TAG_SEQUENCE,
+				self._der_format ())
+
+	def _der_format (self):
+		"""Format the current ASN1SequenceOf using DER notation,
+		   but withhold the DER header consisting of the outer tag
+		   and length.  This format is comparable to what is stored
+		   in bindata array elements.  To be able to produce proper
+		   DER, it needs some contextual information (specifically,
+		   the tag to prefix before the body).
+		"""
 		return ''.join ( [ elem._der_pack () for elem in self ] )
 
 	def __str__ (self):
@@ -308,11 +331,22 @@ class ASN1SetOf (ASN1Object,set):
 			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
 			self.add (subval)
 			derblob = derblob [hlen+ilen:]
-		#TODO:GENERIC# self._bindata [self._offset] = self
+		self._bindata [self._offset] = self
 
 	def _der_pack (self):
 		"""Return the result of the `der_pack()` operation on this
 		   element.
+		"""
+		return primitive.der_prefixhead (DER_PACK_ENTER | DER_TAG_SET,
+				self._der_format ())
+
+	def _der_format (self):
+		"""Format the current ASN1SetOf using DER notation,
+		   but withhold the DER header consisting of the outer tag
+		   and length.  This format is comparable to what is stored
+		   in bindata array elements.  To be able to produce proper
+		   DER, it needs some contextual information (specifically,
+		   the tag to prefix before the body).
 		"""
 		return ''.join ( [ elem._der_pack () for elem in self ] )
 
@@ -356,33 +390,42 @@ class ASN1Atom (ASN1Object):
 	# with get() and set() methods to see and change it.  The functions
 	# mapped to interpret DER content and map it to a native type.
 	_direct_data_map = {
-		DER_TAG_BOOLEAN: primitive.der_unpack_BOOLEAN,
-		DER_TAG_INTEGER: primitive.der_unpack_INTEGER,
-		DER_TAG_BITSTRING: primitive.der_unpack_BITSTRING,
-		DER_TAG_OCTETSTRING: primitive.der_unpack_STRING,
+		DER_TAG_BOOLEAN: primitive.der_parse_BOOLEAN,
+		DER_TAG_INTEGER: primitive.der_parse_INTEGER,
+		DER_TAG_BITSTRING: primitive.der_parse_BITSTRING,
+		DER_TAG_OCTETSTRING: primitive.der_parse_STRING,
 		#DEFAULT# DER_TAG_NULL: ASN1Atom,
-		DER_TAG_OID: primitive.der_unpack_OID,
+		DER_TAG_OID: primitive.der_parse_OID,
 		#DEFAULT# DER_TAG_OBJECT_DESCRIPTOR: ASN1Atom,
 		#DEFAULT# DER_TAG_EXTERNAL:  ASN1Atom,
-		DER_TAG_REAL: primitive.der_unpack_REAL,
-		DER_TAG_ENUMERATED: primitive.der_unpack_INTEGER,	#TODO# der2enum???
+		DER_TAG_REAL: primitive.der_parse_REAL,
+		DER_TAG_ENUMERATED: primitive.der_parse_INTEGER,	#TODO# der2enum???
 		#DEFAULT# DER_TAG_EMBEDDED_PDV: ASN1Atom,
-		DER_TAG_UTF8STRING: primitive.der_unpack_STRING,
-		DER_TAG_RELATIVE_OID: primitive.der_unpack_RELATIVE_OID,
-		DER_TAG_NUMERICSTRING: primitive.der_unpack_STRING,
-		DER_TAG_PRINTABLESTRING: primitive.der_unpack_STRING,
-		DER_TAG_TELETEXSTRING: primitive.der_unpack_STRING,
-		DER_TAG_VIDEOTEXSTRING: primitive.der_unpack_STRING,
-		DER_TAG_IA5STRING: primitive.der_unpack_STRING,
-		DER_TAG_UTCTIME: primitive.der_unpack_UTCTIME,
-		DER_TAG_GENERALIZEDTIME: primitive.der_unpack_GENERALIZEDTIME,
-		DER_TAG_GRAPHICSTRING: primitive.der_unpack_STRING,
-		DER_TAG_VISIBLESTRING: primitive.der_unpack_STRING,
-		DER_TAG_GENERALSTRING: primitive.der_unpack_STRING,
-		DER_TAG_UNIVERSALSTRING: primitive.der_unpack_STRING,
-		DER_TAG_CHARACTERSTRING: primitive.der_unpack_STRING,
-		DER_TAG_BMPSTRING: primitive.der_unpack_STRING,
+		DER_TAG_UTF8STRING: primitive.der_parse_STRING,
+		DER_TAG_RELATIVE_OID: primitive.der_parse_RELATIVE_OID,
+		DER_TAG_NUMERICSTRING: primitive.der_parse_STRING,
+		DER_TAG_PRINTABLESTRING: primitive.der_parse_STRING,
+		DER_TAG_TELETEXSTRING: primitive.der_parse_STRING,
+		DER_TAG_VIDEOTEXSTRING: primitive.der_parse_STRING,
+		DER_TAG_IA5STRING: primitive.der_parse_STRING,
+		DER_TAG_UTCTIME: primitive.der_parse_UTCTIME,
+		DER_TAG_GENERALIZEDTIME: primitive.der_parse_GENERALIZEDTIME,
+		DER_TAG_GRAPHICSTRING: primitive.der_parse_STRING,
+		DER_TAG_VISIBLESTRING: primitive.der_parse_STRING,
+		DER_TAG_GENERALSTRING: primitive.der_parse_STRING,
+		DER_TAG_UNIVERSALSTRING: primitive.der_parse_STRING,
+		DER_TAG_CHARACTERSTRING: primitive.der_parse_STRING,
+		DER_TAG_BMPSTRING: primitive.der_parse_STRING,
 	}
+
+	# The tags in the _direct_data_replace set are replaced in the
+	# _bindata [_offset] entry, so this is no longer a binary string
+	# but rather the current ASN1Atom subclass
+	_direct_data_replace = set ([
+		DER_TAG_BOOLEAN, DER_TAG_BITSTRING, DER_TAG_OID,
+		DER_TAG_ENUMERATED, DER_TAG_RELATIVE_OID,
+		DER_TAG_UTCTIME, DER_TAG_GENERALIZEDTIME,
+	])
 
 	def __init_bindata__ (self):
 		"""The object has been setup with structural information in
@@ -396,18 +439,22 @@ class ASN1Atom (ASN1Object):
 		   counting the overhead should be tolerable, though it may
 		   be avoided in a more clever approach.
 		"""
+		self._value = self._bindata [self._offset]
 		mytag = ord (self._der_packer [0]) & DER_PACK_MATCHBITS
-		if mytag in self._direct_data_map:
+		if self._direct_data_map.has_key (mytag):
 			mapfun = self._direct_data_map [mytag]
 			if self._bindata [self._offset] is None:
-				myrepr = None
+				pass # Keep the None value in _bindata [_offset]
 			else:
-				myrepr = mapfun (self._bindata [self._offset])
+				mapped_value = mapfun (self._value)
+				if mytag in self._direct_data_replace:
+					# Replace the _value
+					self._value = mapped_value
+					# Replace the _bindata [_offset]
+					self._bindata [self._offset] = self
 		else:
-			myrepr = self
-		# Keep the binary string in _value; possibly change _bindata
-		self._value = self._bindata [self._offset]
-		self._bindata [self._offset] = myrepr
+			pass	# Keep binary string in _bindata [_offset]
+			#   	# Keep binary string in _value: self is usable
 
 	def get (self):
 		return self._value
@@ -427,14 +474,15 @@ class ASN1Atom (ASN1Object):
 	def __str__ (self):
 		retval = self.get ()
 		if retval:
-			retval = "'" + self.get ().encode ('hex') + "'H"
+			retval = "'" + self._der_format ().encode ('hex') + "'H"
 		else:
 			retval = 'None'
 		return retval
 
 	def __len__ (self):
 		if self._value:
-			return len (self._value)
+			# A bit wasteful to compute the DER format for len
+			return len (self._der_format ())
 		else:
 			return 0
 
@@ -442,7 +490,17 @@ class ASN1Atom (ASN1Object):
 		"""Return the result of the `der_pack()` operation on this
 		   element.
 		"""
-		#TODO# insert the header!
+		return primitive.der_prefixhead (self._der_packer [0],
+				self._der_format ())
+
+	def _der_format (self):
+		"""Format the current ASN1Atom using DER notation,
+		   but withhold the DER header consisting of the outer tag
+		   and length.  This format is comparable to what is stored
+		   in bindata array elements.  To be able to produce proper
+		   DER, it needs some contextual information (specifically,
+		   the tag to prefix before the body).
+		"""
 		return self._bindata [self._offset]
 
 
@@ -456,6 +514,9 @@ class ASN1Boolean (ASN1Atom):
 		else:
 			return 'FALSE'
 
+	def _der_format (self):
+		return primitive.der_format_BOOLEAN (self.get ())
+
 
 class ASN1Integer (ASN1Atom):
 
@@ -464,12 +525,12 @@ class ASN1Integer (ASN1Atom):
 	def get (self):
 		val = super (ASN1Integer,self).get ()
 		if val is not None:
-			val = primitive.der_unpack_INTEGER (val)
+			val = primitive.der_parse_INTEGER (val)
 		return val
 
 	def set (self, val):
 		if val is not None:
-			val = primitive.der_pack_INTEGER (val)
+			val = primitive.der_format_INTEGER (val)
 		super (ASN1Integer, self).set (val)
 
 	def __int__ (self):
@@ -477,6 +538,9 @@ class ASN1Integer (ASN1Atom):
 
 	def __str__ (self):
 		return str (self.__int__ ())
+
+	def _der_format (self):
+		return primitive.der_format_INTEGER (self.get ())
 
 
 class ASN1BitString (ASN1Atom):
@@ -491,6 +555,9 @@ class ASN1BitString (ASN1Atom):
 
 	def clear (self, bit):
 		self._bindata [self._offset].remove (bit)
+
+	def _der_format (self):
+		return primitive.der_format_BITSTRING (self.get ())
 
 
 class ASN1OctetString (ASN1Atom):
@@ -511,18 +578,27 @@ class ASN1OID (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
 
 	def __str__ (self):
-		oidstr = primitive.der_unpack_OID (self.get ())
+		oidstr = primitive.der_parse_OID (self.get ())
 		return '{ ' + oidstr.replace ('.', ' ') + ' }'
+
+	def _der_format (self):
+		return primitive.der_format_OID (self.get ())
 
 
 class ASN1Real (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_REAL) + chr(DER_PACK_END)
 
+	def _der_format (self):
+		return primitive.der_format_REAL (self.get ())
+
 
 class ASN1Enumerated (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_ENUMERATED) + chr(DER_PACK_END)
+
+	def _der_format (self):
+		return primitive.der_format_INTEGER (self.get ())
 
 
 class ASN1UTF8String (ASN1Atom):
@@ -541,6 +617,9 @@ class ASN1UTF8String (ASN1Atom):
 class ASN1RelativeOID (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_RELATIVE_OID) + chr(DER_PACK_END)
+
+	def _der_format (self):
+		return primitive.der_format_RELATIVEOID (self.get ())
 
 
 class ASN1NumericString (ASN1Atom):
@@ -615,10 +694,13 @@ class ASN1UTCTime (ASN1Atom):
 	def __str__ (self):
 		retval = self.get ()
 		if retval:
-			retval = '"' + self.get () + '"'
+			retval = '"' + self._der_format () + '"'
 		else:
 			retval = 'None'
 		return retval
+
+	def _der_format (self):
+		return primitive.der_format_UTCTIME (self.get ())
 
 
 class ASN1GeneralizedTime (ASN1Atom):
@@ -628,10 +710,13 @@ class ASN1GeneralizedTime (ASN1Atom):
 	def __str__ (self):
 		retval = self.get ()
 		if retval:
-			retval = '"' + self.get () + '"'
+			retval = '"' + self._der_format () + '"'
 		else:
 			retval = 'None'
 		return retval
+
+	def _der_format (self):
+		return primitive.der_format_GENERALIZEDTIME (self.get ())
 
 
 class ASN1GraphicString (ASN1Atom):
@@ -721,5 +806,8 @@ class ASN1Any (ASN1Atom):
 					derblob = self._bindata [self._offset],
 					offset = 0,
 					context = cls._context )
+
+	def der_pack (self):
+		return format.der_pack (self._value, cls=self._class)
 
 

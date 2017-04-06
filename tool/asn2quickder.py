@@ -812,26 +812,26 @@ class QuickDER2py (QuickDERgeneric):
 			val = self.pyvalOID (node.value)
 			cls = api_prefix + '.ASN1OID'
 		else:
-			val = 'MAP2DER("""' + str (node.value) + '""")'
+			val = 'UNDEF_MAP2DER("""' + str (node.value) + '""")'
 		self.comment (str (node))
 		# Must provide a context for name resolution, even {} will do
-		self.writeln (var + ' = ' + cls + ' (' + val + ', context={})')
+		self.writeln (var + ' = ' + cls + ' (bindata=[' + val + '], context={})')
 		self.writeln ()
 
 	def pyvalInteger (self, valnode):
-		return api_prefix + '.der_pack_INTEGER (' + str (int (valnode)) + ', hdr=True)'
+		return api_prefix + '.der_format_INTEGER (' + str (int (valnode)) + ')'
 
 	def pyvalOID (self, valnode):
 		retc = []
 		for oidcompo in valnode.components:
 			if type (oidcompo) == NameForm:
-				retc.append (api_prefix + '.der_unpack_OID (' + tosym (oidcompo.name) + '.get())')
+				retc.append (api_prefix + '.der_parse_OID (' + tosym (oidcompo.name) + '.get())')
 			elif type (oidcompo) == NumberForm:
 				retc.append ("'" + str (oidcompo.value) + "'")
 			elif type (oidcompo) == NameAndNumberForm:
 				retc.append ("'" + str (oidcompo.number) + "'")
 		retval = " + '.' + ".join (retc)
-		retval = api_prefix + '.der_pack_OID (' + retval.replace ("' + '", '') + ', hdr=True)'
+		retval = api_prefix + '.der_format_OID (' + retval.replace ("' + '", '') + ')'
 		return retval
 
 	def generate_classes (self):

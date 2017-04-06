@@ -14,7 +14,7 @@ add_test(certio-py-test
 add_test(empty-py-test
 	python ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
 add_test(pack-py-test
-	python ${CMAKE_CURRENT_SOURCE_DIR}/der_pack.py)
+	python ${CMAKE_CURRENT_SOURCE_DIR}/der_format.py)
 
 add_executable (ldap.test
 	ldapsearch.c)

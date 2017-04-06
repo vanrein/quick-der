@@ -8,13 +8,25 @@ sys.path = [ '../../python/installroot', '../python/installroot' ] + sys.path
 # Normal programming uses the package name, but in the build tree we don't
 # from quick_der.rfc5280 import Certificate
 from quick_der.rfc5280 import Certificate
+from quick_der.format import der_pack
 
-der = open (sys.argv [1]).read ()
-crt = Certificate (derblob=der)
+der_in = open (sys.argv [1]).read ()
+crt = Certificate (derblob=der_in)
 
 print 'WHOLE CERT:'
 print crt
 print
+
+der_out = der_pack (crt)
+if der_out != der_in:
+	print 'DIFFERENT DER BLOBS IN AND OUT!!!'
+	print 'der_in  =', der_in [:30].encode ('hex'), '...'
+	print 'der_out =', der_out[:30].encode ('hex'), '...'
+	of = open ('/tmp/verisign.out', 'w')
+	of.write (der_out)
+	of.close ()
+	print 'der_out written to /tmp/verisign.out -- perhaps compare with derdump'
+	sys.exit (1)
 
 print 'TBSCERTIFICATE:'
 print 'type is', type (crt.tbsCertificate)

@@ -25,10 +25,10 @@ for typename, value in (
 	(BOOL, False),
 	(BOOL, 0),
 	(BOOL, 1),
-	(BIT, set([1,5,7])),
-	(BIT, set()),
-	(BIT, set([22])),
-	(BIT, set([100, 101])),
+	(BIT, 162),
+	(BIT, 0),
+	(BIT, 4194304),
+	(BIT, 3802951800684688204490109616128L),
 	(STR, "cow"),
 	(STR, ""),
 	(STR, chr(0) + "cow"),
@@ -36,12 +36,12 @@ for typename, value in (
 	(OID, "1.2.3.4"),
 	(OID, "3.14.159.2653.58979.323812"),
 	):
-	pack_func = getattr(qd, "der_pack_" + typename)
-	unpack_func = getattr(qd, "der_unpack_" + typename)
+	format_func = getattr(qd, "der_format_" + typename)
+	parse_func = getattr(qd, "der_parse_" + typename)
 
-	assert pack_func is not None
-	assert unpack_func is not None
-	assert callable(pack_func)
-	assert callable(unpack_func)
+	assert format_func is not None
+	assert parse_func is not None
+	assert callable(format_func)
+	assert callable(parse_func)
 
-	assert unpack_func(pack_func(value)) == value
+	assert parse_func(format_func(value)) == value, "Value " + str (value) + " :: " + str (typename) + " is not properly reproduced by parse . format"
