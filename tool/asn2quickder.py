@@ -1100,19 +1100,31 @@ class QuickDER2py (QuickDERgeneric):
 """
 
 if len(sys.argv) < 2:
-    sys.stderr.write('Usage: %s [-I incdir] ... main.asn1 [dependency.asn1] ...\n'
+    sys.stderr.write('Usage: %s [-I incdir] [-l proglang] ... main.asn1 [dependency.asn1] ...\n'
         % sys.argv [0])
     sys.exit(1)
 
 defmods = {}
 refmods = {}
 incdirs = []
-(opts,restargs) = getopt.getopt (sys.argv [1:], 'I:')
+langopt = [ 'c', 'python' ]
+langsel = set ()
+(opts,restargs) = getopt.getopt (sys.argv [1:], 'I:l:', longopts=langopt)
 for (opt,optarg) in opts:
-	if opt != '-I':
+	if opt == '-I':
+		incdirs.append (optarg)
+	elif opt == '-l':
+		if optarg not in langopt:
+			sys.stderr.write ('No code generator backend for ' + optarg + '\nAvailable backends: ' + ', '.join (langopt) + '\n')
+			sys.exit (1)
+		langsel.add (optarg)
+	elif optarg [:2] == '--' and optarg [2:] in langopts:
+		langsel.add (optarg)
+	else:
 		sys.stderr.write ('Usage: ' + sys.argv [0] + ' [-I incdir] ... main.asn1 [dependency.asn1] ...\n')
 		sys.exit (1)
-	incdirs.append (optarg)
+if len (langsel) == 0:
+	langsel = set (langopt)
 incdirs.append (os.path.curdir)
 for file in restargs:
     modnm = os.path.basename (file).lower ()
@@ -1151,25 +1163,27 @@ while len (imports) > 0:
 	    #TODO:DEBUG# print('Realised semantic model for "%s"' % rm)
 
 # Generate C header files
-for modnm in defmods.keys ():
-	#TODO:DEBUG# print ('Generating C header file for "%s"' % modnm)
-	cogen = QuickDER2c (defmods [modnm], modnm, refmods)
-	cogen.generate_head ()
-	cogen.generate_overlay ()
-	cogen.generate_pack ()
-	cogen.generate_psub ()
-	cogen.generate_tail ()
-	cogen.close ()
-	#TODO:DEBUG# print ('Ready with C header file for "%s"' % modnm)
+if 'c' in langsel:
+	for modnm in defmods.keys ():
+		#TODO:DEBUG# print ('Generating C header file for "%s"' % modnm)
+		cogen = QuickDER2c (defmods [modnm], modnm, refmods)
+		cogen.generate_head ()
+		cogen.generate_overlay ()
+		cogen.generate_pack ()
+		cogen.generate_psub ()
+		cogen.generate_tail ()
+		cogen.close ()
+		#TODO:DEBUG# print ('Ready with C header file for "%s"' % modnm)
 
 # Generate Python modules
-for modnm in defmods.keys ():
-	#TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
-	cogen = QuickDER2py (defmods [modnm], modnm, refmods)
-	cogen.generate_head ()
-	cogen.generate_classes ()
-	cogen.generate_values ()
-	cogen.generate_tail ()
-	cogen.close ()
-	#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
+if 'python' in langsel:
+	for modnm in defmods.keys ():
+		#TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
+		cogen = QuickDER2py (defmods [modnm], modnm, refmods)
+		cogen.generate_head ()
+		cogen.generate_classes ()
+		cogen.generate_values ()
+		cogen.generate_tail ()
+		cogen.close ()
+		#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
 
