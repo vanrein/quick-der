@@ -29,6 +29,7 @@
 import sys
 import os.path
 import getopt
+import re
 
 from asn1ate import parser
 from asn1ate.sema import *
@@ -1094,22 +1095,79 @@ class QuickDER2py (QuickDERgeneric):
 	def pytypeSetOf (self, node, implicit_tag='DER_TAG_SET'):
 		return self.pyhelpRepeatedType (node, implicit_tag, '_SETOF')
 
+
+class QuickDER2testdata (QuickDERgeneric):
+	"""This builds a network of generators that exhibits the structure
+	   of the data, generating test variations for each of the parts.
+	   For each named type, an entry point for the network is setup in
+	   a dictionary, from which any number of test cases can be retrieved.
+
+	   The search structure for the generators is width-first, meaning
+	   that structures first seek out variations at the outer levels,
+	   using already-found cases for end points, and only later start
+	   to vary deeper down.  This way, test cases can be enumerated
+	   in a consistent manner and tests become reproducable, even when
+	   the total work load for testing is rediculously high.  The
+	   width-first approach was chosen because often a type includes
+	   other named types, which may be tested independently.
+
+	   The deliverable of the type-processing routines is a tuple
+	   (casecount,casegenerator) where the casecount gives the total
+	   number of tests available (usually much larger than deemed
+	   interesting for a test) and where the casegenerator can be
+	   asked to generate one numbered test case.  This allows us to
+	   both generate "the first 100 tests" and any specific test or
+	   range of tests that we might be interested in (perhaps we
+	   got an error report on case 1234567 and would like to make
+	   it a standard test).
+
+	   The reason we speak of a network of generators is that the
+	   various definitions are connected, often in a cyclical
+	   manner, and to that end they lookup values in the dictionary
+	   that maps type names to (casecount,casegenerator) tuples.
+	   These are not generators in the Python3 sense however, as
+	   these would not allow us to request arbitrary entries such
+	   as the aforementioned test case 1234567.  It is closer to
+	   a functional programming concept with closures standing by
+	   to operate on a given index in a (virtual) output list.
+
+	   The efficiency might be poor if we generated each case for
+	   each type name freshly, because there will be a lot of
+	   repeated uses.  To make the case generators operate more
+	   smoothly, they may employ a cache, perhaps based on weak
+	   references.
+
+	   This class can hold the network of generators as well as
+	   their cache structures, and supports output of test data
+	   in individual files.  As an alternative use case, one may
+	   consider delivering test cases over a stream, such as an
+	   HTTP API.
+	"""
+
+	pass	#TODO#IMPLEMENT#
+
+
 """The main program asn2quickder is called with one or more .asn1 files,
    the first of which is mapped to a C header file and the rest is
    loaded to fulfil dependencies.
 """
 
 if len(sys.argv) < 2:
-    sys.stderr.write('Usage: %s [-I incdir] [-l proglang] ... main.asn1 [dependency.asn1] ...\n'
+    sys.stderr.write('Usage: %s [-I incdir] [-l proglang] [-t testcases] ... main.asn1 [dependency.asn1] ...\n'
         % sys.argv [0])
     sys.exit(1)
+
+# Test case notation: [asn1id=] [[ddd]-]ddd ...
+casesyntax = re.compile ('^(?:([A-Z][A-Za-z0-9-]*)=)?((?:([0-9]*-)?[0-9]+)(?:,(?:[0-9]*-)?[0-9]+)*)$')
+cases2find = re.compile ('(?:([0-9]*)(-))?([0-9]+)')
 
 defmods = {}
 refmods = {}
 incdirs = []
 langopt = [ 'c', 'python' ]
 langsel = set ()
-(opts,restargs) = getopt.getopt (sys.argv [1:], 'I:l:', longopts=langopt)
+testcases = {}
+(opts,restargs) = getopt.getopt (sys.argv [1:], 'I:l:t:', longopts=langopt)
 for (opt,optarg) in opts:
 	if opt == '-I':
 		incdirs.append (optarg)
@@ -1118,10 +1176,29 @@ for (opt,optarg) in opts:
 			sys.stderr.write ('No code generator backend for ' + optarg + '\nAvailable backends: ' + ', '.join (langopt) + '\n')
 			sys.exit (1)
 		langsel.add (optarg)
+	elif opt == '-t':
+		m = casesyntax.match (optarg)
+		if m is None:
+			sys.stderr.write ('Wrong syntax for -t [asn1id=] [[ddd]-]ddd,...\n')
+			sys.exit (1)
+		asn1id = m.group (1) or ''
+		series = m.group (2)
+		for (start,dash,end) in cases2find.findall (series):
+			end   = int (end)
+			if start == '':
+				if dash == '-':
+					start = 0
+				else:
+					start = end
+			else:
+				start = int (start)
+			if not testcases.has_key (asn1id):
+				testcases [asn1id] = []
+			testcases [asn1id].append ( (start,end) )
 	elif optarg [:2] == '--' and optarg [2:] in langopts:
 		langsel.add (optarg)
 	else:
-		sys.stderr.write ('Usage: ' + sys.argv [0] + ' [-I incdir] ... main.asn1 [dependency.asn1] ...\n')
+		sys.stderr.write ('Usage: ' + sys.argv [0] + ' [-I incdir] [-l proglang] [-t testcases] ... main.asn1 [dependency.asn1] ...\n')
 		sys.exit (1)
 if len (langsel) == 0:
 	langsel = set (langopt)
@@ -1187,3 +1264,16 @@ if 'python' in langsel:
 		cogen.close ()
 		#TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
 
+# Generate test data
+if testcases != {}:
+	for modnm in defmods.keys ():
+		if testcases.has_key (modnm):
+			cases = testcases [modnm]
+		elif testcases.has_key (''):
+			cases = testcases ['']
+		else:
+			cases = []
+		casestr = ','.join (map (lambda (s,e): str(s)+'-'+str(e), cases))
+		print ('Generating test cases ' + casestr + ' for ' + modnm)
+		raise NotImplementedError
+		print ('Generated  test cases ' + casestr + ' for ' + modnm)
