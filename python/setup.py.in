@@ -16,7 +16,7 @@ sharedlib = Extension (
 if __name__ == '__main__':
 	setup (
 		name='quick_der',
-		version='@CMAKE_PACKAGE_VERSION@',
+		version='@Quick-DER_VERSION_MAJOR@.@Quick-DER_VERSION_MINOR@',
 		#TODO# package_dir={ '': '@CMAKE_CURRENT_SOURCE_DIR@' },
 		package_dir={ '': '.' },
 		ext_modules=[ sharedlib ],
