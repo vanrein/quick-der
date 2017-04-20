@@ -3,6 +3,7 @@
 <img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
 Copyright (c) 2016, Rick van Rein, OpenFortress.nl
+Copyright (c) 2017, Adriaan de Groot <groot@kde.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

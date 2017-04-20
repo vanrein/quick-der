@@ -63,6 +63,10 @@ set (CPACK_PACKAGE_NAME "Quick-DER")
 set (CPACK_PACKAGE_VERSION ${Quick-DER_VERSION})
 set (CPACK_PACKAGE_VENDOR "ARPA2.net")
 set (CPACK_PACKAGE_CONTACT "Rick van Rein <rick@openfortress.nl>")
+# License information for packaging. This uses the SPDX license
+# identifiers from https://spdx.org/licenses/
+set (CPACK_FREEBSD_PACKAGE_LICENSE "BSD-2-Clause")
+
 include (PackAllPossible)
 include (CPack)
 
