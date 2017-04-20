@@ -97,8 +97,10 @@ The tool can generate C language headers and Python bindings for an
 ASN.1 description. An additional tool, `asn1literate` produces documentation
 from an ASN.1 description.
 
-**TODO** CMake macros are provided to provide a simple way to integrate
-ASN.1 compilation into any project that wishes to use Quick DER.
+For users of CMake, the macros in `cmake/MacroASN1Module.cmake` may be
+an inspiration to automate ASN.1 compilation in those projects. The macros
+should not be used verbatim, since they are tied up with compiling ASN.1
+before the tools are installed.
 
 
 ## Features
