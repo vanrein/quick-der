@@ -637,7 +637,7 @@ void der_prepack (dercursor *derray, size_t arraycount, derarray *target);
  *
  * It is legal to pass a NULL valp, in which case the return value tells
  * you if the integer could be represented (or not). The DER cursor must
-//  * be valid and point to valid memory.
+ * be valid and point to valid memory.
  */
 int der_get_int32 (dercursor cursor, int32_t *valp);
 
