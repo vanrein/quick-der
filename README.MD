@@ -13,6 +13,7 @@ See also:
  - [Building and installing Quick DER](INSTALL.MD)
  - [Extended usage examples](USING.MD)
  - [Embedded systems use](WHEN-SIZE-MATTERS.MD)
+ - [Python bindings](PYTHON.MD)
  - Syntax definitions for [walks](WALK-SYNTAX.MD)
    and [packing](PACK-SYNTAX.MD)
  - [License](LICENSE.MD) (BSD 2-Clause)

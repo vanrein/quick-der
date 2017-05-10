@@ -2,19 +2,23 @@
 
 <img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
-The basic installation that provides you with the library:
+> To do a basic installation that provides you with a default build of the
+> library, Python bindings, headers and tools:
+>
+>     make           # Optional: make PREFIX=/my/path
+>     make install
 
-    make           # Optional: make PREFIX=/my/path
-    make install
-
-Other customary build targets include `test`, `clean` and `uninstall`.
-The makefile itself is just a stub, that invokes CMake as a (meta-)
-build system for generating the actual build files. You can also use
-CMake on its own, or one of its configuration UIs, for more detailed
-configuration of the system.
+Quick DER uses CMake as a (meta-)buildsystem. There is a top-level
+Makefile that provides convenience targets for default builds;
+the `all` target will build the default configuration.
+You can also use CMake on its own, or one of its configuration UIs,
+for more detailed configuration of the Quick DER build.
 
 Using just `make` creates a `build/` directory (for an out-of-source
 build), runs CMake there, and then performs a regular build.
+
+Other customary build targets include `test`, `clean` and `uninstall`,
+and `package` which uses CPack (part of CMake) to build local packages.
 
 The default configuration builds the library, Python bindings for the
 library, and headers for a selection of standards that use DER-encoding
@@ -28,12 +32,25 @@ These are tools needed to be able to build and install Quick DER.
     Meta-buildsystem for doing dependency and configuration.
   * [Python](https://www.python.org/)
     Interpreter for the Python language, which is used in some of the
-    build tools.
+    build tools. Both (or either of) Python 2 and Python 3 are supported.
   * [pyparsing](https://pypi.python.org/pypi/pyparsing)
     The tool `asn2quickder` is used to translate the ASN.1 descriptions
     of RFC data structures to C headers (and Python bindings).
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
+
+## Configuration
+
+The following compile-time options are supported. These can be set from
+the CMake command-line or by using the `ccmake` command. All of the options
+default to *on*.
+
+ - `DEBUG` When enabled, prints progress and status information about
+   walks and DER operations to stdout. This is not recommended for
+   production use.
+ - `SPEC_RFC`, `SPEC_ITU`, `SPEC_ARPA2` each of these options controls
+   the generation of C header files and Python bindings for a set of
+   ASN.1 specifications.
 
 ## Add-ons
 

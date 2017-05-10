@@ -2,9 +2,9 @@
 
 > *This description explains how Quick DER is mapped into Python.
 > The design is made to facilitate similar structural traversals in
-> Python as in C, albeit through a different mechanism.  As for C, the
-> structures are generated and placed into modules that are delivered
-> along with Quick DER for Python.*
+> Python as in C, albeit through a different mechanism.  Much like
+> the C headers, the structures are generated and placed into modules
+> that are delivered along with Quick DER for Python.*
 
 
 ## General Description
@@ -74,7 +74,7 @@ on it and generate the binary transmission format when the need arises.
 The `asn2quickder` compiler produces Python packages for many specifications,
 ready to be loaded as modules.  For example, a Kerberos Ticket is defined
 by the name `Ticket` in RFC 4120, so it can be reached under
-`quick_der.rfc4120.Ticket` and used just like a custom class the would
+`quick_der.rfc4120.Ticket` and used just like a custom class that would
 implement a Kerberos Ticket:
 
     from quick_der.rfc4120 import Ticket
