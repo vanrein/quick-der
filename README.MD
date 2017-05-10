@@ -8,16 +8,25 @@
 > fed into library routines, resulting in pointer/length descriptors for the
 > individual data fragments.*
 
+See also:
+
+ - [Building and installing Quick DER](INSTALL.MD)
+ - [Extended usage examples](USING.MD)
+ - [Embedded systems use](WHEN-SIZE-MATTERS.MD)
+ - Syntax definitions for [walks](WALK-SYNTAX.MD)
+   and [packing](PACK-SYNTAX.MD)
+ - [License](LICENSE.MD) (BSD 2-Clause)
+
 ## Basic Usage
 
 Quick DER is a three-pronged fork:
  - you can use the library to process DER data at a low level (e.g. as a
    sequence of nested tags with a data payload),
- - you can use the headers for a wide variety of RFCs that include ASN.1
-   descriptions of their DER data to process that data at a higher level
-   (e.g. LDAP messages with named fields),
- - the tools provided can be used to translate ASN.1 syntax into (C language)
-   headers and Python bindings for use as above.
+ - you can use the data structures provided by the library for a wide variety
+   of RFCs to process data from those RFCs at a higher level (e.g. LDAP
+   messages with named fields),
+ - the tools provided with the library can be used to translate ASN.1 syntax
+   into (C language) data structures and Python bindings for use as above.
 
 Since Quick DER handles binary data (rather than character strings), all data
 is described in so-called `dercursor` structures; each containing a pointer
@@ -38,9 +47,9 @@ There are also routines to manually walk through packaged DER structures,
 namely `der_enter()` and `der_skip()` to enter into a nested structure and to
 find the next element in a concatenation of such elements.
 
-A much more advanced form of such walks through a DER structure exists in the
-form of `der_walk()`, which is fed another kind of walk, a sequence of enter/skip
-statements with tags that will be validated.
+A more advanced form of such walks through a DER structure exists in the
+form of `der_walk()`, which is fed a sequence of enter/skip statements with
+tags that will be validated.
 
 ### Higher Level Interface
 
@@ -110,16 +119,6 @@ allocations (although it can use extra memory for handling variable-
 length structures if you help it). It provides a library of pre-
 compiled headers and bindings to common protocols that use DER.
 
-### Relation to BER
-
-*This is for ASN.1 experts; others can safely skip this subsection.*
-
-The Quick DER library is designed to process DER, although it will also accept
-some of the more general BER format.  If a length or value is written in more
-than the minimal space, the library is still likely to accept it.  Note that
-the `BIT STRING` type is somewhat likely to run into overflow problems, so
-there the full restrictiveness of DER is applied.
-
 ### No Memory Allocation
 
 The entire library has been designed to operate without dynamic memory allocation.
@@ -144,7 +143,7 @@ it provides the calling program with a lot of control to avoid it too.  This is
 ideal for embedded applications, but is also beneficial for a secure programming
 style.
 
-### Memory Allocation for Sequences
+### Optional Memory Allocation for Sequences
 
 Software built around Quick DER, such as
 [LillyDAP](https://github.com/vanrein/lillydap)
@@ -161,6 +160,12 @@ invoke `der_unpack()` again on the components, and deliver the result in
 `info`, thereby overwriting the original `wire` format.  Before sending out an
 `info` structure with `der_pack()`, the calling application should revert to
 `wire` form again through preparing calls to `der_pack()`.
+
+### Embedding
+
+The library can be built for static linking, and can be optimized for
+code size when linking. See the [embedded Quick DER](WHEN-SIZE-MATTERS.MD)
+file for details.
 
 ### RFC Collection
 
@@ -183,13 +188,33 @@ have been made, and clearly marked with `asn1ate` and an explanation in the
 ASN.1 files in the `rfc/`, `itu/` and `arpa2/` directories.  The issues found
 were usually quite simple:
 
-  * we had to use uppercase initial characters in type names
-  * we removed complex constraints (as Quick DER does not implement them anyway)
-  * LDAP contained an infinitely circular reference for `Filter.not`
+  * Using uppercase initial characters in type names
+  * Removing complex constraints (Quick DER does not implement them anyway)
+  * Cutting an infinitely circular reference for `Filter.not` in LDAP.
 
 There are some specifications that go far beyond the abilities of `asn1ate`,
 by using such concepts as macros.  This applies to the SNMP RFC's (which are
 not included).
+
+### Python Bindings ###
+
+There are Python (both Python 2 and Python 3) bindings that can be generated
+when building the library.
+
+See [Python and Quick DER](PYTHON.MD) for a plan that greatly simplifies
+ASN.1 processing with Python.
+
+### Relation to BER
+
+*This is for ASN.1 experts; others can safely skip this subsection.*
+
+The Quick DER library is designed to process DER, although it will also accept
+some of the more general BER format.  If a length or value is written in more
+than the minimal space, the library is still likely to accept it.  Note that
+the `BIT STRING` type is somewhat likely to run into overflow problems, so
+there the full restrictiveness of DER is applied.
+
+Integer types longer than four octets (i.e. 32 bit) are not supported directly.
 
 ## Typical Use
 
@@ -233,12 +258,23 @@ for sharing locally.
 
 There are a few things that this library can use:
 
-  * **More testing.** The current `test` directory is far too small; we can take a PKIX certificate apart and re-compose it, so we're definately doing something good, but this is nowhere near thorough testing.  If you run into a problem case, then *please* share it so we can solve it and extend our test base.
-  * **Compiler output testing.** The compiler output is currently compiled to see if there are C syntactical problems, but that is all.  They have been visually compared to manually crafted code, too.  More exhaustive tests, including a full application, would be in order.
-  * **Python embedding.** This would be useful for many protocol applications that need to modify a few things.  It also greatly helps to get more protocols within the reach of Python.  See our [ideas about Python Quick DER](PYTHON.MD) for a plan that greatly simplifies ASN.1 processing with Python.
+  * **More testing.** The current `test` directory is far too small; we can
+    take a PKIX certificate apart and re-compose it, so we're definately doing
+    something good, but this is nowhere near thorough testing.  If you run
+    into a problem case, then *please* share it so we can solve it and extend
+    our test base.
+  * **Compiler output testing.** The compiler output is currently compiled to
+    see if there are C syntactical problems, but that is all.  They have been
+    visually compared to manually crafted code, too.  More exhaustive tests,
+    including a full application, would be in order.
 
 And of course, there are many useful things we may do with this library:
 
-  * **Kerberos in PKIX.** [Certificates wrapping Kerberos Tickets](http://github.com/arpa2/kerberos2pkix) for use with [TLS-KDH](https://tools.ietf.org/html/draft-vanrein-tls-kdh)
-  * **Remote PKCS #11.** The main issue in doing this well is proper encapsulation, but with Quick and Easy DER, and the emphasis of both on security and well-defined sizes, it appears to be a perfect match to wrap PKCS #11 arguments in DER structures.
+  * **Kerberos in PKIX.** [Certificates wrapping Kerberos Tickets][pkix] for
+    use with [TLS-KDH](https://tools.ietf.org/html/draft-vanrein-tls-kdh),
+  * **Remote PKCS #11.** The main issue in doing this well is proper
+    encapsulation, but with Quick and Easy DER, and the emphasis of both on
+    security and well-defined sizes, it appears to be a perfect match to
+    wrap PKCS #11 arguments in DER structures.
 
+[pkix]: (http://github.com/arpa2/kerberos2pkix)
