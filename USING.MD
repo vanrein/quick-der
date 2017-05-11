@@ -212,14 +212,19 @@ the structure.  The header file defines those names as part of
 Something else that can now be done, is switch behaviour based on the the
 various fields that contain an `OBJECT IDENTIFIER` for that purposes.  These
 can usually be treated as binary settings to be compared as binaries.  The
-`dercmp()` function does this by looking at the length as well as binary
+`der_cmp()` function does this by looking at the length as well as binary
 contents of such fields, as in
 
-    if (dercmp (&crt.signatureAlgorith.algorithm, RSA_WITH_SHA1) == 0) {
+    /* Canonical OID 1.2.840.113549.1.1.11 as encoded data, no tag or len */
+    const uint8_t RSA_WITH_SHA256[] =
+       { 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B }
+    dercursor_t rsa_algo;
+    rsa_algo.derptr = RSA_WITH_SHA256;
+    rsa_algo.derlen = sizeof(RSA_WITH_SHA256);
+    if (der_cmp (&crt.signatureAlgorith.algorithm, rsa_algo) == 0) {
        /* ...the OIDs matched... */
     } else {
        /* ...other cases... */
     }
 
-TODO: dercmp() doesn't actually exist.
 
