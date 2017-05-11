@@ -176,7 +176,59 @@ derwalk path_rdn2value[] = {
 	DER_WALK_END
 };
 
+/* Given the canonical data-representation for an OID, declare
+ * a dercursor @p name that points to that data; used to declare
+ * "constant cursors" for comparison purposes.
+ */
+#define OID_CURSOR(name, ...) \
+        const uint8_t name##_derdata[] = { __VA_ARGS__ }; \
+        const dercursor name = { (uint8_t *)name##_derdata, sizeof(name##_derdata) };
+
+/* These are all OIDs under 1.2.840.113549.1.1., which name signature algorithms */
+OID_CURSOR(rsa_with_nothing,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01)
+
+OID_CURSOR(rsa_with_md5,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x04)
+
+OID_CURSOR(rsa_with_sha1,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x05)
+
+OID_CURSOR(rsa_with_sha224,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0e)
+
+OID_CURSOR(rsa_with_sha256,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0b)
+
+OID_CURSOR(rsa_with_sha384,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0c)
+
+OID_CURSOR(rsa_with_sha512,
+           0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0d)
+
+typedef struct { const dercursor *cursor; const char *label; } oid_label_assoc;
+oid_label_assoc oid_labels[] = {
+	{ &rsa_with_nothing, "RSA (no digest specified)" },
+	{ &rsa_with_md5, "RSA with MD5 (unsafe)" },
+	{ &rsa_with_sha1, "RSA with SHA1 (unsafe)" },
+	{ &rsa_with_sha224, "RSA with SHA224" },
+	{ &rsa_with_sha256, "RSA with SHA256" },
+	{ &rsa_with_sha384, "RSA with SHA384" },
+	{ &rsa_with_sha512, "RSA with SHA512" },
+	{ NULL, NULL }
+};
+
 void print_oid (dercursor *oid) {
+	/* Look up a named OID */
+	const char *label = NULL;
+	for (const oid_label_assoc *ola = oid_labels; ola->label != NULL; ola++) {
+		if (der_cmp(*oid, *(ola->cursor)) == 0)
+		{
+			label = ola->label;
+			break;
+		}
+	}
+
 	size_t oidlen = oid->derlen;
 	uint8_t *oidptr = oid->derptr;
 	uint32_t nextoid = 0;
@@ -216,6 +268,11 @@ void print_oid (dercursor *oid) {
 	}
 	if (nextoid != 0x00) {
 		printf (".LEFTOVER_%d", nextoid);
+	}
+
+	if (label != NULL)
+	{
+		printf(" (%s)", label);
 	}
 }
 
