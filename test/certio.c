@@ -13,7 +13,7 @@
 // 	tbsCertificate       TBSCertificate,
 // 	signatureAlgorithm   AlgorithmIdentifier,
 // 	signatureValue       BIT STRING  }
-// 
+//
 // TBSCertificate  ::=  SEQUENCE  {
 // 	version         [0]  EXPLICIT Version DEFAULT v1,
 // 	serialNumber         CertificateSerialNumber,
@@ -184,7 +184,23 @@ void print_oid (dercursor *oid) {
 		printf ("BAD_OID");
 		return;
 	} else {
-		printf ("%d.%d", (*oidptr) / 40, (*oidptr) % 40);
+		uint8_t x = (*oidptr) / 40;
+		uint8_t y = (*oidptr) % 40;
+		if (x>2) {
+			/* Special case: there are only initial arcs 0,1,2
+			 * and initial arcs 0,1 have a constrained space
+			 * underneath. Arc 2 has values from 0..51 and
+			 * 999 (example), which can be confused (e.g. 2.40)
+			 * with "initial arcs" > 2.
+			 *
+			 * Disambiguate those higher-numbered sub-arcs.
+			 *
+			 * Still doesn't handle 2.999, though.
+			 */
+			y += (x-2) * 40;
+			x = 2;
+		}
+		printf ("%d.%d", x, y);
 	}
 	oidlen--;
 	oidptr++;
