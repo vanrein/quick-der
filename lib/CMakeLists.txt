@@ -19,6 +19,7 @@ set(quickder_SRC
 	der_walk.c
 	der_get_int32.c
 	der_get_uint32.c
+	der_cmp.c
 )
 
 add_library (quickderShared SHARED ${quickder_SRC})

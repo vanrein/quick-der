@@ -644,4 +644,17 @@ int der_get_int32 (dercursor cursor, int32_t *valp);
 /* Unpack a single unsigned integer. See also der_get_int32(). */
 int der_get_uint32 (dercursor cursor, uint32_t *valp);
 
+/* Compare the values pointed to by cursors @p c1 and @p c2.
+ * Returns 0 if the (binary) values are equal, otherwise returns
+ * the difference between the first two differing bytes (similar
+ * to memcmp(3) with different parameters). Zero length data is
+ * considered equal. If the value in @p c1 is a prefix of the
+ * data in @p c2, returns -1 (less than).
+ *
+ * Does not know about semantics: a FALSE (DEFAULT) boolean is
+ * still different from a FALSE boolean, since the former has
+ * zero length, while the latter has non-zero length, with a zero value.
+ */
+int der_cmp(dercursor c1, dercursor c2);
+
 #endif /* QUICK_DER_H */
