@@ -1,5 +1,7 @@
 # Embedding Quick DER into Python
 
+<img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
+
 > *This description explains how Quick DER is mapped into Python.
 > The design is made to facilitate similar structural traversals in
 > Python as in C, albeit through a different mechanism.  Much like
