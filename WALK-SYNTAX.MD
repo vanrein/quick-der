@@ -2,16 +2,29 @@
 
 <img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
-This specification describes how to make `der_walk()` traverse the path in DER
-binaries that you intend it to take.
+> This specification describes how to make `der_walk()` traverse the path in DER
+> binaries that you intend it to take.
+
+A *walking path* is a sequence of instructions for the function
+`der_walk()`, which controls how that functions modifies a cursor
+to point to an element within the data that the cursor originally
+points to. A walking path may be considered a program in a very small
+domain-specific language. See also the
+[PACK SYNTAX](PACK-SYNTAX.MD)
+for the similar, but somewhat more complex, packing paths.
+
+A single walking path can replace dozens of lines of explicit function calls
+to manipulate a cursor.
 
 ## Declaring and Using a Walking Path
 
-The walk path is described as a sequence of values that ends in `DER_WALK_END`:
+The walk path is described as a sequence of values that ends in `DER_WALK_END`.
+Here, `path_demo` is such a sequence. It is declared `static const` so that it
+may be placed in read-only memory, but that is not required.
 
     #include <quick-der/api.h>
 
-    derwalk path_demo [] = {
+    static const derwalk path_demo [] = {
             ...,
             DER_WALK_END
     }
@@ -21,8 +34,9 @@ which is then used to move a `dercursor crs` with
     int prsok;
     prsok = der_walk (&crs, path_demo);
 
-The output is -1 for hard errors or 0 for success.  If it fails to parse the path
-at some point, the return value is a positive integer, indicating how much of
+The return value from `der_walk()` is -1 for hard errors, 0 for success,
+or a positive integer for partial errors.  If it fails to parse the path at
+some point, the return value is a positive  integer, indicating how much of
 `path_demo` was left unprocessed before `DER_WALK_END`.
 
 The `crs` value is updated by this call to point to the end of the `path_demo`
@@ -34,7 +48,7 @@ There are two basic actions that `der_walk()` takes at each position along the
 path; it may either enter or skip a DER element.  This is defined in the path
 with `DER_WALK_ENTER` and `DER_WALK_SKIP`, respectively, as in
 
-    derwalk path_demo [] = {
+    static const derwalk path_demo [] = {
             DER_WALK_ENTER | ...,
             DER_WALK_SKIP  | ...,
             ...,
@@ -83,8 +97,9 @@ This is precisely what the path walk describes.  Although *some* understanding
 of the mapping to DER is helpful, you can generally derive the path to walk
 directly from the ASN.1 structure.
 
-When done, `der_walk()` returns the pointer to the string "Quick DER" with a
-length of 9, and you can continue to process it:
+When done, `der_walk()` returns 0, and `crs.derptr` is set so that it
+points to the octet string "Quick DER", while `crs.derlen` is set to 9,
+and you can continue to process the cursor:
 
     printf ("Found \"%.*s\"\n", crs.derlen, crs.derptr);
 
@@ -102,7 +117,7 @@ specify `DER_WALK_SKIP | DER_WALK_CHOICE` to skip an arbitrary element;
 there will be no validation of that particular tag.
 
 The forms `ANY` and `ANY DEFINED BY` receive the same treatment as `CHOICE`,
-but can be declare with a separate symbol `DER_WALK_ANY`.
+but can be declared with a separate symbol `DER_WALK_ANY`.
 
 
 ## There is more
