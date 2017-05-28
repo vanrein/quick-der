@@ -221,7 +221,8 @@ oid_label_assoc oid_labels[] = {
 void print_oid (dercursor *oid) {
 	/* Look up a named OID */
 	const char *label = NULL;
-	for (const oid_label_assoc *ola = oid_labels; ola->label != NULL; ola++) {
+	const oid_label_assoc *ola;
+	for (ola = oid_labels; ola->label != NULL; ola++) {
 		if (der_cmp(*oid, *(ola->cursor)) == 0)
 		{
 			label = ola->label;
