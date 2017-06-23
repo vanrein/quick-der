@@ -20,7 +20,7 @@ virtually without bounds.
 
 ## Code size
 
-The following data stems from analysis of the `.text` segment of version TODO
+The following data stems from analysis of the `.text` segment of version 0.1
 of Quick DER:
 
   * 261 bytes for `der_header()`
@@ -53,10 +53,10 @@ it easy to setup a cursor and have it traverse paths.  And there are iterators
 to walk through SEQUENCE OF and SET OF structures.
 
 The only reason you might have to allocate memory is when you intend to fully
-der_unpack() into SEQUENCE OF and SET OF structures.  In this case, the output
+`der_unpack()` into SEQUENCE OF and SET OF structures.  In this case, the output
 in the form of an dercursor array can have any size due to the variable size
 of the repeated structure.  You may be forced to use this if your aim is to
-der_pack() the structure later, because it may otherwise end up as a Primitive
+`der_pack()` the structure later, because it may otherwise end up as a Primitive
 structure, which may not be what you intended to deliver.  But even then, it
 is a matter of dercursor structures, not the full-blown packaged data size.
 After taking ample size precautiouns, this might easily be done on a stack.
@@ -67,12 +67,12 @@ This applies to OPTIONAL / DEFAULT as well as to CHOICE.  Entries that were
 not parsed are simply set to NULL dercursor values, so it is detectable that
 they were not present in the input (and should not appear in the output).
 The ANY element is parsed by providing the entire structure at its position,
-including its header (and tag).  You can use der_enter() or der_header() to
-skip or analyse the header, and/or you could start a new der_unpack() or
-der_walk() to get into the structure, based on the applicable syntax.
+including its header (and tag).  You can use `der_enter()` or `der_header()` to
+skip or analyse the header, and/or you could start a new `der_unpack()` or
+`der_walk()` to get into the structure, based on the applicable syntax.
 
 The number of dercursor structures created depends on the parser prescription.
-Here is the count for der_unpack()ing a few standard structures:
+Here is the count for `der_unpack()`ing a few standard structures:
 
   * 16 dercursor values for a PKIX Certificate
   * 03 dercursor values for a PKIX Certificate Extension
@@ -97,10 +97,10 @@ since it does not depend on the data, there is no risk of a stack overflow
 caused by too large data.  (You should of course still be careful when you
 allocate dynamically sized, that is, input-determined, data on your stack.)
 
-With der_walk() there is never any nesting.  For der_pack() and der_unpack()
+With `der_walk()` there is never any nesting.  For `der_pack()` and `der_unpack()`
 the nesting is determined by the number of ENTER / LEAVE pairs.
-In addition, der_pack() will nest for components prepared with der_prepack()
-which might also be prepared in a nested fashion.  In addition, der_unpack()
+In addition, `der_pack()` will nest for components prepared with `der_prepack()`
+which might also be prepared in a nested fashion.  In addition, `der_unpack()`
 will nest for CHOICE sequences.
 
 The following indications provide some information on the maximum reached
