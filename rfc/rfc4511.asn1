@@ -255,9 +255,9 @@
 
 	--asn1ate: intermediate form, look at tags to know how to process
         FilterOperation ::= CHOICE {
-             and             [0] SET SIZE (1..MAX) OF filter Filter,
-             or              [1] SET SIZE (1..MAX) OF filter Filter,
-             not             [2] Filter,
+             andFilter       [0] SET SIZE (1..MAX) OF filter Filter,
+             orFilter        [1] SET SIZE (1..MAX) OF filter Filter,
+             notFilter       [2] Filter,
              equalityMatch   [3] AttributeValueAssertion,
              substrings      [4] SubstringFilter,
              greaterOrEqual  [5] AttributeValueAssertion,
