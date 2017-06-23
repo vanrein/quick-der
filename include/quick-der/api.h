@@ -50,6 +50,9 @@
 #  define EBADMSG EBADF
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Most of BER is included with these routines as well, but not the
  * indefinate-length method.  Also, there is no support for application,
@@ -685,5 +688,9 @@ int der_get_uint32 (dercursor cursor, uint32_t *valp);
  * zero length, while the latter has non-zero length, with a zero value.
  */
 int der_cmp(dercursor c1, dercursor c2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* QUICK_DER_H */
