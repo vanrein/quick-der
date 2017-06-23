@@ -27,7 +27,7 @@ option (SPEC_RFC
 option (SPEC_ITU
 	"Build include files from ASN.1 fragments of ITU specs"
 	ON)
-CMAKE_DEPENDENT_OPTION(SPEC_ARPA2
+cmake_dependent_option(SPEC_ARPA2
 	"Build include files from ASN.1 specs for ARPA2 projects"
 	ON
 	"SPEC_RFC" OFF)
