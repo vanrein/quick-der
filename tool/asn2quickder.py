@@ -95,7 +95,7 @@ class QuickDERgeneric(object):
     def getcomma(self):
         return (self.comma1, self.comma0)
 
-    def setcomma(self, (comma1, comma0)):
+    def setcomma(self, comma1, comma0):
         self.comma1 = comma1
         self.comma0 = comma0
 
@@ -675,7 +675,7 @@ class QuickDER2c(QuickDERgeneric):
             self.generate_pack_node(elem_type, implicit=False)
             self.comma()
             self.write('DER_PACK_END }')
-            self.setcomma(surround_comma)
+            self.setcomma(*surround_comma)
             # 2. retrieve subquads for the nested field
             # TODO:DEBUG# print 'SECOND STEP OF psubRepeatingStructureType()'
             # TODO:DEBUG# print 'PROVIDED', tp
