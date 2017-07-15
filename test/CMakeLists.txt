@@ -16,17 +16,20 @@ add_test(empty-py-test
 add_test(pack-py-test
 	python ${CMAKE_CURRENT_SOURCE_DIR}/der_format.py)
 
-add_executable (ldap.test
-	ldapsearch.c)
-target_include_directories(ldap.test PUBLIC ${CMAKE_BINARY_DIR}/rfc)
-target_link_libraries(ldap.test
-	quickderStatic)
-add_test (ldap.test.0
-	ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-0.bin)
-add_test (ldap.test.1
-	ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-1.bin)
-add_test (ldap.test.2
-	ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-2.bin)
+if (SPEC_RFC)
+    # LDAP tests only work if the LDAP ASN.1 bindings have been generated
+	add_executable (ldap.test
+		ldapsearch.c)
+	target_include_directories(ldap.test PUBLIC ${CMAKE_BINARY_DIR}/rfc)
+	target_link_libraries(ldap.test
+		quickderStatic)
+	add_test (ldap.test.0
+		ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-0.bin)
+	add_test (ldap.test.1
+		ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-1.bin)
+	add_test (ldap.test.2
+		ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-2.bin)
+endif ()
 
 add_executable (der_data.test
 	der_data.c)
