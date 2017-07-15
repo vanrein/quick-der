@@ -8,6 +8,8 @@
 
 configure_file (setup.py.in ${CMAKE_CURRENT_BINARY_DIR}/setup.py @ONLY)
 
+execute_process (COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/python/quick_der)
+
 # The asn1-spec-modules target is special; it is empty here,
 # but the spec-directories (e.g. rfc/, itu/ and arpa2/) add
 # dependencies to it via macro add_asn1_modules(), so that the
