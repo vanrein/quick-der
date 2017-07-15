@@ -7,6 +7,9 @@ project ("Quick-DER" C)
 set (CMAKE_MACOSX_RPATH 0)  # Don't use rpaths (but we don't build executables anyway)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
 
+set( CMAKE_C_STANDARD 99 )
+set( CMAKE_C_STANDARD_REQUIRED ON )
+
 include (MacroEnsureOutOfSourceBuild)
 include (MacroAddUninstallTarget)
 include (MacroGitVersionInfo)
