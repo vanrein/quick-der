@@ -1611,6 +1611,6 @@ if testcases != {}:
             for (casenr, der_packer) in cogen.fetch_multi(typenm, cases):
                 if der_packer is None:
                     break
-                print 'Type', typenm, 'case', casenr, 'packer', der_packer.encode('hex')
+                print ('Type %s case %s packer %s' % (typenm, casenr, der_packer.encode('hex')))
         cogen.close()
         print ('Generated  test cases for ' + modnm)
