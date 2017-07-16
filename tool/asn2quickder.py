@@ -355,7 +355,7 @@ class QuickDER2c(QuickDERgeneric):
         while len(self.to_be_overlaid) > 0:
             (tname, tdecl) = self.to_be_overlaid.pop(0)
             key = (self.unit, tname)
-            if not self.issued_typedefs.has_key(key):
+            if key not in self.issued_typedefs:
                 self.issued_typedefs[key] = str(tdecl)
                 self.write('typedef ')
                 self.generate_overlay_node(tdecl, tname, '0')
@@ -428,7 +428,7 @@ class QuickDER2c(QuickDERgeneric):
             # TODO:DEBUG# print 'MODNM =', modnm, '::', type (modnm)
             # TODO:DEBUG# print 'Referenced module:', modnm, '::', type (modnm)
             # TODO:DEBUG# print 'Searching case-insensitively in:', self.refmods.keys ()
-        if not self.refmods.has_key(modnm):
+        if modnm not in self.refmods:
             raise Exception('Module name "%s" not found' % modnm)
         thetype = self.refmods[modnm].user_types()[node.type_name]
         # TODO:DEBUG# print 'References:', thetype, '::', type (thetype)
@@ -975,7 +975,7 @@ class QuickDER2py(QuickDERgeneric):
                     break
         if modnm is None:
             modnm = self.unit.lower()
-        if not self.refmods.has_key(modnm):
+        if modnm not in self.refmods:
             raise Exception('Module name "%s" not found' % modnm)
         popunit = self.unit
         popsema = self.semamod
@@ -1550,7 +1550,7 @@ while len(imports) > 0:
     dm = refmods[imports.pop(0).lower()]
     for rm in dm.imports.symbols_imported.keys():
         rm = rm.lower()
-        if not refmods.has_key(rm):
+        if rm not in refmods:
             # TODO:DEBUG# print ('Importing ASN.1 include for "%s"' % rm)
             modfh = None
             for incdir in incdirs:
