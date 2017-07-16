@@ -1545,7 +1545,7 @@ for file in restargs:
     refmods[os.path.splitext(modnm)[0]] = asn1sem[0]
     # TODO:DEBUG# print('Realised semantic model for "%s"' % modnm)
 
-imports = refmods.keys()
+imports = list(refmods.keys())
 while len(imports) > 0:
     dm = refmods[imports.pop(0).lower()]
     for rm in dm.imports.symbols_imported.keys():
