@@ -1607,7 +1607,7 @@ if testcases != {}:
                 cases = testcases['']
             else:
                 cases = []
-            casestr = ','.join(map(lambda (s, e): str(s) + '-' + str(e), cases))
+            casestr = ','.join([str(s) + '-' + str(e) for (s,e) in cases])
             for (casenr, der_packer) in cogen.fetch_multi(typenm, cases):
                 if der_packer is None:
                     break
