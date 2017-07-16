@@ -1014,7 +1014,7 @@ class QuickDER2py(QuickDERgeneric):
             simptag = eval('DER_TAG_' + simptp, api.__dict__)
         recp = self.cursor_offset
         self.cursor_offset += 1
-        if dertag2atomsubclass.has_key(simptag):
+        if simptag in dertag2atomsubclass:
             recp = ('_TYPTR', [api_prefix + '.' + dertag2atomsubclass[simptag]], recp)
         return (pck, recp)
 
