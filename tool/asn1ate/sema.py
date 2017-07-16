@@ -270,8 +270,8 @@ class Module(SemaNode):
             self.tag_default = TagImplicity.EXPLICIT
 
         self.assignments = [_create_sema_node(token) for token in assignments.elements]
-	self.imports = _create_sema_node(imports)
-	self.exports = _create_sema_node(exports)
+        self.imports = _create_sema_node(imports)
+        self.exports = _create_sema_node(exports)
 
     def user_types(self):
         if not self._user_types:
@@ -343,8 +343,8 @@ class Module(SemaNode):
 
     def __str__(self):
         return '%s DEFINITIONS ::=\n' % self.name \
-	    + str (self.exports) + '\n' \
-	    + str (self.imports) + '\n' \
+            + str (self.exports) + '\n' \
+            + str (self.imports) + '\n' \
             + 'BEGIN\n' \
             + '\n'.join(map(str, self.assignments)) + '\n' \
             + 'END\n'
@@ -725,35 +725,35 @@ class ValueListType(SemaNode):
 
 class Imports(SemaNode):
     def __init__(self, elements):
-	self.symbols_imported = { }
-	for i in range(0, len(elements), 2):
-	    mod = elements [i+1].elements[0]
-	    old = self.symbols_imported.get(mod, set())
-	    new = old.union(set(elements [i]))
-	    self.symbols_imported [mod] = new
+        self.symbols_imported = { }
+        for i in range(0, len(elements), 2):
+            mod = elements [i+1].elements[0]
+            old = self.symbols_imported.get(mod, set())
+            new = old.union(set(elements [i]))
+            self.symbols_imported [mod] = new
 
     def __str__ (self):
-	clauses = set ()
-	for mod in self.symbols_imported.keys ():
-	    clauses.add (','.join (self.symbols_imported [mod]) + ' FROM ' + mod)
-	if len (clauses) == 0:
-	    return ''
-	else:
-	    return 'IMPORTS ' + ' '.join (clauses) + ';'
-	    
+        clauses = set ()
+        for mod in self.symbols_imported.keys ():
+            clauses.add (','.join (self.symbols_imported [mod]) + ' FROM ' + mod)
+        if len (clauses) == 0:
+            return ''
+        else:
+            return 'IMPORTS ' + ' '.join (clauses) + ';'
+ 
 
 class Exports(SemaNode):
     def __init__(self, elements):
-	if len (elements) == 0:
-	    self.symbols_exported = set ()
-	else:
-	    self.symbols_exported = set (elements [0])
+        if len (elements) == 0:
+            self.symbols_exported = set ()
+        else:
+            self.symbols_exported = set (elements [0])
 
     def __str__(self):
-	if len (self.symbols_exported) == 0:
-	    return ''
-	else:
-	    return 'EXPORTS ' + ','.join (self.symbols_exported) + ';'
+        if len (self.symbols_exported) == 0:
+            return ''
+        else:
+            return 'EXPORTS ' + ','.join (self.symbols_exported) + ';'
 
 
 class BitStringType(SemaNode):
@@ -939,9 +939,9 @@ def _create_sema_node(token):
     elif token.ty == 'HexStringValue':
         return HexStringValue(token.elements)
     elif token.ty == 'Imports':
-	return Imports(token.elements)
+        return Imports(token.elements)
     elif token.ty == 'Exports':
-	return Exports(token.elements)
+        return Exports(token.elements)
 
     raise Exception('Unknown token type: %s' % token.ty)
 
