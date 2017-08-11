@@ -16,6 +16,7 @@ See also:
  - [Python bindings](PYTHON.MD)
  - Syntax definitions for [walks](WALK-SYNTAX.MD)
    and [packing](PACK-SYNTAX.MD)
+ - [Changelog](CHANGELOG.MD) (high-level history since 1.1)
  - [License](LICENSE.MD) (BSD 2-Clause)
 
 ## Basic Usage
