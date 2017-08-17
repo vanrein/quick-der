@@ -33,11 +33,18 @@ These are tools needed to be able to build and install Quick DER.
   * [Python](https://www.python.org/)
     Interpreter for the Python language, which is used in some of the
     build tools. Both (or either of) Python 2 and Python 3 are supported.
+    Note that you also need the Python development headers, in order to
+    build Python extensions.
   * [pyparsing](https://pypi.python.org/pypi/pyparsing)
     The tool `asn2quickder` is used to translate the ASN.1 descriptions
     of RFC data structures to C headers (and Python bindings).
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
+
+Suggested packages are:
+
+  * **Debian** cmake python-pyparsing python-dev
+  * **FreeBSD** cmake python-pyparsing
 
 ## Configuration
 
