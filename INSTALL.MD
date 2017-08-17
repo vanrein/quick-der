@@ -59,6 +59,9 @@ default to *on*.
    the generation of C header files and Python bindings for a set of
    ASN.1 specifications.
 
+You should set PYTHONPATH to suitable values for the eventual installation
+path of Quick DER, so that the Python extensions can be correctly installed.
+
 ## Add-ons
 
 While Quick DER provides tools for manipulating DER-encoded data --
