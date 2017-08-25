@@ -35,7 +35,7 @@ cmake_dependent_option(SPEC_ARPA2
 	ON
 	"SPEC_RFC" OFF)
 
-get_version_from_git (Quick-DER 1.2.2)
+get_version_from_git (Quick-DER 1.2.3)
 
 enable_testing ()
 
