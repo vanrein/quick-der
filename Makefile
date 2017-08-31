@@ -25,7 +25,7 @@ _configure:
 	@rm -f build/CMakeCache.txt
 
 build/CMakeCache.txt:
-	( cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$(PREFIX) )
+	( cd build && cmake .. -DCMAKE_INSTALL_PREFIX=$(PREFIX) -DCMAKE_PREFIX_PATH=$(PREFIX) )
 
 compile: build-dir build/CMakeCache.txt
 	( cd build && $(MAKE) )
