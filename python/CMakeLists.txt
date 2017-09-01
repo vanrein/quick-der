@@ -15,8 +15,7 @@ execute_process (COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/
 # dependencies to it via macro add_asn1_modules(), so that the
 # python bindings are generated before asn1-spec-modules --
 # then the shared-module-build can pick them up.
-add_custom_command(OUTPUT asn1-spec-modules-fake COMMAND true)
-add_custom_target(asn1-spec-modules ALL DEPENDS asn1-spec-modules-fake)
+add_custom_target (asn1-spec-modules ALL)
 
 add_custom_command (OUTPUT quickder-shared-module-build
 			COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/quick_der/*.py ${CMAKE_CURRENT_BINARY_DIR}/quick_der
