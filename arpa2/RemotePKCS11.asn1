@@ -9,7 +9,7 @@
 -- From: Rick van Rein `<rick@openfortress.nl>`
 
 
--- Document version: 0.1 (document history is at the end of the document)
+-- Document version: 0.2 (document history is at the end of the document)
 
 
 RemotePKCS11 DEFINITIONS ::= BEGIN
@@ -1312,7 +1312,8 @@ OperationCode ::= ENUMERATED {
         opc-GenerateRandom(64),
         opc-GetFunctionStatus(65),
         opc-CancelFunction(66),
-        opc-WaitForSlotEvent(67)
+        opc-WaitForSlotEvent(67),
+        ...
 }
 
 -- Below, we define the values for the `notecode` field in `RemoteNotificationCall`
@@ -1328,7 +1329,8 @@ NotifierCode ::= ENUMERATED {
         cb-CreateMutex(1),
         cb-DestroyMutex(2),
         cb-LockMutex(3),
-        cb-UnlockMutex(4)
+        cb-UnlockMutex(4),
+        ...
 }
 
 
@@ -1421,4 +1423,9 @@ END
 --  * Added extensibility provisions in the `TransportMessage`
 --  * Added notes about Kerberos and `pkcs11:` URIs
 --  * Proposed a service name to use in Kerberos tickets for Remote PKCS #11
+--
+-- **Version 0.2**
+--
+--  * Added ... to OperationCode, to allow for future operation extensions
+--  * Also added ... to RemoteNotificationCode, also for future extensions
 --
