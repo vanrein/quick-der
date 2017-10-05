@@ -5,11 +5,11 @@
 # License-Filename: LICENSE.MD
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 
-find_package(ARPA2CM REQUIRED NO_MODULE)
+find_package(ARPA2CM REQUIRED 0.3 NO_MODULE)
 set (CMAKE_MODULE_PATH
 	${CMAKE_MODULE_PATH}
-	${ARPA2CM_MODULE_PATH}
 	${CMAKE_SOURCE_DIR}/cmake
+	${ARPA2CM_MODULE_PATH}
 )
 
 project ("Quick-DER" C)
@@ -42,7 +42,7 @@ cmake_dependent_option(SPEC_ARPA2
 	ON
 	"SPEC_RFC" OFF)
 
-get_version_from_git (Quick-DER 1.2.4)
+get_version_from_git (Quick-DER 1.3)
 
 enable_testing ()
 
@@ -88,3 +88,9 @@ include (CPack)
 # obtained) automatically.
 #
 create_config_files (Quick-DER)
+
+install(FILES 
+		cmake/MacroASN1Module.cmake 
+		cmake/module-test.c.in
+		cmake/module-test.py.in
+	DESTINATION ${ARPA2CM_TOOLCHAIN_DIR})

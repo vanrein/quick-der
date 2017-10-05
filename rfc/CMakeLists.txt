@@ -3,7 +3,6 @@ include(MacroASN1Module)
 
 set_asn2quickder_options(-I ${CMAKE_SOURCE_DIR}/rfc)
 
-add_custom_target(rfc-modules ALL)
 add_asn1_modules(rfc-modules
 	rfc1422
 	rfc2315
