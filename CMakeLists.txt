@@ -1,6 +1,8 @@
 #
 # CMAKE SETUP (version, build style)
 #
+# SPDX-License-Identifier: BSD-2-Clause
+# License-Filename: LICENSE.MD
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 
 find_package(ARPA2CM REQUIRED NO_MODULE)
