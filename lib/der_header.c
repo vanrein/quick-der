@@ -42,6 +42,11 @@ int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
 	crs->derlen--;
 	if (len & 0x80) {
 		lenlen = len & 0x7f;
+		if (lenlen == 0) {
+			// Indefinite length form (unsupported BER)
+			errno = EBADMSG;
+			return -1;
+		}
 		*hlenp = 2 + lenlen;
 		if (lenlen > crs->derlen) {
 			errno = EBADMSG;
