@@ -1,0 +1,5 @@
+-- Simple single sequence
+--
+Test01 DEFINITIONS ::= BEGIN
+Thing ::= SEQUENCE { ding INTEGER }
+END
