@@ -1,11 +1,18 @@
 #
 # CMAKE SETUP (version, build style)
 #
+# SPDX-License-Identifier: BSD-2-Clause
+# License-Filename: LICENSE.MD
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
-project ("Quick-DER" C)
 
-set (CMAKE_MACOSX_RPATH 0)  # Don't use rpaths (but we don't build executables anyway)
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+find_package(ARPA2CM REQUIRED 0.3 NO_MODULE)
+set (CMAKE_MODULE_PATH
+	${CMAKE_MODULE_PATH}
+	${CMAKE_SOURCE_DIR}/cmake
+	${ARPA2CM_MODULE_PATH}
+)
+
+project ("Quick-DER" C)
 
 set( CMAKE_C_STANDARD 99 )
 set( CMAKE_C_STANDARD_REQUIRED ON )
@@ -22,7 +29,7 @@ macro_ensure_out_of_source_build("Do not build Quick-DER in the source directory
 # OPTIONS / BUILD SETTINGS
 #
 option (DEBUG
-	"Produce verbose output while unpcaking and packing DER"
+	"Produce verbose output while unpacking and packing DER"
 	ON)
 option (SPEC_RFC
 	"Build include files from ASN.1 fragments of RFCs"
@@ -35,7 +42,7 @@ cmake_dependent_option(SPEC_ARPA2
 	ON
 	"SPEC_RFC" OFF)
 
-get_version_from_git (Quick-DER 1.2.3)
+get_version_from_git (Quick-DER 1.3)
 
 enable_testing ()
 
@@ -81,3 +88,9 @@ include (CPack)
 # obtained) automatically.
 #
 create_config_files (Quick-DER)
+
+install(FILES 
+		cmake/MacroASN1Module.cmake 
+		cmake/module-test.c.in
+		cmake/module-test.py.in
+	DESTINATION ${ARPA2CM_TOOLCHAIN_DIR})
