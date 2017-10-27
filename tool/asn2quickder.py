@@ -34,8 +34,37 @@ import re
 from asn2qd1ate import parser
 from asn2qd1ate.sema import *
 
-# from quick_der import api
 import quick_der.packstx as api
+
+
+class dprint (object):
+    """
+    Simple debugging-print object; looks like a print statement.
+    Instantiate this with a format string and optional arguments,
+    like so:
+        dprint("foo", bar)
+    if the format string does not contain a % (like here, then the
+    string and arguments are printed as strings, one after the other,
+    joined by spaces. If a % is present, uses %-interpolation to
+    format the arguments in the string.
+    
+    If dprint.enable is False (by default), nothing is ever printed
+    and the objects of this class do nothing.
+    
+    Passing option -v (verbose) to this script enables debugging-
+    print by setting enable to True.
+    """
+    enable = False
+    
+    def __init__ (self, s, *args):
+        if self.enable:
+            if args:
+                if "%" in s:
+                    print(s % args)
+                else:
+                    print(" ".join([s]+map(lambda x: str(x), args)))
+            else:
+                print(s)
 
 
 def tosym(name):
@@ -290,9 +319,9 @@ class QuickDER2c(QuickDERgeneric):
             for assign in assigncompos:
                 tnm = type(assign)
                 if tnm in self.psub_funmap:
-                    # TODO:DEBUG# print 'Recursive call for', tnm
+                    dprint ('Recursive call for', tnm)
                     self.psub_funmap[tnm](assign, None, None, True)
-                    # TODO:DEBUG# print 'Recursion done for', tnm
+                    dprint ('Recursion done for', tnm)
                 else:
                     raise Exception('No psub generator for ' + str(tnm))
 
@@ -330,7 +359,7 @@ class QuickDER2c(QuickDERgeneric):
 
     def generate_psub_node(self, node, tp, fld, prim):
         tnm = type(node)
-        # TODO:DEBUG# print 'generate_psub_node() CALLED ON', tnm
+        dprint ('generate_psub_node() CALLED ON', tnm)
         if tnm in self.psub_funmap:
             return self.psub_funmap[tnm](node, tp, fld, prim)
         else:
@@ -387,7 +416,7 @@ class QuickDER2c(QuickDERgeneric):
         self.newcomma('; \\\n\t', '#define DEFINE_DER_PSUB_' + self.unit + '_' + tosym(node.type_name) + ' \\\n\t')
         tp = tosym(node.type_name)
         subquads = self.generate_psub_node(node.type_decl, tp, '0', prim)
-        # TODO:DEBUG# print 'SUBTRIPLES =', subquads
+        dprint ('SUBTRIPLES =', subquads)
         if subquads != []:
             self.generate_psub_sub(node.type_decl, subquads, tp, None)
             self.write(';\n\n')
@@ -410,28 +439,28 @@ class QuickDER2c(QuickDERgeneric):
         self.write(tagging + tosym(mod) + '_' + tosym(node.type_name) + param)
 
     def psubDefinedType(self, node, tp, fld, prim):
-        # TODO:DEBUG# print 'DefinedType type:', node.type_name, '::', type (node.type_name)
+        dprint ('DefinedType type:', node.type_name, '::', type (node.type_name))
         modnm = node.module_name
-        # TODO:DEBUG# print 'AFTER modnm = node.module_name', modnm
+        dprint ('AFTER modnm = node.module_name', modnm)
         if modnm is None:
             syms = self.semamod.imports.symbols_imported
-            # TODO:DEBUG# print 'SYMS.KEYS() =', syms.keys ()
+            dprint ('SYMS.KEYS() =', syms.keys ())
             for mod in syms.keys():
                 if node.type_name in syms[mod]:
                     modnm = mod.lower()
-                    # TODO:DEBUG# print 'AFTER modnm = mod.lower ()', modnm
+                    dprint ('AFTER modnm = mod.lower ()', modnm)
                     break
         if modnm is None:
             # NOT_IN_GENERAL# modnm = node.module_name
             modnm = self.unit.lower()
-            # TODO:DEBUG# print 'AFTER modnm = self.unit.lower ()', modnm
-            # TODO:DEBUG# print 'MODNM =', modnm, '::', type (modnm)
-            # TODO:DEBUG# print 'Referenced module:', modnm, '::', type (modnm)
-            # TODO:DEBUG# print 'Searching case-insensitively in:', self.refmods.keys ()
+            dprint ('AFTER modnm = self.unit.lower ()', modnm)
+            dprint ('MODNM =', modnm, '::', type (modnm))
+            dprint ('Referenced module:', modnm, '::', type (modnm))
+            dprint ('Searching case-insensitively in:', self.refmods.keys ())
         if modnm not in self.refmods:
             raise Exception('Module name "%s" not found' % modnm)
         thetype = self.refmods[modnm].user_types()[node.type_name]
-        # TODO:DEBUG# print 'References:', thetype, '::', type (thetype)
+        dprint ('References:', thetype, '::', type (thetype))
         popunit = self.unit
         popsema = self.semamod
         self.unit = modnm
@@ -442,7 +471,7 @@ class QuickDER2c(QuickDERgeneric):
                                             prim and (popunit == self.unit) and (tp == tp2))
         self.semamod = popsema
         self.unit = popunit
-        # TODO:DEBUG# print 'SUBTUPLES =', subtuples
+        dprint ('SUBTUPLES =', subtuples)
         return subtuples
 
     def overlaySimpleType(self, node, tp, fld):
@@ -537,17 +566,16 @@ class QuickDER2c(QuickDERgeneric):
     def psubConstructedType(self, node, tp, fld, prim):
         # Iterate over field names, recursively retrieving quads;
         # add the field's offset to each of the quads, for its holding field
-        # TODO:DEBUG# print 'OVERLAY =', ovly
         compquads = []
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
                 continue
             subfld = tosym(comp.identifier)
-            # TODO:DEBUG# print ('subfld is ' + subfld)
-            # TODO:DEBUG# print ('Generating PSUB node for ' + str (comp.type_decl.type_name))
+            dprint ('subfld is ', subfld)
+            dprint ('Generating PSUB node for %s', comp.type_decl.type_name)
             subquads = self.generate_psub_node(comp.type_decl, tp, subfld, prim)
-            # TODO:DEBUG# print ('Generated  PSUB node for ' + str (comp.type_decl.type_name))
-            # TODO:DEBUG# print ('quads are ' + str (subquads))
+            dprint ('Generated  PSUB node for %s', comp.type_decl.type_name)
+            dprint ('quads are %s', subquads)
             if fld == '0':
                 subtp = tp
             else:
@@ -560,13 +588,13 @@ class QuickDER2c(QuickDERgeneric):
             else:
                 ofs = '0'
             for (idx, esz, pck, psb) in subquads:
-                # TODO:DEBUG# print 'DEALING WITH', pck
+                dprint ('DEALING WITH', pck)
                 if str(idx) == '0':
                     idx = ofs
                 else:
                     idx = ofs + ' \\\n\t\t+ ' + str(idx)
                 compquads.append((idx, esz, pck, psb))
-        # TODO:DEBUG# print 'psubConstructedType() RETURNS COMPONENT TRIPLES', compquads
+        dprint ('psubConstructedType() RETURNS COMPONENT TRIPLES', compquads)
         return compquads
 
     def packSequenceType(self, node, implicit=False, outer_tag='DER_TAG_SEQUENCE'):
@@ -667,7 +695,7 @@ class QuickDER2c(QuickDERgeneric):
             elem_type = elem_type.type_decl
         if prim:
             # 1. produce derwalk for the nested field
-            # TODO:DEBUG# print 'FIRST STEP OF psubRepeatingStructureType()'
+            dprint ('FIRST STEP OF psubRepeatingStructureType()')
             self.comma()
             self.write('const derwalk DER_PACK_' + self.unit + '_' + tp + ('_' + fld if fld else '') + ' [] = {')
             surround_comma = self.getcomma()
@@ -677,16 +705,16 @@ class QuickDER2c(QuickDERgeneric):
             self.write('DER_PACK_END }')
             self.setcomma(*surround_comma)
             # 2. retrieve subquads for the nested field
-            # TODO:DEBUG# print 'SECOND STEP OF psubRepeatingStructureType()'
-            # TODO:DEBUG# print 'PROVIDED', tp
+            dprint ('SECOND STEP OF psubRepeatingStructureType()')
+            dprint ('PROVIDED', tp)
             subquads = self.generate_psub_node(elem_type, tp, fld, False)
             # 3. produce triple structure definition for the nested field
-            # TODO:DEBUG# print 'THIRD STEP OF psubRepeatingStructureType()'
+            dprint ('THIRD STEP OF psubRepeatingStructureType()')
             self.generate_psub_sub(node, subquads, tp, fld)
         else:
             pass  # TODO:DEBUG# print 'FIRST,SECOND,THIRD STEP OF psubRepeatingStructureType() SKIPPED: SECONDARY'
             # 4. return a fresh triple structure defining this repeating field
-            # TODO:DEBUG# print 'FOURTH STEP OF psubRepeatingStructureType()'
+            dprint ('FOURTH STEP OF psubRepeatingStructureType()')
         nam = self.unit + '_' + tp
         idx = '0'
         esz = 'DER_ELEMSZ (' + self.unit + ',' + tp + ',' + (fld or '') + ')'
@@ -1496,10 +1524,12 @@ incdirs = []
 langopt = ['c', 'python']
 langsel = set()
 testcases = {}
-(opts, restargs) = getopt.getopt(sys.argv[1:], 'I:l:t:', longopts=langopt)
+(opts, restargs) = getopt.getopt(sys.argv[1:], 'vI:l:t:', longopts=langopt)
 for (opt, optarg) in opts:
     if opt == '-I':
         incdirs.append(optarg)
+    elif opt == '-v':
+        dprint.enable = True
     elif opt == '-l':
         if optarg not in langopt:
             sys.stderr.write(
@@ -1535,15 +1565,15 @@ if len(langsel) == 0:
 incdirs.append(os.path.curdir)
 for file in restargs:
     modnm = os.path.basename(file).lower()
-    # TODO:DEBUG# print('Parsing ASN.1 syntaxdef for "%s"' % modnm)
+    dprint('Parsing ASN.1 syntaxdef for "%s"', modnm)
     with open(file, 'r') as asn1fh:
         asn1txt = asn1fh.read()
         asn1tree = parser.parse_asn1(asn1txt)
-    # TODO:DEBUG# print('Building semantic model for "%s"' % modnm)
+    dprint('Building semantic model for "%s"', modnm)
     asn1sem = build_semantic_model(asn1tree)
     defmods[os.path.basename(file)] = asn1sem[0]
     refmods[os.path.splitext(modnm)[0]] = asn1sem[0]
-    # TODO:DEBUG# print('Realised semantic model for "%s"' % modnm)
+    dprint('Realised semantic model for "%s"', modnm)
 
 imports = list(refmods.keys())
 while len(imports) > 0:
@@ -1551,7 +1581,7 @@ while len(imports) > 0:
     for rm in dm.imports.symbols_imported.keys():
         rm = rm.lower()
         if rm not in refmods:
-            # TODO:DEBUG# print ('Importing ASN.1 include for "%s"' % rm)
+            dprint('Importing ASN.1 include for "%s"', rm)
             modfh = None
             for incdir in incdirs:
                 try:
@@ -1560,19 +1590,19 @@ while len(imports) > 0:
                 except IOError:
                     continue
             if modfh is None:
-                raise Exception('No include file "%s.asn1" found' % rm)
+                raise Exception('No include file "%s.asn1" found', rm)
             asn1txt = modfh.read()
             asn1tree = parser.parse_asn1(asn1txt)
-            # TODO:DEBUG# print ('Building semantic model for "%s"' % rm)
+            dprint('Building semantic model for "%s"', rm)
             asn1sem = build_semantic_model(asn1tree)
             refmods[rm] = asn1sem[0]
             imports.append(rm)
-            # TODO:DEBUG# print('Realised semantic model for "%s"' % rm)
+            dprint('Realised semantic model for "%s"', rm)
 
 # Generate C header files
 if 'c' in langsel:
     for modnm in defmods.keys():
-        # TODO:DEBUG# print ('Generating C header file for "%s"' % modnm)
+        dprint ('Generating C header file for "%s"', modnm)
         cogen = QuickDER2c(defmods[modnm], modnm, refmods)
         cogen.generate_head()
         cogen.generate_overlay()
@@ -1580,19 +1610,19 @@ if 'c' in langsel:
         cogen.generate_psub()
         cogen.generate_tail()
         cogen.close()
-        # TODO:DEBUG# print ('Ready with C header file for "%s"' % modnm)
+        dprint ('Ready with C header file for "%s"', modnm)
 
 # Generate Python modules
 if 'python' in langsel:
     for modnm in defmods.keys():
-        # TODO:DEBUG# print ('Generating Python module for "%s"' % modnm)
+        dprint ('Generating Python module for "%s"', modnm)
         cogen = QuickDER2py(defmods[modnm], modnm, refmods)
         cogen.generate_head()
         cogen.generate_classes()
         cogen.generate_values()
         cogen.generate_tail()
         cogen.close()
-        # TODO:DEBUG# print ('Ready with Python module for "%s"' % modnm)
+        dprint ('Ready with Python module for "%s"', modnm)
 
 # Generate test data
 if testcases != {}:
