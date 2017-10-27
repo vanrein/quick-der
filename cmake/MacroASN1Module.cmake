@@ -32,6 +32,12 @@
 #    add_asn1_documents(my-asn1-documents spec1 spec2)
 #
 # This snippet requires files spec1.asn1 and spec2.asn1 to exist.
+#
+# For each header generated, a simple test is also
+# created, which compiles the generated code. If the
+# CMake variable NO_TESTING has a truthy-value, then
+# building these tests is suppressed (in addition to the usual
+# mechanism of add_test() not running the tests).
 
 # Copyright 2017, Adriaan de Groot <groot@kde.org>
 #
@@ -75,23 +81,26 @@ macro(add_asn1_module _modulename _groupname)
 		COMMENT "Build Python script ${_modulename}.py from ASN.1 spec")
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h DESTINATION include/quick-der)
 
-# Also add a test that builds against that module
-	set(ASN1_MODULE_NAME ${_modulename})
-	set(ASN1_HEADER_NAME quick-der/${_modulename})
-	configure_file(${_qd_aam_dir}/module-test.c.in ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}.c @ONLY)
-	configure_file(${_qd_aam_dir}/module-test.py.in ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}-test.py @ONLY)
-	add_executable(${_modulename}-test-h ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}.c)
-	target_include_directories(${_modulename}-test-h PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
-
 	add_custom_target(${_modulename}_asn1_h DEPENDS 
 		${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
 		${CMAKE_BINARY_DIR}/python/quick_der/${_modulename}.py
 	)
-	add_dependencies(${_modulename}-test-h ${_modulename}_asn1_h)
 	add_dependencies(${_groupname} ${_module}_asn1_h)
 
-	add_test(${_modulename}-test-h ${_modulename}-test-h)
-	add_test(${_modulename}-test-py python ${_modulename}-test.py)
+	# Also add a test that builds against that module
+	if (NOT NO_TESTING)
+		set(ASN1_MODULE_NAME ${_modulename})
+		set(ASN1_HEADER_NAME quick-der/${_modulename})
+		configure_file(${_qd_aam_dir}/module-test.c.in ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}.c @ONLY)
+		configure_file(${_qd_aam_dir}/module-test.py.in ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}-test.py @ONLY)
+		add_executable(${_modulename}-test-h ${CMAKE_CURRENT_BINARY_DIR}/${_modulename}.c)
+		target_include_directories(${_modulename}-test-h PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
+	
+		add_dependencies(${_modulename}-test-h ${_modulename}_asn1_h)
+	
+		add_test(${_modulename}-test-h ${_modulename}-test-h)
+		add_test(${_modulename}-test-py python ${_modulename}-test.py)
+	endif()
 endmacro()
 
 macro(add_asn1_modules _groupname)

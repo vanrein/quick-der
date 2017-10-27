@@ -44,9 +44,14 @@ cmake_dependent_option(SPEC_ARPA2
 option (NO_INSTALL_PYTHON
 	"Do not install Python modules (e.g. the Python bindings, asn2qd1ate)."
 	OFF)
+option (NO_TESTING
+	"Disable testing."
+	OFF)
 get_version_from_git (Quick-DER 1.3)
 
-enable_testing ()
+if (NOT NO_TESTING)
+	enable_testing ()
+endif()
 
 #
 # BUILDING
@@ -63,7 +68,10 @@ endif ()
 if (SPEC_ARPA2)
 	add_subdirectory (arpa2)
 endif ()
-add_subdirectory (test)
+
+if (NOT NO_TESTING)
+    add_subdirectory (test)
+endif()
 
 add_uninstall_target ()
 
