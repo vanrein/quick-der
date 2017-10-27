@@ -20,6 +20,9 @@ if (SPEC_RFC)
     # LDAP tests only work if the LDAP ASN.1 bindings have been generated
 	add_executable (ldap.test
 		ldapsearch.c)
+
+	add_dependencies(ldap.test rfc-modules)
+
 	target_include_directories(ldap.test PUBLIC ${CMAKE_BINARY_DIR}/rfc)
 	target_link_libraries(ldap.test
 		quickderStatic)
