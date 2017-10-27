@@ -1,0 +1,5 @@
+-- Simple single sequence
+--
+Test01 DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+Thing ::= SEQUENCE { ding INTEGER }
+END

@@ -33,3 +33,13 @@ if (NOT NO_INSTALL_PYTHON)
 
 	install(CODE "execute_process(COMMAND python setup.py install ${_python_install_args} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
 endif()
+
+if (NOT NO_TESTING)
+	set (_ASN2QD_CMD python ${CMAKE_CURRENT_SOURCE_DIR}/asn2quickder.py)
+	set (_ASN2QD_SRC "${CMAKE_CURRENT_SOURCE_DIR}/test")
+	add_test(NAME asntool_test01 COMMAND ${_ASN2QD_CMD} ${_ASN2QD_SRC}/test01.asn1)
+	add_test(NAME asntool_test02 COMMAND ${_ASN2QD_CMD} ${_ASN2QD_SRC}/test02.asn1)
+	add_test(NAME asntool_test03 COMMAND ${_ASN2QD_CMD} ${CMAKE_SOURCE_DIR}/rfc/rfc3280.asn1)
+	add_test(NAME asntool_test04 COMMAND ${_ASN2QD_CMD} ${_ASN2QD_SRC}/test04.asn1)
+	add_test(NAME asntool_test05 COMMAND ${_ASN2QD_CMD} ${_ASN2QD_SRC}/test05.asn1)
+endif()
