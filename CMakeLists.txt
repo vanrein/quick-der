@@ -41,7 +41,9 @@ cmake_dependent_option(SPEC_ARPA2
 	"Build include files from ASN.1 specs for ARPA2 projects"
 	ON
 	"SPEC_RFC" OFF)
-
+option (NO_INSTALL_PYTHON
+	"Do not install Python modules (e.g. the Python bindings, asn2qd1ate)."
+	OFF)
 get_version_from_git (Quick-DER 1.3)
 
 enable_testing ()

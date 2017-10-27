@@ -24,10 +24,12 @@ add_custom_command (OUTPUT quickder-asn2qd1ate-build
 add_custom_target (quickder-asn2qd1ate ALL
 		DEPENDS quickder-asn2qd1ate-build)
 
-if (CMAKE_INSTALL_PREFIX)
-	set(_python_install_args --prefix ${CMAKE_INSTALL_PREFIX})
-else ()
-	set(_python_install_args "")
-endif ()
+if (NOT NO_INSTALL_PYTHON)
+	if (CMAKE_INSTALL_PREFIX)
+		set(_python_install_args --prefix ${CMAKE_INSTALL_PREFIX})
+	else ()
+		set(_python_install_args "")
+	endif ()
 
-install(CODE "execute_process(COMMAND python setup.py install ${_python_install_args} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+	install(CODE "execute_process(COMMAND python setup.py install ${_python_install_args} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+endif()
