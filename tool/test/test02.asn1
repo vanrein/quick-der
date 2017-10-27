@@ -1,0 +1,6 @@
+-- Simple subset of the RFC3280 file
+--
+RFC3280 DEFINITIONS ::=
+BEGIN
+   CertificateSerialNumber  ::=  INTEGER
+END
