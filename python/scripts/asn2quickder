@@ -31,7 +31,6 @@ import os.path
 import getopt
 import re
 
-from asn1ate import parser
 from asn1ate.sema import *
 
 import quick_der.packstx as api

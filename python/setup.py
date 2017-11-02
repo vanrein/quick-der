@@ -8,7 +8,7 @@ here = (path.dirname(path.realpath(__file__)))
 
 extension = Extension(name="_quickder",
                       sources=[
-                          "_quickder.c",
+                          path.join(here, "src/_quickder.c"),
                           path.join(here, "../lib/der_header.c"),
                           path.join(here, "../lib/der_unpack.c"),
                           path.join(here, "../lib/der_pack.c")],
@@ -16,7 +16,7 @@ extension = Extension(name="_quickder",
 )
 
 setup(
-    scripts=['asn1literate.py', 'asn2quickder.py'],
+    scripts=['scripts/asn1literate', 'scripts/asn2quickder'],
     name='quick_der',
     author='Rick van Rein',
     license='BSD-2',
