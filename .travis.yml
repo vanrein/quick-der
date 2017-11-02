@@ -10,11 +10,13 @@ addons:
 
 
 before_install:
-  - sh ci/travis-continuous.sh
+  - git describe
+  - mkdir build
+  - BUILDDIR=`pwd`/build SRCDIR=`pwd` sh ci/travis-continuous.sh
 
 install:
-  - make install
+  - ( cd build && make install )
 
 script:
-  - make test
+  - ( cd build && make test )
 
