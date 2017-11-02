@@ -13,7 +13,7 @@ extension = Extension(name="_quickder",
                           path.join(here, "../lib/der_unpack.c"),
                           path.join(here, "../lib/der_pack.c")],
                       include_dirs=[path.join(here, "../include")],
-)
+                      )
 
 setup(
     scripts=['scripts/asn1literate', 'scripts/asn2quickder'],
@@ -27,6 +27,7 @@ setup(
     ext_modules=[extension],
     packages=find_packages(),
     install_requires=[
+        'six',
         'asn1ate>0.5'
     ],
     dependency_links=[

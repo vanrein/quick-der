@@ -12,7 +12,7 @@ DER_PACK_ANY = 0xdf
 # Flags to add to tags to indicate entering or storing them while (un)packing
 DER_PACK_ENTER = 0x20
 DER_PACK_STORE = 0x00
-DER_PACK_MATCHBITS = (~ (DER_PACK_ENTER | DER_PACK_STORE) )
+DER_PACK_MATCHBITS = (~ (DER_PACK_ENTER | DER_PACK_STORE))
 
 # Universal tags and macros for application, contextual, private tags
 DER_TAG_BOOLEAN = 0x01
@@ -56,7 +56,14 @@ DER_TAG_CHARACTERSTRING = 0x1d
 DER_TAG_CHARACTER_STRING = 0x1d
 DER_TAG_BMPSTRING = 0x1e
 
-DER_TAG_APPLICATION = lambda n: 0x40 | n
-DER_TAG_CONTEXT = lambda n: 0x80 | n
-DER_TAG_PRIVATE = lambda n: 0xc0 | n
 
+def DER_TAG_APPLICATION(n):
+    return 0x40 | n
+
+
+def DER_TAG_CONTEXT(n):
+    return 0x80 | n
+
+
+def DER_TAG_PRIVATE(n):
+    return 0xc0 | n
