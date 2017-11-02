@@ -19,6 +19,7 @@ setup(
     scripts=['scripts/asn1literate', 'scripts/asn2quickder'],
     name='quick_der',
     author='Rick van Rein',
+    author_email='rick@openfortress.nl',
     license='BSD-2',
     description="Quick `n' Easy DER library",
     url="https://github.com/vanrein/quick-der",
@@ -29,6 +30,9 @@ setup(
         'asn1ate>0.5'
     ],
     dependency_links=[
-        'git+git://github.com/kimgr/asn1ate.git@baf6a89b2f08892f184cf36c4c7a250251b195b1',
-    ]
+        'git+ssh://git@github.com/kimgr/asn1ate.git@baf6a89b2f08892f184cf36c4c7a250251b195b1#egg=asn1ate-0.5.1.dev0',
+    ],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
+    test_suite='tests',
 )

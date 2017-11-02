@@ -4,3 +4,5 @@ dist/
 .virtualenv*/
 *.so
 *.dylib
+.cache/
+.eggs/
