@@ -1,0 +1,23 @@
+language: c
+dist: trusty
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - cmake
+      - python-dev
+
+
+before_install:
+  - mkdir travis_build
+  - cd travis_build
+  - cmake ..
+  - make -j
+
+install:
+  - make install
+
+script:
+  - make test
+
