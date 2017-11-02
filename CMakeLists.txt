@@ -57,7 +57,7 @@ endif()
 # BUILDING
 #
 add_subdirectory (lib)
-add_subdirectory (tool)
+
 add_subdirectory (python)
 if (SPEC_RFC)
 	add_subdirectory (rfc)

@@ -6,8 +6,6 @@
 # add_custom_command (makebe COMMAND ...)
 # add_custom_target (newbe DEPENDS makebe)
 
-configure_file (setup.py.in ${CMAKE_CURRENT_BINARY_DIR}/setup.py @ONLY)
-
 execute_process (COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/python/quick_der)
 
 # The asn1-spec-modules target is special; it is empty here,
@@ -34,4 +32,10 @@ if (NOT NO_INSTALL_PYTHON)
 	endif ()
 
 	install(CODE "execute_process(COMMAND python setup.py install ${_python_install_args} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+
+	if (NOT NO_TESTING)
+		add_test(NAME python_test COMMAND python setup.py test)
+	endif()
 endif()
+
+
