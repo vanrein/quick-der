@@ -26,10 +26,10 @@
 #
 
 
-import sys
-import os.path
 import getopt
+import os.path
 import re
+import sys
 
 from asn1ate.sema import *
 
@@ -106,6 +106,9 @@ class QuickDERgeneric(object):
             raise Exception('File cannot overwrite itself -- use another extension than ' + outext + ' for input files')
         self.outfile = open(self.unit + outext, 'w')
 
+        self.comma1 = None
+        self.comma0 = None
+
     def write(self, txt):
         self.outfile.write(txt)
 
@@ -121,7 +124,7 @@ class QuickDERgeneric(object):
         self.comma0 = self.comma1
 
     def getcomma(self):
-        return (self.comma1, self.comma0)
+        return self.comma1, self.comma0
 
     def setcomma(self, comma1, comma0):
         self.comma1 = comma1
@@ -182,6 +185,12 @@ class QuickDER2c(QuickDERgeneric):
     """
 
     def __init__(self, semamod, outfn, refmods):
+        self.to_be_defined = None
+        self.to_be_overlaid = None
+        self.cursor_offset = None
+        self.nested_typerefs = None
+        self.nested_typecuts = None
+
         self.semamod = semamod
         self.refmods = refmods
         # Open the output file
@@ -416,7 +425,7 @@ class QuickDER2c(QuickDERgeneric):
         tp = tosym(node.type_name)
         subquads = self.generate_psub_node(node.type_decl, tp, '0', prim)
         dprint('SUBTRIPLES =', subquads)
-        if subquads != []:
+        if subquads:
             self.generate_psub_sub(node.type_decl, subquads, tp, None)
             self.write(';\n\n')
         return []
@@ -506,7 +515,7 @@ class QuickDER2c(QuickDERgeneric):
             self.comma()
             self.write('DER_PACK_ENTER | ' + outer_tag)
         mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
+        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT:
             self.generate_pack_node(node.type_decl, implicit=False, outer_tag=mytag)
         else:
             self.comma()
@@ -522,7 +531,7 @@ class QuickDER2c(QuickDERgeneric):
         if not implicit:
             self.comma()
             self.write('DER_PACK_ENTER | DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')')
-        implicit_sub = (self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT)
+        implicit_sub = (self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT)
         self.generate_pack_node(node.type_decl, implicit=implicit_sub)
         if not implicit:
             self.comma()
@@ -538,7 +547,7 @@ class QuickDER2c(QuickDERgeneric):
                 fld = ''
             else:
                 fld = '_' + fld
-            self.writeln('struct DER_OVLY_' + self.unit + '_' + tp + fld + ' {');
+            self.writeln('struct DER_OVLY_' + self.unit + '_' + tp + fld + ' {')
             if fld:
                 self.to_be_defined.append('DER_OVLY_' + self.unit + '_' + tp + fld)
         for comp in node.components:
@@ -555,7 +564,7 @@ class QuickDER2c(QuickDERgeneric):
                 # TODO:ARG1=???# self.overlayConstructedType (comp.components_of_type, naked=True)
                 continue
             self.write('\t')
-            subfld = tosym(comp.identifier);
+            subfld = tosym(comp.identifier)
             self.generate_overlay_node(comp.type_decl, tp, subfld)
             self.writeln(' ' + subfld + '; // ' + str(comp.type_decl))
         if not naked:
@@ -771,8 +780,13 @@ class QuickDER2py(QuickDERgeneric):
     """
 
     def __init__(self, semamod, outfn, refmods):
+        self.cursor_offset = None
+        self.nested_typerefs = None
+        self.nested_typecuts = None
+
         self.semamod = semamod
         self.refmods = refmods
+
         # Open the output file
         super(QuickDER2py, self).__init__(outfn, '.py')
         # Setup the function maps for generating Python
@@ -896,11 +910,11 @@ class QuickDER2py(QuickDERgeneric):
             if type(recp) == int:
                 retval = str(recp + ctxofs)
             elif recp[0] == '_NAMED':
-                (_NAMED, map) = recp
+                (_NAMED, map_) = recp
                 ln += '    '
                 retval = "('_NAMED', {"
                 comma = False
-                for (fld, fldrcp) in map.items():
+                for (fld, fldrcp) in map_.items():
                     if comma:
                         retval += ',' + ln
                     else:
@@ -922,7 +936,7 @@ class QuickDER2py(QuickDERgeneric):
                 retval = repr(recp)
             else:
                 assert False, 'Unexpected recipe tag ' + str(recp[0])
-                retval = repr(recp)
+                # retval = repr(recp)
             return retval
 
         def pygen_class(clsnm, tp, ctxofs, pck, recp, numcrs):
@@ -961,9 +975,10 @@ class QuickDER2py(QuickDERgeneric):
         self.comment(str(node))
         (pck, recp) = self.generate_pytype(node.type_decl)
         ofs = 0
+        tp = None
         if type(recp) == int:
             dertag = eval(pck[0], api.__dict__)
-            if dertag2atomsubclass.has_key(dertag):
+            if dertag in dertag2atomsubclass:
                 tp = dertag2atomsubclass[dertag]
             else:
                 tp = 'ASN1Atom'
@@ -981,7 +996,7 @@ class QuickDER2py(QuickDERgeneric):
             # TODO:GONE# 	# Strip off api_prefix to avoid duplication
             # TODO:GONE# 	tp = tp [len(api_prefix)+1:]
         else:
-            assert Fail, 'Unknown recipe tag ' + str(recp[0])
+            assert False, 'Unknown recipe tag ' + str(recp[0])
         numcrs = self.cursor_offset
         pygen_class(tosym(node.type_name), tp, ofs, pck, recp, numcrs)
 
@@ -1021,7 +1036,7 @@ class QuickDER2py(QuickDERgeneric):
             # TODO:BAD# self.cursor_offset += popcofs
         self.semamod = popsema
         self.unit = popunit
-        return (pck, recp)
+        return pck, recp
 
     def pytypeSimple(self, node, implicit_tag=None):
         simptp = node.type_name.replace(' ', '').upper()
@@ -1043,11 +1058,11 @@ class QuickDER2py(QuickDERgeneric):
         self.cursor_offset += 1
         if simptag in dertag2atomsubclass:
             recp = ('_TYPTR', [api_prefix + '.' + dertag2atomsubclass[simptag]], recp)
-        return (pck, recp)
+        return pck, recp
 
     def pytypeTagged(self, node, implicit_tag=None):
         mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT:
+        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT:
             # Tag implicitly by handing mytag down to type_decl
             (pck, recp) = self.generate_pytype(node.type_decl,
                                                implicit_tag=mytag)
@@ -1058,7 +1073,7 @@ class QuickDER2py(QuickDERgeneric):
         if implicit_tag:
             # Can't nest implicit tags, so wrap surrounding ones
             pck = ['DER_PACK_ENTER | ' + implicit_tag] + pck + ['DER_PACK_LEAVE']
-        return (pck, recp)
+        return pck, recp
 
     def pytypeNamedType(self, node, **subarg):
         # TODO# Ignore field name... or should we use it any way?
@@ -1080,7 +1095,7 @@ class QuickDER2py(QuickDERgeneric):
                     pck1 = ['DER_PACK_OPTIONAL'] + pck1
             pck = pck + pck1
             recp[tosym(comp.identifier)] = stru1
-        return (pck, ('_NAMED', recp))
+        return pck, ('_NAMED', recp)
 
     def pytypeChoice(self, node, implicit_tag=None):
         (pck, recp) = self.pyhelpConstructedType(node)
@@ -1088,17 +1103,17 @@ class QuickDER2py(QuickDERgeneric):
         if implicit_tag:
             # Can't have an implicit tag around a CHOICE
             pck = ['DER_PACK_ENTER | ' + implicit_tag] + pck + ['DER_PACK_LEAVE']
-        return (pck, recp)
+        return pck, recp
 
     def pytypeSequence(self, node, implicit_tag='DER_TAG_SEQUENCE'):
         (pck, recp) = self.pyhelpConstructedType(node)
         pck = ['DER_PACK_ENTER | ' + implicit_tag] + pck + ['DER_PACK_LEAVE']
-        return (pck, recp)
+        return pck, recp
 
     def pytypeSet(self, node, implicit_tag='DER_TAG_SET'):
         (pck, recp) = self.pyhelpConstructedType(node)
         pck = ['DER_PACK_ENTER | ' + implicit_tag] + pck + ['DER_PACK_LEAVE']
-        return (pck, recp)
+        return pck, recp
 
     def pyhelpRepeatedType(self, node, dertag, recptag):
         allidx = self.cursor_offset
@@ -1119,7 +1134,7 @@ class QuickDER2py(QuickDERgeneric):
             self.cursor_offset = popcofs
             self.nested_typecuts = self.nested_typecuts - 1
         pck = ['DER_PACK_STORE | ' + dertag]
-        return (pck, (recptag, allidx, subpck, subnum, subrcp))
+        return pck, (recptag, allidx, subpck, subnum, subrcp)
 
     def pytypeSequenceOf(self, node, implicit_tag='DER_TAG_SEQUENCE'):
         return self.pyhelpRepeatedType(node, implicit_tag, '_SEQOF')
@@ -1199,10 +1214,10 @@ class QuickDER2testdata(QuickDERgeneric):
 
     def fetch_one(self, typename, casenr):
         # TODO# Check in weakref cache if already generated
-        (max, fun) = self.type2tdgen[typename]
-        if casenr >= max:
+        (max_, fun) = self.type2tdgen[typename]
+        if casenr >= max_:
             return None
-        assert casenr < max, 'Case number out of range for ' + typename
+        assert casenr < max_, 'Case number out of range for ' + typename
         return fun(casenr)
 
     def fetch_multi(self, typename, testcases):
@@ -1241,7 +1256,7 @@ class QuickDER2testdata(QuickDERgeneric):
                     break
         if modnm is None:
             modnm = self.unit.lower()
-        if not self.refmods.has_key(modnm):
+        if not modnm in self.refmods:
             raise Exception('Module name "%s" not found' % modnm)
         thetype = self.refmods[modnm].user_types()[node.type_name]
         return self.generate_tdgen(thetype, **subarg)
@@ -1299,7 +1314,7 @@ class QuickDER2testdata(QuickDERgeneric):
             assert casenr < len(cases), 'Simple type case number out of range'
             return cases[casenr]
 
-        return (len(cases), do_gen)
+        return len(cases), do_gen
 
     def tdgenNamedType(self, node, **subarg):
         # Ignore the name label and delegate to the declared type
@@ -1314,7 +1329,7 @@ class QuickDER2testdata(QuickDERgeneric):
     def tdgenTagged(self, node, implicit_tag=None):
         # Tagged values delegate to type_decl, prefixing a header
         (subcnt, subgen) = self.generate_tdgen(node.type_decl)
-        am_implicit = self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicity.IMPLICIT
+        am_implicit = self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT
         tag = self.nodeclass2basaltag[node.class_name or 'CONTEXT']
         tag |= int(node.class_number)
 
@@ -1328,7 +1343,7 @@ class QuickDER2testdata(QuickDERgeneric):
                 retval = self.der_prefixhead(implicit_tag, retval)
             return retval
 
-        return (subcnt, do_gen)
+        return subcnt, do_gen
 
     def tdgenChoice(self, node, implicit_tag=None):
         """CHOICE test cases are generated by enabling each of the
@@ -1361,15 +1376,15 @@ class QuickDER2testdata(QuickDERgeneric):
 
         def do_gen(casenr):
             # Index-specific generator for tdgenChoice
-            round = 0
+            round_ = 0
             # Invariants for the following loop:
             #  - We have made "round" passes over all components
             #  - Considering that some components end before others
             #  - We still have to generate "casenr" new values
             #  - Skips for "round" are in "elcnts_sorted[round]"
-            while casenr >= round2flips[round]:
-                casenr -= round2flips[round]
-                round += 1
+            while casenr >= round2flips[round_]:
+                casenr -= round2flips[round_]
+                round_ += 1
             eltidx = 0
             # Invariants for the following loop:
             #  - We have made "round" passes over all components
@@ -1378,7 +1393,7 @@ class QuickDER2testdata(QuickDERgeneric):
             #  - The current "round" contains new "casenr" value
             #  - Searching for "eltidx" for the value to generate
             while True:
-                if elcnts[eltidx] > round:
+                if elcnts[eltidx] > round_:
                     if casenr == 0:
                         break
                     casenr -= 1
@@ -1389,12 +1404,12 @@ class QuickDER2testdata(QuickDERgeneric):
             #  - We have found "eltidx" to generate
             #  - We should deliver eltgen(round) for "eltidx"
             #  - We should deliver eltgen(0) for all but "eltidx"
-            retval = elgens[eltidx](round)
+            retval = elgens[eltidx](round_)
             if implicit_tag is not None:
                 retval = self.der_prefixhead(implicit_tag, retval)
             return retval
 
-        return (totcnt, do_gen)
+        return totcnt, do_gen
 
     def tdgenConstructed(self, node, implicit_tag=None):
         """SEQUENCE and SET test cases are generated assuming
@@ -1443,15 +1458,15 @@ class QuickDER2testdata(QuickDERgeneric):
             if None in comp:
                 for idx2 in range(len(elgens)):
                     comp[idx2] = elgens[idx2](0)
-            round = 0
+            round_ = 0
             # Invariants for the following loop:
             #  - We have made "round" passes over all components
             #  - Considering that some components end before others
             #  - We still have to generate "casenr" new values
             #  - Skips for "round" are in "elcnts_sorted[round]"
-            while casenr >= round2flips[round]:
-                casenr -= round2flips[round]
-                round += 1
+            while casenr >= round2flips[round_]:
+                casenr -= round2flips[round_]
+                round_ += 1
             eltidx = 0
             # Invariants for the following loop:
             #  - We have made "round" passes over all components
@@ -1460,7 +1475,7 @@ class QuickDER2testdata(QuickDERgeneric):
             #  - The current "round" contains new "casenr" value
             #  - Searching for "eltidx" for the value to generate
             while True:
-                if elcnts[eltidx] > round:
+                if elcnts[eltidx] > round_:
                     if casenr == 0:
                         break
                     casenr -= 1
@@ -1472,8 +1487,8 @@ class QuickDER2testdata(QuickDERgeneric):
             #  - We should deliver eltgen(round) for "eltidx"
             #  - We should deliver eltgen(0) for all but "eltidx"
             retval = comp[:eltidx]
-            if round > 0:
-                retval += elgens[eltidx](round)
+            if round_ > 0:
+                retval += elgens[eltidx](round_)
                 eltidx += 1
             retval += comp[eltidx:]
             retval = ''.join(retval)
@@ -1500,7 +1515,7 @@ class QuickDER2testdata(QuickDERgeneric):
             retval = self.der_prefixhead(tag, retval)
             return retval
 
-        return (totcnt, do_gen)
+        return totcnt, do_gen
 
 
 def main(script_name, script_args):
@@ -1545,7 +1560,7 @@ def main(script_name, script_args):
                     start = end
                 else:
                     start = 0
-                if not testcases.has_key(asn1id):
+                if not asn1id in testcases:
                     testcases[asn1id] = []
                 testcases[asn1id].append((start, end))
         elif optarg[:2] == '--' and optarg[2:] in langopt:
@@ -1558,15 +1573,15 @@ def main(script_name, script_args):
     if len(langsel) == 0:
         langsel = set(langopt)
     incdirs.append(os.path.curdir)
-    for file in restargs:
-        modnm = os.path.basename(file).lower()
+    for file_ in restargs:
+        modnm = os.path.basename(file_).lower()
         dprint('Parsing ASN.1 syntaxdef for "%s"', modnm)
-        with open(file, 'r') as asn1fh:
+        with open(file_, 'r') as asn1fh:
             asn1txt = asn1fh.read()
             asn1tree = parser.parse_asn1(asn1txt)
         dprint('Building semantic model for "%s"', modnm)
         asn1sem = build_semantic_model(asn1tree)
-        defmods[os.path.basename(file)] = asn1sem[0]
+        defmods[os.path.basename(file_)] = asn1sem[0]
         refmods[os.path.splitext(modnm)[0]] = asn1sem[0]
         dprint('Realised semantic model for "%s"', modnm)
 
@@ -1626,9 +1641,9 @@ def main(script_name, script_args):
             cogen = QuickDER2testdata(defmods[modnm], modnm, refmods)
             cogen.generate_testdata()
             for typenm in cogen.all_typenames():
-                if testcases.has_key(typenm):
+                if typenm in testcases:
                     cases = testcases[typenm]
-                elif testcases.has_key(''):
+                elif '' in testcases:
                     cases = testcases['']
                 else:
                     cases = []
