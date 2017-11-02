@@ -10,10 +10,7 @@ addons:
 
 
 before_install:
-  - mkdir travis_build
-  - cd travis_build
-  - cmake ..
-  - make -j
+  - sh ci/travis-continuous.sh
 
 install:
   - make install
