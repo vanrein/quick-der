@@ -1,0 +1,6 @@
+dist/
+*.egg-info/
+.venv*/
+.virtualenv*/
+*.so
+*.dylib
