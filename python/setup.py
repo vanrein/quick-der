@@ -28,7 +28,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'six',
-        'asn1ate>0.5'
+        'asn1ate==0.5.1.dev0',
     ],
     dependency_links=[
         'git+ssh://git@github.com/kimgr/asn1ate.git@baf6a89b2f08892f184cf36c4c7a250251b195b1#egg=asn1ate-0.5.1.dev0',
