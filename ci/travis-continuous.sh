@@ -1,26 +1,28 @@
-#! /bin/sh
+#!/bin/bash -ve
 #
 # Travis CI script for use on every-commit:
 #  - build and install Arpa2CM (dependency)
 #  - build and install Quick DER
 #
-test -n "$BUILDDIR" || exit 1
-test -n "$SRCDIR" || exit 1
+test -n "$BUILDDIR"
+test -n "$SRCDIR" 
 
-test -d "$BUILDDIR" || exit 1
-test -d "$SRCDIR" || exit 1
-test -f "$SRCDIR/CMakeLists.txt" || exit 1
+test -d "$BUILDDIR" 
+test -d "$SRCDIR" 
+test -f "$SRCDIR/CMakeLists.txt"
 
-cd "$BUILDDIR" || exit 1
+pushd "$BUILDDIR" 
 
-### First, ARPA2CM
-#
-#
-git clone https://github.com/arpa2/arpa2cm/ arpa2cm_build || exit 1
-( cd arpa2cm_build && mkdir build && cd build && cmake .. && make && sudo make install ) || exit 1
+git clone https://github.com/arpa2/arpa2cm/ arpa2cm_build 
 
-### Second, Quick DER
-#
-#
-cmake .. && make -j
+pushd arpa2cm_build
+mkdir build
+pushd build
+cmake ..
+make
+sudo make install
+popd
+popd
+
+popd
 
