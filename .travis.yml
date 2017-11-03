@@ -1,0 +1,23 @@
+language: c
+dist: trusty
+sudo: true
+
+addons:
+  apt:
+    packages:
+      - cmake
+      - python-dev
+
+
+before_install:
+  - git describe
+  - mkdir build
+  - BUILDDIR=`pwd`/build SRCDIR=`pwd` sh ci/travis-continuous.sh
+
+install:
+  - (sudo pip install --process-dependency-links . )
+  - ( cd build && cmake .. && make && sudo make install )
+
+script:
+  - ( cd build && make test )
+

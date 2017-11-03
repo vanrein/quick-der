@@ -1,0 +1,9 @@
+recursive-include python/quick_der *.py
+recursive-include python/tests *.py
+include python/data/*.asn1
+include python/scripts/*
+include python/src/_quickder.c
+include lib/der_header.c
+include lib/der_unpack.c
+include lib/der_pack.c
+include include/quick-der/api.h

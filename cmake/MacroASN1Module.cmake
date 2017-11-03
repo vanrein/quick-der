@@ -50,7 +50,6 @@ set (_qd_aam_dir ${CMAKE_CURRENT_LIST_DIR})
 
 find_program (_qd_asn2quickder 
     NAMES
-        asn2quickder.py
         asn2quickder
     HINTS 
         ${CMAKE_SOURCE_DIR}/python/scripts
@@ -69,7 +68,6 @@ macro(add_asn1_module _modulename _groupname)
 # and python/quick_der/modulename.py
 # and install the header file to include/quick-der/modulename.h.
 	set(_ppath $ENV{PYTHONPATH})
-	message(${CMAKE_SOURCE_DIR}/python)
 	add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
 		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
@@ -117,7 +115,7 @@ endmacro()
 
 macro(add_asn1_document _docname _groupname)
 	add_custom_command (OUTPUT doc/${_docname}.md
-		COMMAND ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate.py ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
+		COMMAND ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1
 		WORKING_DIRECTORY doc
 		COMMENT "Build markdown text file ${_docname}.md from ASN.1 spec")
