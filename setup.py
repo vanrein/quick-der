@@ -16,7 +16,7 @@ extension = Extension(name="_quickder",
 
 setup(
     scripts=['python/scripts/asn1literate', 'python/scripts/asn2quickder'],
-    name='quick_der',
+    name='pyquickder',
     author='Rick van Rein',
     author_email='rick@openfortress.nl',
     license='BSD-2',
