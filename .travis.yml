@@ -16,7 +16,7 @@ before_install:
 
 install:
   - ( cd python && sudo pip install --process-dependency-links . )
-  - ( cd build && sudo make install )
+  - ( cd build && cmake .. && make && sudo make install )
 
 script:
   - ( cd build && make test )
