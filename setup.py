@@ -5,18 +5,17 @@ from os import path
 
 here = (path.dirname(path.realpath(__file__)))
 
-
 extension = Extension(name="_quickder",
                       sources=[
-                          path.join(here, "src/_quickder.c"),
-                          path.join(here, "../lib/der_header.c"),
-                          path.join(here, "../lib/der_unpack.c"),
-                          path.join(here, "../lib/der_pack.c")],
-                      include_dirs=[path.join(here, "../include")],
+                          path.join(here, "python/src/_quickder.c"),
+                          path.join(here, "lib/der_header.c"),
+                          path.join(here, "lib/der_unpack.c"),
+                          path.join(here, "lib/der_pack.c")],
+                      include_dirs=[path.join(here, "include")],
                       )
 
 setup(
-    scripts=['scripts/asn1literate', 'scripts/asn2quickder'],
+    scripts=['python/scripts/asn1literate', 'python/scripts/asn2quickder'],
     name='quick_der',
     author='Rick van Rein',
     author_email='rick@openfortress.nl',
@@ -25,7 +24,11 @@ setup(
     url="https://github.com/vanrein/quick-der",
     version='1.2.2',
     ext_modules=[extension],
-    packages=find_packages(),
+    packages=find_packages(where='python'),
+    package_dir={
+        'quick_der': 'python/quick_der',
+         'tests': 'python/tests'
+    },
     install_requires=[
         'six',
         'asn1ate==0.5.1.dev0',
