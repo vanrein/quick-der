@@ -30,6 +30,6 @@ class TestAsn2Quickder(unittest.TestCase):
 
     def test_kxover(self):
         asn1_path = path.join(here, '../../arpa2/kxover.asn1')
-        main('asn2quickder', ['-l', 'c', '-I', '../../rfc/', asn1_path])
+        main('asn2quickder', ['-l', 'c', '-I', path.join(here, '../../rfc/'), asn1_path])
 
 
