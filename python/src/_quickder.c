@@ -70,7 +70,15 @@ static PyObject *quickder_unpack (PyObject *self, PyObject *args) {
 			Py_INCREF (Py_None);
 			elem = Py_None;
 		} else {
-			elem = PyString_FromStringAndSize ((char *)cursori [numcursori].derptr, cursori [numcursori].derlen);
+
+
+			#if PY_MAJOR_VERSION >= 3
+            elem = PyUnicode_FromStringAndSize ((char *)cursori [numcursori].derptr, cursori [numcursori].derlen);
+            #else
+            elem = PyString_FromStringAndSize ((char *)cursori [numcursori].derptr, cursori [numcursori].derlen);
+            #endif
+
+
 			if (elem == NULL) {
 				Py_DECREF (retval); // not returned, so discard
 				return NULL;
@@ -113,11 +121,21 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 		// "elem" is a borrowed reference; theory of race condition?!?
 		if (elem == Py_None) {
 			memset (&cursori [binslen], 0, sizeof (*cursori));
-		} else if (PyString_Check (elem)) {
+
+        #if PY_MAJOR_VERSION >= 3
+        } else if (PyUnicode_Check (elem)) {
+        #else
+        } else if (PyString_Check (elem)) {
+        #endif
 			char *buf;
 			Py_ssize_t buflen;
 			//TODO// Retval from following call?  Can it go wrong?
+            #if PY_MAJOR_VERSION >= 3
+			PyBytes_AsStringAndSize (elem, &buf, &buflen);
+            #else
 			PyString_AsStringAndSize (elem, &buf, &buflen);
+            #endif
+
 			cursori [binslen].derptr = (uint8_t *)buf;
 			cursori [binslen].derlen = buflen;
 		} else {
@@ -133,7 +151,14 @@ static PyObject *quickder_pack (PyObject *self, PyObject *args) {
 	}
 	uint8_t packed [packedlen];
 	der_pack ((derwalk *)pck, cursori, packed + packedlen);
+
+	#if PY_MAJOR_VERSION >= 3
+	retval = PyUnicode_FromStringAndSize ((char *)packed, packedlen);
+	#else
 	retval = PyString_FromStringAndSize ((char *)packed, packedlen);
+	#endif
+
+
 	if (retval == NULL) {
 		return NULL;
 	}
@@ -190,11 +215,50 @@ static PyMethodDef der_methods [] = {
 };
 
 
-PyMODINIT_FUNC init_quickder () {
-	PyObject *mod;
-	mod = Py_InitModule ("_quickder", der_methods);
-	if (mod == NULL) {
-		return;
-	}
+char module___doc__[] = "Quick `n' Easy DER library";
+
+#if PY_MAJOR_VERSION >= 3
+  static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "_quickder",         /* m_name */
+    module___doc__,      /* m_doc */
+    -1,                  /* m_size */
+    der_methods,         /* m_methods */
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+  };
+#endif
+
+
+static PyObject *
+moduleinit(void)
+{
+    PyObject *m;
+
+#if PY_MAJOR_VERSION >= 3
+    m = PyModule_Create(&moduledef);
+#else
+    m = Py_InitModule3("_quickder", der_methods, module___doc__);
+#endif
+
+    if (m == NULL)
+        return NULL;
+
+  return m;
 }
 
+#if PY_MAJOR_VERSION < 3
+    PyMODINIT_FUNC
+    init_quickder(void)
+    {
+        moduleinit();
+    }
+#else
+    PyMODINIT_FUNC
+    PyInit__quickder(void)
+    {
+        return moduleinit();
+    }
+#endif
