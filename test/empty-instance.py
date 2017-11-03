@@ -3,10 +3,10 @@
 import sys
 # ../../python is (once this test is being run) the source-dir python,
 #    ../python is inside the build-directory
-sys.path = [ '../../python/installroot', '../python/installroot' ] + sys.path
+sys.path = ['../../python/testing', '../python/testing'] + sys.path
 
-from quick_der.rfc4511 import LDAPMessage
+from rfc4511 import LDAPMessage
 
-lm = LDAPMessage ()
+lm = LDAPMessage()
 
-print lm
+print(lm)
