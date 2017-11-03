@@ -58,7 +58,10 @@ endif()
 #
 add_subdirectory (lib)
 
-add_subdirectory (python)
+if (NOT NO_INSTALL_PYTHON)
+    add_subdirectory (python)
+endif ()
+
 if (SPEC_RFC)
 	add_subdirectory (rfc)
 endif ()
