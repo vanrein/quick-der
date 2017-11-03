@@ -266,8 +266,8 @@ class QuickDER2c(QuickDERgeneric):
         if not self.semamod.imports:
             return
 
-        for rm in self.semamod.imports.symbols_imported.keys():
-            rmfns.add(tosym(rm.rsplit('.', 1)[0]).lower())
+        for rm in self.semamod.imports.imports.keys():
+            rmfns.add(tosym(str(rm).rsplit('.', 1)[0]).lower())
 
         for rmfn in rmfns:
             self.writeln('#include <quick-der/' + rmfn + '.h>')
@@ -275,18 +275,18 @@ class QuickDER2c(QuickDERgeneric):
         self.write(closer)
         closer = ''
 
-        for rm in self.semamod.imports.symbols_imported.keys():
-            rmfn = tosym(rm.rsplit('.', 1)[0]).lower()
-            for sym in self.semamod.imports.symbols_imported[rm]:
+        for rm in self.semamod.imports.imports.keys():
+            rmfn = tosym(str(rm).rsplit('.', 1)[0]).lower()
+            for sym in self.semamod.imports.imports[rm]:
                 self.writeln('typedef DER_OVLY_' + tosym(rmfn) + '_' + tosym(sym) + ' DER_OVLY_' + tosym(
                     self.unit) + '_' + tosym(sym) + ';')
                 closer = '\n\n'
         self.write(closer)
         closer = ''
 
-        for rm in self.semamod.imports.symbols_imported.keys():
-            rmfn = tosym(rm.rsplit('.', 1)[0]).lower()
-            for sym in self.semamod.imports.symbols_imported[rm]:
+        for rm in self.semamod.imports.imports.keys():
+            rmfn = tosym(str(rm).rsplit('.', 1)[0]).lower()
+            for sym in self.semamod.imports.imports[rm]:
                 self.writeln(
                     '#define DER_PIMP_' + tosym(self.unit) + '_' + tosym(sym) + '(implicit_tag) DER_PIMP_' + tosym(
                         rmfn) + '_' + tosym(sym) + '(implicit_tag)')
@@ -346,7 +346,7 @@ class QuickDER2c(QuickDERgeneric):
             fld = ''
         else:
             fld = '_' + fld
-        # OLD:TEST:TODO# mod = node.module_name or self.unit
+        # OLD:TEST:TODO# mod = node.module_ref or self.unit
         mod = self.unit
         self.comma()
         self.writeln('const struct der_subparser_action DER_PSUB_' + mod + '_' + tp + fld + ' [] = { \\')
@@ -439,12 +439,12 @@ class QuickDER2c(QuickDERgeneric):
         return []
 
     def overlayDefinedType(self, node, tp, fld):
-        mod = node.module_name or self.unit
+        mod = node.module_ref or self.unit
         self.write('DER_OVLY_' + tosym(mod) + '_' + tosym(node.type_name))
 
     def packDefinedType(self, node, implicit=False, outer_tag=None):
         # There should never be anything of interest in outer_tag
-        mod = node.module_name or self.unit
+        mod = node.module_ref or self.unit
         self.comma()
         if outer_tag is None:
             tagging = 'DER_PACK_'
@@ -456,18 +456,18 @@ class QuickDER2c(QuickDERgeneric):
 
     def psubDefinedType(self, node, tp, fld, prim):
         dprint('DefinedType type:', node.type_name, '::', type(node.type_name))
-        modnm = node.module_name
-        dprint('AFTER modnm = node.module_name', modnm)
-        if modnm is None:
-            syms = self.semamod.imports.symbols_imported
+        modnm = node.module_ref
+        dprint('AFTER modnm = node.module_ref', modnm)
+        if not modnm and self.semamod.imports:
+            syms = self.semamod.imports.imports
             dprint('SYMS.KEYS() =', syms.keys())
             for mod in syms.keys():
                 if node.type_name in syms[mod]:
-                    modnm = mod.lower()
-                    dprint('AFTER modnm = mod.lower ()', modnm)
+                    modnm = str(mod).lower()
+                    dprint('AFTER modnm = str(mod).lower ()', modnm)
                     break
         if modnm is None:
-            # NOT_IN_GENERAL# modnm = node.module_name
+            # NOT_IN_GENERAL# modnm = node.module_ref
             modnm = self.unit.lower()
             dprint('AFTER modnm = self.unit.lower ()', modnm)
             dprint('MODNM =', modnm, '::', type(modnm))
@@ -834,9 +834,9 @@ class QuickDER2py(QuickDERgeneric):
         if not self.semamod.imports:
             return
 
-        imports = self.semamod.imports.symbols_imported
+        imports = self.semamod.imports.imports
         for rm in imports.keys():
-            pymod = tosym(rm.rsplit('.', 1)[0]).lower()
+            pymod = tosym(str(rm).rsplit('.', 1)[0]).lower()
             self.write('from ' + pymod + ' import ')
             self.writeln(', '.join(map(tosym, imports[rm])))
         self.writeln()
@@ -1020,12 +1020,12 @@ class QuickDER2py(QuickDERgeneric):
         return self.funmap_pytype[tnm](node, **subarg)
 
     def pytypeDefinedType(self, node, **subarg):
-        modnm = node.module_name
-        if modnm is None:
-            syms = self.semamod.imports.symbols_imported
+        modnm = node.module_ref
+        if not modnm and self.semamod.imports:
+            syms = self.semamod.imports.imports
             for mod in syms.keys():
                 if node.type_name in syms[mod]:
-                    modnm = mod.lower()
+                    modnm = str(mod).lower()
                     break
         if modnm is None:
             modnm = self.unit.lower()
@@ -1259,12 +1259,12 @@ class QuickDER2testdata(QuickDERgeneric):
         return self.funmap_tdgen[tnm](node, **subarg)
 
     def tdgenDefinedType(self, node, **subarg):
-        modnm = node.module_name
+        modnm = node.module_ref
         if modnm is None:
-            syms = self.semamod.imports.symbols_imported
+            syms = self.semamod.imports.imports
             for mod in syms.keys():
                 if node.type_name in syms[mod]:
-                    modnm = mod.lower()
+                    modnm = str(mod).lower()
                     break
         if modnm is None:
             modnm = self.unit.lower()
@@ -1604,8 +1604,8 @@ def main(script_name, script_args):
         if not dm.imports:
             continue
 
-        for rm in dm.imports.symbols_imported.keys():
-            rm = rm.lower()
+        for rm in dm.imports.imports.keys():
+            rm = str(rm).lower()
             if rm not in refmods:
                 dprint('Importing ASN.1 include for "%s"', rm)
                 modfh = None
@@ -1616,7 +1616,7 @@ def main(script_name, script_args):
                     except IOError:
                         continue
                 if modfh is None:
-                    raise Exception('No include file "%s.asn1" found', rm)
+                    raise Exception('No include file "{}.asn1" found'.format(rm))
                 asn1txt = modfh.read()
                 asn1tree = parser.parse_asn1(asn1txt)
                 dprint('Building semantic model for "%s"', rm)
