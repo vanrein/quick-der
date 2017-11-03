@@ -49,7 +49,7 @@ def der_parse_STRING(derblob):
 
 
 def der_format_OID(oidstr, hdr=False):
-    oidvals = map(int, oidstr.split('.'))
+    oidvals = list(map(int, oidstr.split('.')))
     oidvals[1] += 40 * oidvals[0]
     enc = ''
     for oidx in range(len(oidvals) - 1, 0, -1):
