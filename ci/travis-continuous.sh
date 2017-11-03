@@ -17,7 +17,7 @@ cd "$BUILDDIR" || exit 1
 #
 #
 git clone https://github.com/arpa2/arpa2cm/ arpa2cm_build || exit 1
-( cd arpa2cm_build && mkdir build && cd build && cmake .. && make && make install ) || exit 1
+( cd arpa2cm_build && mkdir build && cd build && cmake .. && make && sudo make install ) || exit 1
 
 ### Second, Quick DER
 #
