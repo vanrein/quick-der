@@ -23,6 +23,7 @@ class TestAsn2Quickder(unittest.TestCase):
         asn1_path = path.join(here, '../data/test04.asn1')
         main('asn2quickder', [asn1_path])
 
+    @unittest.skip('TODO: see issue #42')
     def test_test05(self):
         asn1_path = path.join(here, '../data/test05.asn1')
         main('asn2quickder', [asn1_path])
