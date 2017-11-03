@@ -193,6 +193,7 @@ class QuickDER2c(QuickDERgeneric):
 
         self.semamod = semamod
         self.refmods = refmods
+
         # Open the output file
         super(QuickDER2c, self).__init__(outfn, '.h')
         # Setup function maps
@@ -261,13 +262,19 @@ class QuickDER2c(QuickDERgeneric):
         self.writeln()
         closer = ''
         rmfns = set()
+
+        if not self.semamod.imports:
+            return
+
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfns.add(tosym(rm.rsplit('.', 1)[0]).lower())
+
         for rmfn in rmfns:
             self.writeln('#include <quick-der/' + rmfn + '.h>')
             closer = '\n\n'
         self.write(closer)
         closer = ''
+
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfn = tosym(rm.rsplit('.', 1)[0]).lower()
             for sym in self.semamod.imports.symbols_imported[rm]:
@@ -276,6 +283,7 @@ class QuickDER2c(QuickDERgeneric):
                 closer = '\n\n'
         self.write(closer)
         closer = ''
+
         for rm in self.semamod.imports.symbols_imported.keys():
             rmfn = tosym(rm.rsplit('.', 1)[0]).lower()
             for sym in self.semamod.imports.symbols_imported[rm]:
@@ -515,7 +523,7 @@ class QuickDER2c(QuickDERgeneric):
             self.comma()
             self.write('DER_PACK_ENTER | ' + outer_tag)
         mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT:
+        if self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT:
             self.generate_pack_node(node.type_decl, implicit=False, outer_tag=mytag)
         else:
             self.comma()
@@ -531,7 +539,7 @@ class QuickDER2c(QuickDERgeneric):
         if not implicit:
             self.comma()
             self.write('DER_PACK_ENTER | DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')')
-        implicit_sub = (self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT)
+        implicit_sub = (self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT)
         self.generate_pack_node(node.type_decl, implicit=implicit_sub)
         if not implicit:
             self.comma()
@@ -822,6 +830,10 @@ class QuickDER2py(QuickDERgeneric):
         self.writeln()
         self.writeln('import quick_der.api as ' + api_prefix)
         self.writeln()
+
+        if not self.semamod.imports:
+            return
+
         imports = self.semamod.imports.symbols_imported
         for rm in imports.keys():
             pymod = tosym(rm.rsplit('.', 1)[0]).lower()
@@ -1062,7 +1074,7 @@ class QuickDER2py(QuickDERgeneric):
 
     def pytypeTagged(self, node, implicit_tag=None):
         mytag = 'DER_TAG_' + (node.class_name or 'CONTEXT') + '(' + node.class_number + ')'
-        if self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT:
+        if self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT:
             # Tag implicitly by handing mytag down to type_decl
             (pck, recp) = self.generate_pytype(node.type_decl,
                                                implicit_tag=mytag)
@@ -1329,7 +1341,7 @@ class QuickDER2testdata(QuickDERgeneric):
     def tdgenTagged(self, node, implicit_tag=None):
         # Tagged values delegate to type_decl, prefixing a header
         (subcnt, subgen) = self.generate_tdgen(node.type_decl)
-        am_implicit = self.semamod.resolve_tag_implicity(node.implicity, node.type_decl) == TagImplicitness.IMPLICIT
+        am_implicit = self.semamod.resolve_tag_implicitness(node.implicitness, node.type_decl) == TagImplicitness.IMPLICIT
         tag = self.nodeclass2basaltag[node.class_name or 'CONTEXT']
         tag |= int(node.class_number)
 
@@ -1588,6 +1600,10 @@ def main(script_name, script_args):
     imports = list(refmods.keys())
     while len(imports) > 0:
         dm = refmods[imports.pop(0).lower()]
+
+        if not dm.imports:
+            continue
+
         for rm in dm.imports.symbols_imported.keys():
             rm = rm.lower()
             if rm not in refmods:
