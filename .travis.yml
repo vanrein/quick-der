@@ -15,6 +15,7 @@ before_install:
   - BUILDDIR=`pwd`/build SRCDIR=`pwd` sh ci/travis-continuous.sh
 
 install:
+  - ( cd python && sudo pip install --process-dependency-links . )
   - ( cd build && sudo make install )
 
 script:
