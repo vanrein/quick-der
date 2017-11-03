@@ -58,7 +58,6 @@ endif()
 #
 add_subdirectory (lib)
 
-add_subdirectory (python)
 if (SPEC_RFC)
 	add_subdirectory (rfc)
 endif ()
@@ -71,6 +70,7 @@ endif ()
 
 if (NOT NO_TESTING)
     add_subdirectory (test)
+    add_test(NAME python_test COMMAND python setup.py test)
 endif()
 
 add_uninstall_target ()
