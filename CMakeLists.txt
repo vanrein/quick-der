@@ -4,18 +4,32 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # License-Filename: LICENSE.MD
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
-
-find_package(ARPA2CM REQUIRED 0.3 NO_MODULE)
-set (CMAKE_MODULE_PATH
-	${CMAKE_MODULE_PATH}
-	${CMAKE_SOURCE_DIR}/cmake
-	${ARPA2CM_MODULE_PATH}
-)
-
 project ("Quick-DER" C)
 
-set( CMAKE_C_STANDARD 99 )
-set( CMAKE_C_STANDARD_REQUIRED ON )
+include (FeatureSummary)
+
+set (CMAKE_C_STANDARD 99)
+set (CMAKE_C_STANDARD_REQUIRED ON)
+ 
+find_package (ARPA2CM 0.3 NO_MODULE)
+set_package_properties (ARPA2CM PROPERTIES
+	DESCRIPTION "CMake modules for ARPA2 projects"
+	TYPE REQUIRED
+	URL "https://github.com/arpa2/arpa2cm/"
+	PURPOSE "Required for the CMake build system of Quick DER"
+)
+
+feature_summary (WHAT ALL)
+
+if (ARPA2CM_FOUND)
+	set (CMAKE_MODULE_PATH
+		${CMAKE_MODULE_PATH}
+		${CMAKE_SOURCE_DIR}/cmake
+		${ARPA2CM_MODULE_PATH}
+	)
+else()
+	message (FATAL_ERROR "ARPA2CM is required.")
+endif()
 
 include (MacroEnsureOutOfSourceBuild)
 include (MacroAddUninstallTarget)
