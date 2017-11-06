@@ -78,7 +78,8 @@ macro(add_asn1_module _modulename _groupname)
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/testing
 		COMMENT "Build Python script ${_modulename}.py from ASN.1 spec")
-	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h DESTINATION include/quick-der)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
+	        DESTINATION include/quick-der COMPONENT dev)
 
 	add_custom_target(${_modulename}_asn1_h DEPENDS 
 		${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
@@ -120,7 +121,8 @@ macro(add_asn1_document _docname _groupname)
 		WORKING_DIRECTORY doc
 		COMMENT "Build markdown text file ${_docname}.md from ASN.1 spec")
 	add_custom_target(${_docname}_asn1_md DEPENDS doc/${_docname}.md)
-	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/doc/${_docname}.md DESTINATION share/doc/quick-der)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/doc/${_docname}.md
+	        DESTINATION share/doc/quick-der COMPONENT docs)
 endmacro()
 
 macro(add_asn1_documents _groupname)
