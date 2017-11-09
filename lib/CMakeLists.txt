@@ -35,10 +35,13 @@ set_target_properties (quickderStatic
 # from the top-level include/ directory. For installing the headers, don't
 # need an extra quick-der/ level because that's retained in the file paths.
 install (TARGETS quickderShared
-	LIBRARY DESTINATION lib
-	PUBLIC_HEADER DESTINATION include/quick-der)
+	ARCHIVE DESTINATION lib COMPONENT quickderShared
+	LIBRARY DESTINATION lib COMPONENT quickderShared
+	RUNTIME DESTINATION bin COMPONENT quickderShared
+	PUBLIC_HEADER DESTINATION include/quick-der COMPONENT dev)
 install (TARGETS quickderStatic
-	ARCHIVE DESTINATION lib)
+	ARCHIVE DESTINATION lib COMPONENT quickderStatic
+	LIBRARY DESTINATION lib COMPONENT quickderStatic)
 install (DIRECTORY ../include/quick-der
-	DESTINATION include
+	DESTINATION include COMPONENT dev
 	FILES_MATCHING PATTERN "*.h")

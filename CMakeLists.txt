@@ -120,4 +120,4 @@ install(FILES
 		cmake/MacroASN1Module.cmake 
 		cmake/module-test.c.in
 		cmake/module-test.py.in
-	DESTINATION ${ARPA2CM_TOOLCHAIN_DIR})
+	DESTINATION ${ARPA2CM_TOOLCHAIN_DIR} COMPONENT dev)
