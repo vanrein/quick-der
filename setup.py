@@ -31,10 +31,7 @@ setup(
     },
     install_requires=[
         'six',
-        'asn1ate==0.5.1.dev0',
-    ],
-    dependency_links=[
-        'git+https://github.com/kimgr/asn1ate.git@baf6a89b2f08892f184cf36c4c7a250251b195b1#egg=asn1ate-0.5.1.dev0',
+        'asn1ate>=0.6.0',
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
