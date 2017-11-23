@@ -676,6 +676,26 @@ int der_get_int32 (dercursor cursor, int32_t *valp);
 /* Unpack a single unsigned integer. See also der_get_int32(). */
 int der_get_uint32 (dercursor cursor, uint32_t *valp);
 
+/* Pack an Int32 or UInt32 and return the number of bytes.
+ *
+ * The buffer types der_buf_int32_t and der_buf_uint32_t can hold the size of
+ * the longest possible value, excluding header.  The return value from the
+ * function indicates the actual number of bytes used.  The buffer pointer
+ * and return value can be combined to hold another dercursor.
+ *
+ * These functions never fail.  Note that a returned derlen of 0 is valid.
+ *
+ * For the curious: the reason that der_buf_uint32_t is 5 bytes while
+ * der_buf_int32_t is only 4 bytes is that DER represents the INTEGER
+ * type in 2's complement, using the most compact representation possible.
+ * Unsigned values >= 0x80000000 need an extra byte 0x00 prefixed to avoid
+ * being interpreted as negative values.
+ */
+typedef uint8_t der_buf_int32_t [4];
+dercursor der_put_int32 (uint8_t *der_buf_int32, int32_t value);
+typedef uint8_t der_buf_uint32_t [5];
+dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
+
 /* Compare the values pointed to by cursors @p c1 and @p c2.
  * Returns 0 if the (binary) values are equal, otherwise returns
  * the difference between the first two differing bytes (similar

@@ -19,6 +19,8 @@ set(quickder_SRC
 	der_walk.c
 	der_get_int32.c
 	der_get_uint32.c
+	der_put_int32.c
+	der_put_uint32.c
 	der_cmp.c
 )
 

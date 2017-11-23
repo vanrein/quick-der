@@ -40,3 +40,10 @@ target_link_libraries(der_data.test
 	quickderStatic)
 add_test (der_data.test
 	der_data.test)
+
+add_executable (int_putget.test
+	int_putget.c)
+target_link_libraries (int_putget.test
+	quickderStatic)
+add_test (int_putget.test
+	int_putget.test)
