@@ -1,4 +1,4 @@
-/* der_putget.c -- Test der_put_[u]int32 followed by der_get[u]int32 for identity.
+/* int_putget.c -- Test der_put_[u]int32 followed by der_get_[u]int32 for identity.
  *
  * From: Rick van Rein <rick@openfortress.nl>
  */

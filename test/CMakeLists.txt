@@ -47,3 +47,11 @@ target_link_libraries (int_putget.test
 	quickderStatic)
 add_test (int_putget.test
 	int_putget.test)
+
+add_executable (bool_putget.test
+	bool_putget.c)
+target_link_libraries (bool_putget.test
+	quickderStatic)
+add_test (bool_putget.test
+	bool_putget.test)
+

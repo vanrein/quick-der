@@ -21,6 +21,8 @@ set(quickder_SRC
 	der_get_uint32.c
 	der_put_int32.c
 	der_put_uint32.c
+	der_get_bool.c
+	der_put_bool.c
 	der_cmp.c
 )
 

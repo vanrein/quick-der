@@ -696,6 +696,32 @@ dercursor der_put_int32 (uint8_t *der_buf_int32, int32_t value);
 typedef uint8_t der_buf_uint32_t [5];
 dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
 
+/* 
+ * Unpack a BOOLEAN and set its value to 0 for FALSE, or 1 for TRUE.
+ *
+ * Do accept all BER encodings of BOOLEAN, meaning, any non-zero byte is
+ * interpreted as TRUE, even though DER is more explicit with 0xff.
+ *
+ * Upon encountering an error, return -1; success decoding as BER is 0.
+ * Even when an error is reported, the value is updated, so it is safe
+ * to ignore the error in order to facilitate a more lenient parser
+ * even than BER.  Even when excessive in size, the value is set to
+ * FALSE only when all bytes (possibly zero bytes) are 0x00.
+ */
+int der_get_bool (dercursor crs, int *valp);
+/* 
+ * Pack a BOOLEAN and return the number of bytes.  Do not pack a header
+ * around it.  The function always packs to one byte, and encodes
+ * TRUE as 0xff and FALSE as 0x00, as required by DER.  It interprets
+ * the provided boolean value as TRUE when it is non-zero, as common
+ * in C.
+ *
+ * Use the der_buf_bool_t as a pre-sized buffer for the encoded value.
+ * This function always returns successfully.
+ */
+typedef uint8_t der_buf_bool_t [1];
+dercursor der_put_bool (uint8_t *der_buf_bool, int value);
+
 /* Compare the values pointed to by cursors @p c1 and @p c2.
  * Returns 0 if the (binary) values are equal, otherwise returns
  * the difference between the first two differing bytes (similar
