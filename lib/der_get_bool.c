@@ -23,7 +23,7 @@
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
 bool der_get_bool (dercursor crs, int *valp) {
-    int i;
+    unsigned int i;
     *valp = 0;
     for (i=0; i<crs.derlen; i++) {
         if (crs.derptr [i]) {
