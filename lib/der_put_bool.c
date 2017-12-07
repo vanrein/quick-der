@@ -5,6 +5,7 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <quick-der/api.h>
 
@@ -19,7 +20,7 @@
  * Use the der_buf_bool_t as a pre-sized buffer for the encoded value.
  * This function always returns successfully.
  */
-dercursor der_put_bool (uint8_t *der_buf_bool, int value) {
+dercursor der_put_bool (uint8_t *der_buf_bool, bool value) {
     dercursor retval;
     retval.derptr = der_buf_bool;
     retval.derlen = 1;

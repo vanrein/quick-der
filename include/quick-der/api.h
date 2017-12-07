@@ -705,7 +705,7 @@ dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
  * even than BER.  Even when excessive in size, the value is set to
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
-int der_get_bool (dercursor crs, int *valp);
+bool der_get_bool (dercursor crs, int *valp);
 /* 
  * Pack a BOOLEAN and return the number of bytes.  Do not pack a header
  * around it.  The function always packs to one byte, and encodes
@@ -717,7 +717,7 @@ int der_get_bool (dercursor crs, int *valp);
  * This function always returns successfully.
  */
 typedef uint8_t der_buf_bool_t [1];
-dercursor der_put_bool (uint8_t *der_buf_bool, int value);
+dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
 
 /* Compare the values pointed to by cursors @p c1 and @p c2.
  * Returns 0 if the (binary) values are equal, otherwise returns
