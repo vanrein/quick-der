@@ -705,7 +705,7 @@ dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
  * even than BER.  Even when excessive in size, the value is set to
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
-bool der_get_bool (dercursor crs, int *valp);
+int der_get_bool (dercursor crs, bool *valp);
 /* 
  * Pack a BOOLEAN and return the number of bytes.  Do not pack a header
  * around it.  The function always packs to one byte, and encodes

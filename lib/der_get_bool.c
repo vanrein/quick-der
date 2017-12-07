@@ -22,7 +22,7 @@
  * even than BER.  Even when excessive in size, the value is set to
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
-bool der_get_bool (dercursor crs, int *valp) {
+int der_get_bool (dercursor crs, bool *valp) {
     unsigned int i;
     *valp = 0;
     for (i=0; i<crs.derlen; i++) {
