@@ -7,13 +7,10 @@
  *
  * NOTE THE DIFFERENT CALLING CONVENTION FOR THIS FUNCTION!
  *
- * This function returns 1 upon success.  In case of failure, it
- * returns 0; in addition, it sets the nested iterator for zero
- * iterations.  A special case of error is when the container cursor is
- * not pointing to a Constructed element; in this case an error is returned
- * but the cursor will run over the contained elements when using the iterator.
+ * This function returns 1 upon success.  In case of failure such as no
+ * elements found, it returns 0.
  *
- * To be sensitive to errors, use this as follows:
+ * To be sensitive to empty lists, use this as follows:
  *
  *	if (der_iterate_first (cnt, &iter)) do {
  *		...process entry...
@@ -34,7 +31,7 @@ int der_iterate_first (const dercursor *container, dercursor *iterator) {
 	}
 #else
 	*iterator = *container;
-	return 1;
+	return (iterator->derlen >= 2);
 #endif
 }
 
