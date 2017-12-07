@@ -35,7 +35,7 @@ int put_tests (void) {
 	dercursor crs_false = der_put_bool (buf_false, 0);
 	dercursor crs_true1 = der_put_bool (buf_true1, 1);
 	dercursor crs_true2 = der_put_bool (buf_true2, 255);
-	int out_false, out_true1, out_true2;
+	bool out_false, out_true1, out_true2;
 	int ok_false = der_get_bool (crs_false, &out_false);
 	int ok_true1 = der_get_bool (crs_true1, &out_true1);
 	int ok_true2 = der_get_bool (crs_true2, &out_true2);
