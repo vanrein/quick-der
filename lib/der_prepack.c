@@ -11,8 +11,9 @@
  * This routine sets a special marker bit DER_DERLEN_FLAG_CONSTRUCTED in the
  * length field, so it can be recognised later on as an array reference.
  */
-void der_prepack (dercursor *derray, size_t arraycount, derarray *target) {
-	target->derray = (dernode *)derray;
-	target->dercnt = arraycount | DER_DERLEN_FLAG_CONSTRUCTED;
+void der_prepack (const dercursor *derray, const size_t arraycount,
+					derarray *prepacked_array) {
+	prepacked_array->derray = (dernode *)derray;
+	prepacked_array->dercnt = arraycount | DER_DERLEN_FLAG_CONSTRUCTED;
 }
 

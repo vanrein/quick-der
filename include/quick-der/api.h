@@ -653,7 +653,8 @@ size_t der_pack (const derwalk *syntax, const dercursor *derray,
  * the array of dercursor as a consecutive sequence, without any additional
  * headers, markers or other frills.
  */
-void der_prepack (dercursor *derray, size_t arraycount, derarray *target);
+void der_prepack (const dercursor *derray, const size_t arraycount,
+					derarray *prepacked_array);
 
 
 
