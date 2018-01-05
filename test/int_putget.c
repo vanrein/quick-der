@@ -14,7 +14,11 @@
 int unsigned_tests (void) {
 	uint32_t tests [] = {
 		0, 1, 255, 256, 32767, 32768, 65535, 65536,
-		0x7fffffff, 0x80000000, 0xc0000000, 0xf0000000, 0xffffffff
+		0x7fffffff, 
+		/* Now the high bits */
+		0x80000000, 0xc0000000,
+		0xf0000000, 0xff000000,
+		0xff800000, 0xffffffff
 	};
 	int numtests = sizeof (tests) / sizeof (tests [0]);
 	int ok = 1;
