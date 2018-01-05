@@ -15,14 +15,28 @@
  */
 dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value) {
     dercursor retval;
-    int ofs = 0;
-    if (value & 0x80000000) {
+    retval.derptr = der_buf_uint32;
+    retval.derlen = 0;
+
+    if (value & 0x80000000U) {
         *der_buf_uint32 = 0x00;
-        ofs = 1;
+        retval.derlen = 1;
     }
-    retval = der_put_int32 (der_buf_uint32 + ofs, (int32_t) value);
-    retval.derptr -= ofs;
-    retval.derlen += ofs;
+
+    int shift = 24;
+    while (shift >= 0) {
+        if ((retval.derlen == 0) && (shift > 0)) {
+            // Skip 0-padding on initial bytes
+            uint32_t neutro = (value >> (shift - 1) ) & 0x000001ffU;
+            if (neutro == 0) {
+                shift -= 8;
+                continue;
+            }
+        }
+        der_buf_uint32 [retval.derlen] = (value >> shift) & 0xff;
+        retval.derlen++;
+        shift -= 8;
+    }
     return retval;
 }
 
