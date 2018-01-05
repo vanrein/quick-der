@@ -15,13 +15,15 @@ int putget_tests (void) {
 	int ok = 1;
 	int i;
 	for (i=0; i<=1; i++) {
-		char *itxt = i? "TRUE": "FALSE";
+		char *itxt = i ? "TRUE": "FALSE";
+		uint8_t ival = i ? 0xFF : 0x00;
+        
 		ok = 0;
 		der_buf_bool_t buf;
 		dercursor crs = der_put_bool (buf, i);
 		if (crs.derlen != 1) {
 			fprintf (stderr, "Boolean %s encoded in %zu bytes (should be 1)\n", itxt, crs.derlen);
-		} else if (*buf != (i? 0x00: 0xff)) {
+		} else if (*buf != ival) {
 			fprintf (stderr, "Wrong encoding of Boolean %s, as 0x%02x\n", itxt, *buf);
 		} else {
 			ok = 1;
