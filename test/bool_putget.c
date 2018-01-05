@@ -41,7 +41,19 @@ int put_tests (void) {
 	int ok_false = der_get_bool (crs_false, &out_false);
 	int ok_true1 = der_get_bool (crs_true1, &out_true1);
 	int ok_true2 = der_get_bool (crs_true2, &out_true2);
-	return ok_false && ok_true1 && ok_true2 &&
+    
+	/* der_get_bool returns 0 on success */
+	if (ok_false) {
+		fprintf (stderr, "get_bool from false failed.\n");
+	}
+	if (ok_true1) {
+		fprintf (stderr, "get_bool from true (1) failed.\n");
+	}
+	if (ok_true2) {
+		fprintf (stderr, "get_bool from true (255) failed.\n");
+	}
+        
+	return !(ok_false || ok_true1 || ok_true2) &&
 		(crs_false.derlen == 1) && (crs_true1.derlen == 1) &&  (crs_true2.derlen == 1) &&
 		(*buf_false == 0x00) && (*buf_true1 == 0xff) && (*buf_true2 == 0xff) &&
 		(out_false == 0) && (out_true1 == 1) && (out_true2 == 1);
