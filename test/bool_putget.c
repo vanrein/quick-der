@@ -65,8 +65,8 @@ int main (int argc, char *argv []) {
 
 	int ok = 1;
 
-	ok = ok && putget_tests ();
-	ok = ok && put_tests ();
+	if (!putget_tests()) ok = 0;
+	if (!put_tests()) ok = 0;
 
 	exit (ok? 0: 1);
 
