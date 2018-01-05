@@ -70,5 +70,5 @@ int main (int argc, char *argv []) {
 	if (!unsigned_tests()) ok = 0;
 	if (!signed_tests()) ok = 0;
 
-	exit (ok? 0: 1);
+	return ok? 0: 1;
 }
