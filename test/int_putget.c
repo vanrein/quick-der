@@ -67,9 +67,8 @@ int main (int argc, char *argv []) {
 
 	int ok = 1;
 
-	ok = ok && unsigned_tests ();
-	ok = ok && signed_tests ();
+	if (!unsigned_tests()) ok = 0;
+	if (!signed_tests()) ok = 0;
 
 	exit (ok? 0: 1);
-
 }
