@@ -20,7 +20,7 @@ int putget_tests (void) {
 		der_buf_bool_t buf;
 		dercursor crs = der_put_bool (buf, i);
 		if (crs.derlen != 1) {
-			fprintf (stderr, "Boolean %s encoded in %d bytes (should be 1)\n", itxt, crs.derlen);
+			fprintf (stderr, "Boolean %s encoded in %zu bytes (should be 1)\n", itxt, crs.derlen);
 		} else if (*buf != (i? 0x00: 0xff)) {
 			fprintf (stderr, "Wrong encoding of Boolean %s, as 0x%02x\n", itxt, *buf);
 		} else {
