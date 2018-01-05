@@ -53,9 +53,9 @@ int signed_tests (void) {
 		int fit = (der_get_int32 (crs, &val) == 0);
 		int match = (val == tests [i]);
 		ok = ok && fit && match;
-		if (fit != 0) {
+		if (!fit) {
 			fprintf (stderr, "Signed integer %d took %zu bytes %02x %02x... and does not fit in 32 bits anymore\n", tests [i], crs.derlen, crs.derptr [0], crs.derptr [1]);
-		} else if (match != 0) {
+		} else if (!match) {
 			fprintf (stderr, "Signed integer %d took %zu bytes and came back as %d\n", tests [i], crs.derlen, val);
 		}
 	}
