@@ -734,8 +734,8 @@ C-EncryptFinal-Call ::= SEQUENCE {
 
 C-EncryptFinal-Return ::= SEQUENCE {
         retval                  ACK-RV,
-        pEncryptedData      [3] ACK-BYTE-ARRAY,
-        pulEncryptedDataLen [4] ACK-ULONG
+        pEncryptedData      [1] ACK-BYTE-ARRAY,
+        pulEncryptedDataLen [2] ACK-ULONG
 }
 
 C-DecryptInit-Call ::= SEQUENCE {
@@ -781,8 +781,8 @@ C-DecryptFinal-Call ::= SEQUENCE {
 
 C-DecryptFinal-Return ::= SEQUENCE {
         retval             ACK-RV,
-        pLastPart      [3] ACK-BYTE-ARRAY,
-        pulLastPartLen [4] ACK-ULONG
+        pLastPart      [1] ACK-BYTE-ARRAY,
+        pulLastPartLen [2] ACK-ULONG
 }
 
 C-DigestInit-Call ::= SEQUENCE {
