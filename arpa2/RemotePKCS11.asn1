@@ -445,13 +445,19 @@ C-GetTokenInfo-Return ::= SEQUENCE {
 
 C-WaitForSlotEvent-Call ::= SEQUENCE {
         flags     [0] ACK-FLAGS,
-        pReserved [2] NULL OPTIONAL
+        pReserved [2] CHOICE {
+                               null NULL,
+                               ...
+                      }
 }
 
 C-WaitForSlotEvent-Return ::= SEQUENCE {
         retval        ACK-RV,
         pSlot     [1] ACK-SLOT-ID,
-        pReserved [2] NULL OPTIONAL
+        pReserved [2] CHOICE {
+                               null NULL,
+                               ...
+                      }
 }
 
 C-GetMechanismList-Call ::= SEQUENCE {
