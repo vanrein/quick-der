@@ -882,7 +882,9 @@ C-SignFinal-Return ::= SEQUENCE {
 }
 
 C-SignRecoverInit-Call ::= SEQUENCE {
-        hSession [0] ACK-SESSION-HANDLE
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
 }
 
 C-SignRecoverInit-Return ::= SEQUENCE {
