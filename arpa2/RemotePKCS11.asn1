@@ -476,12 +476,12 @@ C-GetMechanismList-Return ::= SEQUENCE {
         pulCount       [2] ACK-ULONG
 }
 
-C-MechanismInfo-Call ::= SEQUENCE {
+C-GetMechanismInfo-Call ::= SEQUENCE {
         slotID [0] ACK-SLOT-ID,
         type   [1] ACK-MECHANISM-TYPE
 }
 
-C-MechanismInfo-Return ::= SEQUENCE {
+C-GetMechanismInfo-Return ::= SEQUENCE {
         retval     ACK-RV,
         pInfo  [2] ACK-MECHANISM-INFO
 }
