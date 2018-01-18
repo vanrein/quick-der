@@ -76,6 +76,8 @@ if (NOT NO_INSTALL_PYTHON)
     add_subdirectory (python)
 endif ()
 
+add_custom_target (asn2quickder-done)
+
 if (SPEC_RFC)
 	add_subdirectory (rfc)
 endif ()
