@@ -1062,7 +1062,7 @@ C-UnwrapKey-Call ::= SEQUENCE {
         hSession         [0] ACK-SESSION-HANDLE,
         pMechanism       [1] ACK-MECHANISM,
         hUnwrappingKey   [2] ACK-OBJECT-HANDLE,
-        hWrappedKey      [3] ACK-OBJECT-HANDLE,
+        pWrappedKey      [3] ACK-BYTE-ARRAY,
         ulWrappedKeyLen  [4] ACK-ULONG,
         pTemplate        [5] ACK-ATTRIBUTE-ARRAY,
         ulAttributeCount [6] ACK-ULONG
