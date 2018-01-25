@@ -40,10 +40,12 @@ These are tools needed to be able to build and install Quick DER.
     of RFC data structures to C headers (and Python bindings).
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
+  * Python packages `setuptools`, `asn1ate` and `six`.
 
 Suggested packages are:
 
-  * **Debian** cmake python-pyparsing python-dev
+  * **Debian** cmake python-pyparsing python-dev python-setuptools, and then
+    *easy_install* six asn1ate
   * **FreeBSD** cmake python-pyparsing
 
 ## Configuration
@@ -81,3 +83,8 @@ CMake and pkg-config configuration files so that Quick DER can easily
 be discovered by the buildsystem of Quick DER users.
 
 The configuration file templates can be found in `contrib/`
+
+If any downstream package intends to use the CMake macro's from
+MacroASN1Module, you will need to deal with packaging the Python
+tools for it; see [setup.py](setup.py) and the
+[Python install documentation](python/INSTALL.MD).
