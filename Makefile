@@ -12,6 +12,9 @@
 #	( cd build ; ccmake )          # CMake GUI for build configuration
 #	( cd build ; make install )    # Build and install
 #
+# For building the Python tooling (needed for header generation and tooling)
+# see the Python install documentation in python/INSTALL.MD .
+
 PREFIX ?= /usr/local
 
 all: compile

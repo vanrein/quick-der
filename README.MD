@@ -97,6 +97,10 @@ to generate both the overlay data structures and the
 byte codes for `der_pack()` and `der_unpack()`.  For most everyday ASN.1
 this should suffice to produce a header file from an ASN.1 module.
 
+To use the compiler (and the associated `MacroASN1Module`), you will
+need to build the Python bindings and tools. See the
+[Python install documentation](python/INSTALL.MD).
+
 The compiler generates annotations for external callers that wish to unpack
 `SEQUENCE OF` and `SET OF` syntax elements.  These annotations can be used
 for invoking the sub-unpacking and sub-packing procedures in a reasonably
