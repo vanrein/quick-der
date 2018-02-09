@@ -46,9 +46,12 @@ class ASN1Object(object):
         assert context is not None or getattr(self, "_context",
                                               None) is not None, 'You or a subclass definition should provide a context for symbol resolution'
         # Construct the type if so desired
-        self._der_packer = der_packer
-        self._recipe = recipe
-        self._context = context
+        if der_packer is not None:
+            self._der_packer = der_packer
+        if recipe is not None:
+            self._recipe = recipe
+        if context is not None:
+            self._context = context
 
         # Ensure presence of all typing data
         # Fill the instance data as supplied, or else make it empty
