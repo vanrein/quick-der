@@ -6,20 +6,17 @@
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 project ("Quick-DER" C)
 
-include (FeatureSummary)
-
 set (CMAKE_C_STANDARD 99)
 set (CMAKE_C_STANDARD_REQUIRED ON)
- 
-find_package (ARPA2CM 0.3 NO_MODULE)
+
+include (FeatureSummary)
+find_package (ARPA2CM 0.5 NO_MODULE)
 set_package_properties (ARPA2CM PROPERTIES
 	DESCRIPTION "CMake modules for ARPA2 projects"
 	TYPE REQUIRED
 	URL "https://github.com/arpa2/arpa2cm/"
 	PURPOSE "Required for the CMake build system of Quick DER"
 )
-
-feature_summary (WHAT ALL)
 
 if (ARPA2CM_FOUND)
 	set (CMAKE_MODULE_PATH
@@ -28,6 +25,7 @@ if (ARPA2CM_FOUND)
 		${ARPA2CM_MODULE_PATH}
 	)
 else()
+        feature_summary (WHAT ALL)
 	message (FATAL_ERROR "ARPA2CM is required.")
 endif()
 
