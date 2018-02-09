@@ -3,7 +3,7 @@
 <img alt="Quick DER logo" src="quick-der-logo.png" style="float: right;"/>
 
 > To do a basic installation that provides you with a default build of the
-> library, Python bindings, headers and tools:
+> library, (but not the Python bindings), C headers and tools:
 >
 >     make           # Optional: make PREFIX=/my/path
 >     make install
