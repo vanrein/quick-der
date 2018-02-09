@@ -4,8 +4,6 @@ import _quickder
 
 from six.moves import intern
 
-from quick_der import builder
-from quick_der import format
 from quick_der import primitive
 from quick_der.packstx import *
 
@@ -121,6 +119,7 @@ class ASN1ConstructedType(ASN1Object):
         self._fields = {}
         # Static recipe is generated from the ASN.1 grammar
         # Iterate over this recipe to form the instance data
+        from quick_der import builder
         for (subfld, subrcp) in recp.items():
             if type(subfld) != str:
                 raise Exception("ASN.1 recipe keys can only be strings")
@@ -184,6 +183,7 @@ class ASN1ConstructedType(ASN1Object):
             if bd is not None and type(bd) != str:
                 # Hope to map the value to DER without hints
                 # TODO# Currently fails on ASN1Objects
+                from quick_der import format
                 bd = format.der_format(bd)
             bindata.append(bd)
         return _quickder.der_pack(self._der_packer, bindata)
@@ -244,6 +244,7 @@ class ASN1SequenceOf(ASN1Object, list):
         # TODO:DEBUG# print 'SEQUENCE OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
         # TODO:DEBUG# print 'len(_bindata) =', len(self._bindata), '_offset =', self._offset, 'allidx =', allidx
         derblob = self._bindata[self._offset] or ''
+        from quick_der import builder
         while len(derblob) > 0:
             # TODO:DEBUG# print 'Getting the header from ' + ' '.join(map(lambda x: x.encode('hex'), derblob [:5])) + '...'
             (tag, ilen, hlen) = _quickder.der_header(derblob)
@@ -307,6 +308,7 @@ class ASN1SetOf(ASN1Object, set):
         # TODO:DEBUG# print 'SET OF from', self._offset, 'to', allidx, 'element recipe =', subrcp
         # TODO:DEBUG# print 'len(_bindata) =', len(self._bindata), '_offset =', self._offset, 'allidx =', allidx
         derblob = self._bindata[self._offset] or ''
+        from quick_der import builder
         while len(derblob) > 0:
             (tag, ilen, hlen) = _quickder.der_header(derblob)
             if len(derblob) < hlen + ilen:
@@ -773,4 +775,5 @@ class ASN1Any(ASN1Atom):
                           context=cls._context)
 
     def der_pack(self):
+        from quick_der import format
         return format.der_pack(self._value, cls=self._class)
