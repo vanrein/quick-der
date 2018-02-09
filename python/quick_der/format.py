@@ -85,7 +85,7 @@ def _der_hintmapping(tp, hint='no_hint'):
     elif tp == float:
         return packstx.DER_TAG_REAL, primitive.der_format_REAL
     elif issubclass(tp, classes.ASN1Object):
-        return primitive._der_packer[0], lambda v: v._der_format()
+        return tp._der_packer[0], lambda v: v._der_format()
     else:
         raise Exception('Not able to map ' + str(tp) + ' value to DER')
 
