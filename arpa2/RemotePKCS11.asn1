@@ -166,7 +166,7 @@ ACK-TOKEN-INFO ::= SEQUENCE {
         ulTotalPublicMemory  ACK-ULONG,
         ulFreePublicMemory   ACK-ULONG,
         ulTotalPrivateMemory ACK-ULONG,
-        ulFreePritvateMemory ACK-ULONG,
+        ulFreePrivateMemory  ACK-ULONG,
         hardwareVersion      ACK-VERSION,
         firmwareVersion      ACK-VERSION,
         utcTime              IA5String (SIZE(16))
