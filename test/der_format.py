@@ -36,12 +36,20 @@ for typename, value in (
 	(OID, "1.2.3.4"),
 	(OID, "3.14.159.2653.58979.323812"),
 	):
-	format_func = getattr(qd, "der_format_" + typename)
-	parse_func = getattr(qd, "der_parse_" + typename)
+    format_func = getattr(qd, "der_format_" + typename)
+    parse_func = getattr(qd, "der_parse_" + typename)
 
-	assert format_func is not None
-	assert parse_func is not None
-	assert callable(format_func)
-	assert callable(parse_func)
+    assert format_func is not None, "No der_format_" + typename + " found."
+    assert parse_func is not None, "No der_parse_" + typename + " found."
+    assert callable(format_func), "No callable der_format_" + typename + " found."
+    assert callable(parse_func), "No callable der_parse_" + typename + " found."
 
-	assert parse_func(format_func(value)) == value, "Value " + str (value) + " :: " + str (typename) + " is not properly reproduced by parse . format"
+    print("T=" + str(typename))
+    print("V=" + repr(value))
+    f_v = format_func(value)
+    pf_v = parse_func(f_v)
+    print("f(V)="  + repr(f_v))
+    print("pf(V)=" + repr(pf_v))
+    assert parse_func(format_func(value)) == value, "Value " + str (value) + " :: " + str (typename) + " is not properly reproduced by parse . format"
+
+    print(" .. OK")
