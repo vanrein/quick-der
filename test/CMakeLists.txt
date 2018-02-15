@@ -35,24 +35,13 @@ if (SPEC_RFC)
 		ldap.test ${CMAKE_CURRENT_SOURCE_DIR}/ldap-search-request-2.bin)
 endif ()
 
-add_executable (der_data.test
-	der_data.c)
-target_link_libraries(der_data.test
-	quickderStatic)
-add_test (der_data.test
-	der_data.test)
+macro(c_test _name)
+	add_executable (${_name}.test ${_name}.c)
+	target_link_libraries(${_name}.test quickderStatic)
+	add_test (${_name}.test ${_name}.test)
+endmacro()
 
-add_executable (int_putget.test
-	int_putget.c)
-target_link_libraries (int_putget.test
-	quickderStatic)
-add_test (int_putget.test
-	int_putget.test)
-
-add_executable (bool_putget.test
-	bool_putget.c)
-target_link_libraries (bool_putget.test
-	quickderStatic)
-add_test (bool_putget.test
-	bool_putget.test)
-
+c_test(der_data)
+c_test(int_putget)
+c_test(bool_putget)
+c_test(data_putget)
