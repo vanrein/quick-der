@@ -494,8 +494,9 @@ int der_focus (dercursor *crs);
  * markers DER_PACK_CHOICE_BEGIN ... DER_PACK_CHOICE_END must be properly
  * nested with those instructions and with each other.  There is no
  * protection for foolish specifications (and they will often be generated
- * anyway).  This method additionally requires the first element in the
- * syntax to be flagged with DER_PACK_ENTER.  (TODO: Permit non-looped use?)
+ * anyway). (TODO: Permit non-looped use?)
+ *
+ * Pass in at least 1 repeat, or nothing will be done and 0 returned.
  *
  * The cursor will be updated by this call to point to the position
  * where unpacking stopped.  Refer to the return value to see if this is
