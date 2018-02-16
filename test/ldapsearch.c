@@ -164,11 +164,6 @@ int ldapdecode(uint8_t *message, ssize_t message_size)
 	{
 		return r;
 	}
-	if (message_size != (crs.derptr - message))
-	{
-		fprintf(stderr,"! Message was not completely consumed: %zd bytes left.", message_size - (crs.derptr - message));
-		return -1;
-	}
 
 	if (!rq.messageID.derptr || (rq.messageID.derlen > 4) || (rq.messageID.derlen < 1))
 	{
