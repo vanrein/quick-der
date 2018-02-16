@@ -43,7 +43,7 @@ static const derwalk *der_unpack_rec (dercursor *crs, const derwalk *walk,
 	size_t len;
 	dercursor newcrs;
 	dercursor hdrcrs;
-	bool chosen = 0;
+	bool chosen = false;
 	bool optoutsub = optout;
 DPRINTF ("DEBUG: Entering der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
 	//
@@ -89,7 +89,7 @@ DPRINTF ("DEBUG: Making recursive call because of CHOICE_BEGIN\n");
 				return NULL;
 			}
 DPRINTF ("DEBUG: Ended recursive call because of CHOICE_END\n");
-			optional = 0; // any 1 was used up by recursive CHOICE
+			optional = false; // any 1 was used up by recursive CHOICE
 DPRINTF ("DEBUG: Next command up is 0x%02x with %zd left\n", *walk, crs->derlen);
 			continue;
 		}
@@ -193,7 +193,7 @@ DPRINTF ("ERROR: Mismatch in either CHOICE nor OPTIONAL decoding parts\n");
 DPRINTF ("DEBUG: Making recursive call because of ENTER bit with rest %zd\n", newcrs.derlen);
 			walk = der_unpack_rec (&newcrs, walk,
 					outarray, outctr,
-					0, 0, optoutsub);
+					false, false, optoutsub);
 			if (walk == NULL) {
 				return NULL;
 			}
@@ -304,7 +304,7 @@ int der_unpack (dercursor *crs, const derwalk *syntax,
 	while (repeats-- > 0) {
 		if (der_unpack_rec (crs, syntax,
 				outarray, &outctr,
-				0, 0, 0) == NULL) {
+				false, false, false) == NULL) {
 			return -1;
 		}
 	}
