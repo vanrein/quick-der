@@ -497,9 +497,9 @@ int der_focus (dercursor *crs);
  * anyway).  This method additionally requires the first element in the
  * syntax to be flagged with DER_PACK_ENTER.  (TODO: Permit non-looped use?)
  *
- * The cursor will be updated by this call to point to the position
- * where unpacking stopped.  Refer to the return value to see if this is
- * an error position.  The function returns 0 on success and -1 on failure.
+ * There is no way to find out how much of the data is consumed or
+ * where unpacking stopped.  Refer to the return value to see if an error
+ * was found somewhere.  The function returns 0 on success and -1 on failure.
  * Upon failure, errno is also set, namely to EBADMSG for syntax problems
  * or ERANGE for lengths or tags that are out of the supported range of
  * this implementation.
@@ -700,7 +700,7 @@ dercursor der_put_int32 (uint8_t *der_buf_int32, int32_t value);
 typedef uint8_t der_buf_uint32_t [5];
 dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
 
-/* 
+/*
  * Unpack a BOOLEAN and set its value to 0 for FALSE, or 1 for TRUE.
  *
  * Do accept all BER encodings of BOOLEAN, meaning, any non-zero byte is
@@ -713,7 +713,7 @@ dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
 int der_get_bool (dercursor crs, bool *valp);
-/* 
+/*
  * Pack a BOOLEAN and return the number of bytes.  Do not pack a header
  * around it.  The function always packs to one byte, and encodes
  * TRUE as 0xff and FALSE as 0x00, as required by DER.  It interprets
