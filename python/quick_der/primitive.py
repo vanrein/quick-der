@@ -127,6 +127,7 @@ def der_format_INTEGER(ival, hdr=False):
     retval = ''
     byt = ival & 0xff
     while ival not in [0, -1]:
+        byt = ival & 0xff
         ival = ival >> 8
         retval = chr(byt) + retval
     if ival == 0:

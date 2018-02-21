@@ -1,5 +1,6 @@
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+set(_python_test ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} python)
 # Test X509 decode/encode
 add_executable (certio.test
 	certio.c)
@@ -8,13 +9,13 @@ target_link_libraries (certio.test
 add_test(certio-c-test
 	certio.test ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
 add_test(certio-py-test
-	python ${CMAKE_CURRENT_SOURCE_DIR}/certio.py ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
+	 ${_python_test} ${CMAKE_CURRENT_SOURCE_DIR}/certio.py ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
 
 # Test construction of an empty instance
 add_test(empty-py-test
-	python ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
+	${_python_test} ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
 add_test(pack-py-test
-	python ${CMAKE_CURRENT_SOURCE_DIR}/der_format.py)
+	${_python_test} ${CMAKE_CURRENT_SOURCE_DIR}/der_format.py)
 
 if (SPEC_RFC)
     # LDAP tests only work if the LDAP ASN.1 bindings have been generated
