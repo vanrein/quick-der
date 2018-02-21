@@ -294,16 +294,15 @@ DPRINTF ("DEBUG: Leaving  der_unpack_rec() at 0x%08lx\n", (intptr_t) walk);
  * or ERANGE for lengths or tags that are out of the supported range of
  * this implementation.
  */
-int der_unpack (const dercursor *crs, const derwalk *syntax,
+int der_unpack (dercursor *crs, const derwalk *syntax,
 			dercursor *outarray, int repeats) {
 	int outctr = 0;
-	dercursor thecrs = *crs;
 	//TODO:WHY// if ((*syntax & DER_PACK_ENTER) == 0x00) {
 		//TODO:WHY// errno = EBADMSG;
 		//TODO:WHY// return -1;
 	//TODO:WHY// }
 	while (repeats-- > 0) {
-		if (der_unpack_rec (&thecrs, syntax,
+		if (der_unpack_rec (crs, syntax,
 				outarray, &outctr,
 				0, 0, 0) == NULL) {
 			return -1;
