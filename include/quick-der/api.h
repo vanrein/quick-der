@@ -504,7 +504,7 @@ int der_focus (dercursor *crs);
  * or ERANGE for lengths or tags that are out of the supported range of
  * this implementation.
  */
-int der_unpack (const dercursor *crs, const derwalk *syntax,
+int der_unpack (dercursor *crs, const derwalk *syntax,
 			dercursor *outarray, int repeats);
 
 
