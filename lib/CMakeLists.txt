@@ -23,6 +23,10 @@ set(quickder_SRC
 	der_put_uint32.c
 	der_get_bool.c
 	der_put_bool.c
+	der_get_bitstring_flag.c
+	der_put_bitstring_flag.c
+	der_get_bitstring_by_eight.c
+	der_put_bitstring_by_eight.c
 	der_cmp.c
 )
 

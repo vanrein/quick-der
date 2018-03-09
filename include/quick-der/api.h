@@ -713,6 +713,7 @@ dercursor der_put_uint32 (uint8_t *der_buf_uint32, uint32_t value);
  * FALSE only when all bytes (possibly zero bytes) are 0x00.
  */
 int der_get_bool (dercursor crs, bool *valp);
+
 /* 
  * Pack a BOOLEAN and return the number of bytes.  Do not pack a header
  * around it.  The function always packs to one byte, and encodes
@@ -725,6 +726,80 @@ int der_get_bool (dercursor crs, bool *valp);
  */
 typedef uint8_t der_buf_bool_t [1];
 dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
+
+/*
+ * Set or reset a single flag, numbered from 0 onward.  We don't
+ * follow the suggestion of X.690 to count from the MSB of the first
+ * word, but will instead assign number 0 to the lowest bit.  Do note
+ * however, that this bit may not be the LSB of the last byte; there
+ * may be "empty" bits when the number of bits stored is not a
+ * multiple of 8 and they end up at what could be considered negative
+ * bit numbers in our style of counting.
+ *
+ * The return value is -1 for error, or 0 for success.
+ *
+ * The macro DER_BUF_BITSTRING(NAME,NUMBITS) can be used to declare a
+ * variable named NAME and with place for NUMBITS bits.  The value is
+ * as initialised as may be expected for the type of declaration; so
+ * for static, it would be zero-filled, but not otherwise.  You must
+ * make sure that all bits are initialised, as you might otherwise
+ * send out invalid content.  (Note that we do set the number of
+ * trailing bits in this declaration, so we do some initialisation.)
+ */
+#define DER_BUF_BITSTRING(NAME,NUMBITS) uint8_t (NAME) [1+(((NUMBITS)+7)>>3] = { (((~NUMBITS) + 1) & 0x07) }
+int der_put_bitstring_flag (dercursor der_buf_bitstring, size_t bitnr, bool value);
+
+/*
+ * Sample a single flag, numbered from 0 onward.  We don't follow the
+ * suggestion of X.690 to count from the MSB of the first word, but
+ * will instead assign number 0 to the lowest bit.  Do note however,
+ * that this bit may not be the LSB of the last byte; there may be
+ * "empty" bits when the number of bits stored is not a multiple of 8
+ * and they end up at what could be considered negative bit numbers
+ * in our style of counting.
+ *
+ * The return value is -1 for error, or 0 for success, in which case
+ * the value has been set; only when value is NULL, the return will
+ * indicate whether the bit is available.
+ */
+int der_get_bitstring_flag (dercursor der_buf_bitstring, size_t bitnr, bool *value);
+
+/*
+ * Set a block of 8 bits, numbering from the beginning of the
+ * BIT STRING.  This can be used to store byte sequences in a
+ * BIT STRING, as is often done for signatures and key material.
+ *
+ * Note that the last byte can give special treatment to the
+ * least significant few bits, but only when the BIT STRING was
+ * created for a number of bits that is not a multiple of 8.
+ * Since Quick DER is always sending DER, it will enforce zero
+ * in such bits, and otherwise report error, as it will do for
+ * any other out-of-bounds bits.
+ *
+ * The return value is -1 for error, or 0 for success.
+ */
+int der_put_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint8_t value);
+
+/*
+ * Get a block of 8 bits, numbering from the beginning of the
+ * BIT STRING.  This can be used to retrieve byte sequences in a
+ * BIT STRING, as is often done for signatures and key material.
+ *
+ * Note that the last byte can give special treatment to the
+ * last significant few bits, but only when the BIT STRING was
+ * created for a number of bits that is not a multiple of 8.
+ * Since Quick DER will silently overlook incoming BER habits,
+ * it will wipe such bits to zero, regardless of their transport
+ * format.  This should not invalidate any digital signatures,
+ * since nobody will be signing BER anyway (DER and CER are used
+ * for that, which is what this function basically delivers).
+ *
+ * The return value is -1 for out-of-ranger errors, or zero on
+ * success, in which case it has set the value.  Only when value
+ * is NULL, it will not be set and the return value can be used
+ * to see if this operation would have been possible.
+ */
+int der_get_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint8_t *value);
 
 /* Compare the values pointed to by cursors @p c1 and @p c2.
  * Returns 0 if the (binary) values are equal, otherwise returns
