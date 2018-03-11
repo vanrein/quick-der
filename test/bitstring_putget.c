@@ -82,7 +82,7 @@ int getbyte (int validity, dercursor bsbuf, size_t numbits, ssize_t bytenr, uint
 				bytenr, numbits, expected);
 		return -1;
 	}
-	uint8_t gotten;
+	uint8_t gotten = 0x00;
 	int done = der_get_bitstring_by_eight (bsbuf, bytenr, &gotten);
 	if (test != done) {
 		fprintf (stderr, "Read validity inconsistent: bytenr %zd, numbits %zd, expected 0x%02x\n",
@@ -104,7 +104,7 @@ int getbyte (int validity, dercursor bsbuf, size_t numbits, ssize_t bytenr, uint
 
 int setbit (int validity, dercursor bsbuf, size_t numbits, ssize_t bitnr, bool value) {
 	// bool invalid = (bitnr < 0) || (bitnr >= numbits);
-	int test = der_put_bitstring_flag (bsbuf, (numbits-1)-bitnr, value);
+	int test = der_put_bitstring_flag (bsbuf, bitnr, value);
 	if ((test == 0) && (validity==INVAL)) {
 		fprintf (stderr, "Write should have been invalid: bitnr %zd, numbits %zd, value %s\n",
 				bitnr, numbits, value?"TRUE":"FALSE");
@@ -120,7 +120,7 @@ int setbit (int validity, dercursor bsbuf, size_t numbits, ssize_t bitnr, bool v
 
 int getbit (int validity, dercursor bsbuf, size_t numbits, ssize_t bitnr, bool expected) {
 	// bool invalid = (bitnr < 0) || (bitnr >= numbits);
-	int test = der_get_bitstring_flag (bsbuf, (numbits-1)-bitnr, NULL);
+	int test = der_get_bitstring_flag (bsbuf, bitnr, NULL);
 	if ((test == 0) && (validity==INVAL)) {
 		fprintf (stderr, "Read should have been invalid: bitnr %zd, numbits %zd, expected %s\n",
 				bitnr, numbits, expected?"TRUE":"FALSE");
@@ -131,8 +131,8 @@ int getbit (int validity, dercursor bsbuf, size_t numbits, ssize_t bitnr, bool e
 				bitnr, numbits, expected?"TRUE":"FALSE");
 		return -1;
 	}
-	bool gotten;
-	int done = der_get_bitstring_flag (bsbuf, (numbits-1)-bitnr, &gotten);
+	bool gotten = !expected;
+	int done = der_get_bitstring_flag (bsbuf, bitnr, &gotten);
 	if (test != done) {
 		fprintf (stderr, "Read validity inconsistent: bitnr %zd, numbits %zd, expected %s\n",
 				bitnr, numbits, expected?"TRUE":"FALSE");
@@ -143,7 +143,7 @@ int getbit (int validity, dercursor bsbuf, size_t numbits, ssize_t bitnr, bool e
 				bitnr, expected?"TRUE":"FALSE", gotten?"TRUE":"FALSE");
 		return -1;
 	}
-	if ((gotten == expected) && (validity==WRONG)) {
+	if ((gotten == expected) && (validity!=VALID)) {
 		fprintf (stderr, "Read back too good: bitnr %zd, expected %s, gotten %s\n",
 				bitnr, expected?"TRUE":"FALSE", gotten?"TRUE":"FALSE");
 		return -1;
@@ -274,7 +274,7 @@ int rangeget_bytes (dercursor bsbuf, size_t numbits) {
 }
 
 
-int bitset_tests (void) {
+int bitstring_tests (void) {
 	int trouble = 0;
 	size_t numbits;
 	uint8_t bsplayground [TESTBYTES+2];
@@ -301,7 +301,7 @@ int main (int argc, char *argv []) {
 
 	int ok = 1;
 
-	if (bitset_tests() != 0) ok = 0;
+	if (bitstring_tests() != 0) ok = 0;
 
 	return ok? 0: 1;
 }

@@ -24,14 +24,21 @@
  * last significant few bits, but only when the BIT STRING was
  * created for a number of bits that is not a multiple of 8.
  * Since Quick DER will silently overlook incoming BER habits,
- * it will wipe such bits to zero, regardless of their transport
+ * it will not change such bits, regardless of their transport
  * format.  This should not invalidate any digital signatures,
  * since nobody will be signing BER anyway (DER and CER are used
  * for that, which is what this function basically delivers).
  *
+ * The unchanged nature of the last byte, if it is partially
+ * present in the data, is in the interest of future extensions.
+ * To accommodate these, you should initialise the value
+ * before calling this function, by setting it to the expected
+ * default value.
+ *
  * The return value is -1 for out-of-ranger errors, or zero on
- * success, in which case it has set the value.  Only when value
- * is NULL, it will not be set and the return value can be used
+ * success, in which case it has set the value in those bits
+ * that were found in the BIT STRING data.  Only when value
+ * is NULL, will it not be set and the return value can be used
  * to see if this operation would have been possible.
  */
 int der_get_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint8_t *value) {
@@ -44,7 +51,7 @@ int der_get_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint
 			mask = 0xff & (mask << *der_buf_bitstring.derptr);
 			//DEBUG// fprintf (stderr, "der_get_bitstring_by_eight(): Mask 0x%02x drops %d bits from 0x%02x\n",mask, (int) *der_buf_bitstring.derptr, der_buf_bitstring.derptr [1+bytenr]);
 		}
-		*value = der_buf_bitstring.derptr [1 + bytenr] & mask;
+		*value = (*value & ~mask) | (der_buf_bitstring.derptr [1 + bytenr] & mask);
 	}
 	return 0;
 }

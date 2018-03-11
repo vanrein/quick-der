@@ -728,13 +728,10 @@ typedef uint8_t der_buf_bool_t [1];
 dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
 
 /*
- * Set or reset a single flag, numbered from 0 onward.  We don't
- * follow the suggestion of X.690 to count from the MSB of the first
- * word, but will instead assign number 0 to the lowest bit.  Do note
- * however, that this bit may not be the LSB of the last byte; there
- * may be "empty" bits when the number of bits stored is not a
- * multiple of 8 and they end up at what could be considered negative
- * bit numbers in our style of counting.
+ * Set or reset a single flag, numbered from 0 onward.  We follow
+ * the suggestion of X.690 to count from the MSB of the first word.
+ * Future extensions to the number of bits can be added to the
+ * trailing end of the data.
  *
  * The return value is -1 for error, or 0 for success.
  *
@@ -750,13 +747,18 @@ dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
 int der_put_bitstring_flag (dercursor der_buf_bitstring, size_t bitnr, bool value);
 
 /*
- * Sample a single flag, numbered from 0 onward.  We don't follow the
- * suggestion of X.690 to count from the MSB of the first word, but
- * will instead assign number 0 to the lowest bit.  Do note however,
- * that this bit may not be the LSB of the last byte; there may be
- * "empty" bits when the number of bits stored is not a multiple of 8
- * and they end up at what could be considered negative bit numbers
- * in our style of counting.
+ * Sample a single flag, numbered from 0 onward.  We follow the
+ * suggestion of X.690 to count from the MSB of the first word.
+ * Future extensions to the number of bits can be added to the
+ * trailing end of the data.
+ *
+ * In support of this future extensibility, we return an error
+ * for bits beyond the end of the data range, and leave the
+ * output value untouched in that case.  As long as you setup
+ * a default value in the flag in the output value before
+ * calling, you can ignore the errors and process the output
+ * whether it be that default or something actively supplied
+ * in the data.
  *
  * The return value is -1 for error, or 0 for success, in which case
  * the value has been set; only when value is NULL, the return will
@@ -789,14 +791,21 @@ int der_put_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint
  * last significant few bits, but only when the BIT STRING was
  * created for a number of bits that is not a multiple of 8.
  * Since Quick DER will silently overlook incoming BER habits,
- * it will wipe such bits to zero, regardless of their transport
+ * it will not change such bits, regardless of their transport
  * format.  This should not invalidate any digital signatures,
  * since nobody will be signing BER anyway (DER and CER are used
  * for that, which is what this function basically delivers).
  *
+ * The unchanged nature of the last byte, if it is partially
+ * present in the data, is in the interest of future extensions.
+ * To accommodate these, you should initialise the value
+ * before calling this function, by setting it to the expected
+ * default value.
+ *
  * The return value is -1 for out-of-ranger errors, or zero on
- * success, in which case it has set the value.  Only when value
- * is NULL, it will not be set and the return value can be used
+ * success, in which case it has set the value in those bits
+ * that were found in the BIT STRING data.  Only when value
+ * is NULL, will it not be set and the return value can be used
  * to see if this operation would have been possible.
  */
 int der_get_bitstring_by_eight (dercursor der_buf_bitstring, size_t bytenr, uint8_t *value);
