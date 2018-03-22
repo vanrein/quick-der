@@ -743,7 +743,7 @@ dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
  * send out invalid content.  (Note that we do set the number of
  * trailing bits in this declaration, so we do some initialisation.)
  */
-#define DER_BUF_BITSTRING(NAME,NUMBITS) uint8_t (NAME) [1+(((NUMBITS)+7)>>3] = { (((~NUMBITS) + 1) & 0x07) }
+#define DER_BUF_BITSTRING(NAME,NUMBITS) uint8_t (NAME) [1+(((NUMBITS)+7)>>3)] = { (((~NUMBITS) + 1) & 0x07) }
 int der_put_bitstring_flag (dercursor der_buf_bitstring, size_t bitnr, bool value);
 
 /*
