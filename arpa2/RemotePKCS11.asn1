@@ -952,6 +952,16 @@ C-VerifyFinal-Return ::= SEQUENCE {
         retval ACK-RV
 }
 
+C-VerifyRecoverInit-Call ::= SEQUENCE {
+        hSession   [0] ACK-SESSION-HANDLE,
+        pMechanism [1] ACK-MECHANISM,
+        hKey       [2] ACK-OBJECT-HANDLE
+}
+
+C-VerifyRecoverInit-Return ::= SEQUENCE {
+        retval         ACK-RV
+}
+
 C-VerifyRecover-Call ::= SEQUENCE {
         hSession       [0] ACK-SESSION-HANDLE,
         pSignature     [1] ACK-BYTE-ARRAY,
