@@ -16,6 +16,7 @@ add_asn1_modules(rfc-modules
 	rfc4373
 	rfc4511
 	rfc4531
+	rfc4556
 	rfc5208
 	rfc5280
 	rfc5805
