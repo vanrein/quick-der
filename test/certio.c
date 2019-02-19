@@ -323,6 +323,7 @@ int main (int argc, char *argv []) {
 	printf ("Parsing %zu bytes from %s\n", buflen, argv [1]);
 	crs.derptr = buf;
 	crs.derlen = buflen;
+	DER_DUMP (crs);
 	prsok = der_unpack (&crs, pack_Certificate, (dercursor *) &certificate, 1);
 	switch (prsok) {
 	case -1:

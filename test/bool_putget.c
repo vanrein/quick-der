@@ -25,6 +25,7 @@ int putget_tests (void) {
 			fprintf (stderr, "Boolean %s encoded in %zu bytes (should be 1)\n", itxt, crs.derlen);
 		} else if (*buf != ival) {
 			fprintf (stderr, "Wrong encoding of Boolean %s, as 0x%02x\n", itxt, *buf);
+			break;
 		} else {
 			ok = 1;
 		}
