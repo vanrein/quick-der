@@ -45,6 +45,9 @@
 #    https://opensource.org/licenses/BSD-2-Clause
 #    SPDX short identifier: BSD-2-Clause
 
+include (PythonSupport)
+FindPythonInterpreter()
+
 execute_process (COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/python/testing)
 set (_qd_aam_dir ${CMAKE_CURRENT_LIST_DIR})
 
@@ -67,14 +70,14 @@ macro(add_asn1_module _modulename _groupname)
 # Generate the module file in <quick-der/modulename.h>
 # and python/testing/modulename.py
 # and install the header file to include/quick-der/modulename.h.
-	set(_ppath $ENV{PYTHONPATH})
+	AppendToPythonPath (_ppath ${CMAKE_SOURCE_DIR}/python)
 	add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} ${PYTHON_EXECUTABLE} ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_modulename}.h from ASN.1 spec")
 	add_custom_command (OUTPUT ${CMAKE_BINARY_DIR}/python/testing/${_modulename}.py
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${PYTHON_EXECUTABLE} ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/testing
 		COMMENT "Build Python script ${_modulename}.py from ASN.1 spec")

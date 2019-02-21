@@ -3,14 +3,14 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 # License-Filename: LICENSE.MD
-cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.2 FATAL_ERROR)
 project ("Quick-DER" C)
 
 set (CMAKE_C_STANDARD 99)
 set (CMAKE_C_STANDARD_REQUIRED ON)
 
 include (FeatureSummary)
-find_package (ARPA2CM 0.5 NO_MODULE)
+find_package (ARPA2CM 0.6 NO_MODULE)
 set_package_properties (ARPA2CM PROPERTIES
 	DESCRIPTION "CMake modules for ARPA2 projects"
 	TYPE REQUIRED
