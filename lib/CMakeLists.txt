@@ -40,6 +40,7 @@ set_target_properties (quickderStatic
 # need an extra quick-der/ level because that's retained in the file paths.
 install (TARGETS quickderShared
 	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
 	PUBLIC_HEADER DESTINATION include/quick-der)
 install (TARGETS quickderStatic
 	ARCHIVE DESTINATION lib)
