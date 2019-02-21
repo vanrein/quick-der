@@ -46,7 +46,7 @@ Suggested packages are:
 
   * **Debian** cmake python-pyparsing python-dev python-setuptools, and then
     *easy_install* six asn1ate
-  * **FreeBSD** cmake python-pyparsing
+  * **FreeBSD** cmake python-pyparsing and then *easy_install* asn1ate.
 
 ## Configuration
 
