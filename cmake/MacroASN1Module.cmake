@@ -69,12 +69,12 @@ macro(add_asn1_module _modulename _groupname)
 # and install the header file to include/quick-der/modulename.h.
 	set(_ppath $ENV{PYTHONPATH})
 	add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python python ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_modulename}.h from ASN.1 spec")
 	add_custom_command (OUTPUT ${CMAKE_BINARY_DIR}/python/testing/${_modulename}.py
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python python ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/testing
 		COMMENT "Build Python script ${_modulename}.py from ASN.1 spec")
