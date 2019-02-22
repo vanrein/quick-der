@@ -7,6 +7,24 @@ sys.path = [ '../../python/installroot', '../python/installroot' ] + sys.path
 
 from quick_der import api as qd
 
+def hexily_d(n):
+    """
+    Support-function, produces one single \\xHH escape from a character.
+    """
+    s = hex(n).replace("0x", "")
+    if len(s) < 2:
+        return ("\\x0"+s)
+    else:
+        return ("\\x"+s)
+
+def hexily(s):
+    """
+    Produces a repr-like string for @p s, only it uses hex escapes
+    everywhere. This avoids some cases like 0xa1 failing on US-ASCII
+    output.
+    """
+    return "".join([hexily_d(ord(x)) for x in f_v])
+
 # Names of types, which have corresponding der_pack_<name> functions
 # in the Quick-DER API.
 INT = "INTEGER"
@@ -19,6 +37,12 @@ for typename, value in (
 	(INT, 0),
 	(INT, 100),
 	(INT, -101),
+	(INT, 127),
+	(INT, 128),  # Crossover from 7 to 8 bits
+	(INT, 129),
+	(INT, 128 + 32),  # another crossover, 0xa1 gives ascii-encode error
+	(INT, 128 + 33),
+	(INT, 254),  # Crossover from 8 to 9 bits
 	(INT, 255),
 	(INT, -255),
 	(INT, 256),
@@ -54,7 +78,11 @@ for typename, value in (
     print("V=" + repr(value))
     f_v = format_func(value)
     pf_v = parse_func(f_v)
-    print("f(V)="  + repr(f_v))
+    r_fv = repr(f_v)
+    try:
+        print("f(V)="  + r_fv)
+    except UnicodeEncodeError as e:
+        print("f(V)='" + hexily(f_v) +"' (*)")
     print("pf(V)=" + repr(pf_v))
     assert parse_func(format_func(value)) == value, "Value " + str (value) + " :: " + str (typename) + " is not properly reproduced by parse . format"
 
