@@ -63,6 +63,9 @@ for typename, value in (
 	(STR, ""),
 	(STR, chr(0) + "cow"),
 	(STR, None),  # TODO: is a non-string distinguishable from an empty one?
+	# (OID, "1"),  # Invalid
+	(OID, "1.2"),
+	(OID, "1.2.3"),
 	(OID, "1.2.3.4"),
 	(OID, "3.14.159.2653.58979.323812"),
 	):
