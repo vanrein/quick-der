@@ -8,12 +8,17 @@
 #
 # For anything else, do this:
 #
-#	make configure                 # Basic configure
+#	make configure                 # Basic configure, remember PREFIX!
 #	( cd build ; ccmake )          # CMake GUI for build configuration
 #	( cd build ; make install )    # Build and install
 #
 # For building the Python tooling (needed for header generation and tooling)
-# see the Python install documentation in python/INSTALL.MD .
+# see the Python install documentation in python/INSTALL.MD . For simple
+# cases (or if you have a suitable PYTHONPATH set in the environment already),
+# do this:
+#
+#	make python			# Remember to set PREFIX!
+#
 
 PREFIX ?= /usr/local
 
@@ -47,4 +52,8 @@ clean:
 
 package: compile
 	( cd build && $(MAKE) package )
-	
+
+python: compile install
+	python setup.py build
+	python setup.py install --prefix=$(PREFIX)
+
