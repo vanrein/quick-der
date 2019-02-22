@@ -8,17 +8,17 @@
 import _quickder
 
 # Import the DER_TAG_xxx and DER_PACK_xxx symbol definitions
-from packstx import *
+from .packstx import *
 
 # Import primvite der_parse_TYPE and der_parse_TYPE routines
-from primitive import *
+from .primitive import *
 
 # Import composite der_parse en der_format routines
-from format import *
+from .format import *
 
 # Import ASN.1 supportive classes ASN1xxx
-from classes import *
+from .classes import *
 
 # Import the build_asn1() routine
-from builder import *
+from .builder import *
 
