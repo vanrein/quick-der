@@ -40,7 +40,9 @@ These are tools needed to be able to build and install Quick DER.
     of RFC data structures to C headers (and Python bindings).
     Note that `asn2quickder` is "good enough" for the mapping of at least
     an important part of the RFCs, but it is work that can still be improved.
-  * Python packages `setuptools`, `asn1ate` and `six`.
+  * Python packages `setuptools`, `asn1ate` and `six`. For instructions on
+    building the Python parts of Quick DER, see the 
+    [Python install documentation](python/INSTALL.MD)
 
 Suggested packages are:
 
