@@ -77,7 +77,7 @@ macro(add_asn1_module _modulename _groupname)
 		WORKING_DIRECTORY quick-der
 		COMMENT "Build include file ${_modulename}.h from ASN.1 spec")
 	add_custom_command (OUTPUT ${CMAKE_BINARY_DIR}/python/testing/${_modulename}.py
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} ${PYTHON_EXECUTABLE} ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python ${PYTHON_EXECUTABLE} ${_qd_asn2quickder} -l python ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/testing
 		COMMENT "Build Python script ${_modulename}.py from ASN.1 spec")
@@ -119,7 +119,7 @@ endmacro()
 
 macro(add_asn1_document _docname _groupname)
 	add_custom_command (OUTPUT doc/${_docname}.md
-		COMMAND ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
+		COMMAND python ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1
 		WORKING_DIRECTORY doc
 		COMMENT "Build markdown text file ${_docname}.md from ASN.1 spec")
