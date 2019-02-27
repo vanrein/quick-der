@@ -29,12 +29,12 @@ if der_out != der_in:
 	sys.exit (1)
 
 print('TBSCERTIFICATE:')
-print('type is' + type (crt.tbsCertificate))
+print('type is' + str (type (crt.tbsCertificate)))
 print()
 
 exts = crt.tbsCertificate.extensions
 print('EXTENSIONS:')
-print('type is ' + type (exts))
+print('type is ' + str( type (exts)))
 for exti in range (len (exts)):
 	print('[' + str (exti) + '] ' + str (exts [exti].extnID if exts [exti] else '(no OID)') + ' ' + ('CRITICAL ' if exts [exti].critical else '') + str (exts [exti].extnValue if exts [exti].extnValue else '(no value)'))
 
