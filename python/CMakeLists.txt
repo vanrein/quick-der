@@ -19,4 +19,7 @@ add_custom_target(ppath_test
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} 
         ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py
     )
-   
+add_custom_target(ppath_notest
+    COMMAND ${CMAKE_COMMAND} -E env
+        ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py
+    )
