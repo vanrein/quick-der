@@ -71,7 +71,7 @@ def der_parse_OID(derblob):
         else:
             oidvals[-1] = (oidvals[-1] << 7) | byte
             oidvals.append(0)
-    fst = oidvals[0] / 40
+    fst = oidvals[0] // 40
     snd = oidvals[0] % 40
     oidvals = [fst, snd] + oidvals[1:-1]
     retval = '.'.join(map(str, oidvals))

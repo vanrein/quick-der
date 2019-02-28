@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 # License-Filename: LICENSE.MD
-cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required (VERSION 3.2 FATAL_ERROR)
 project ("Quick-DER" C)
 
 set (CMAKE_C_STANDARD 99)
@@ -69,6 +69,15 @@ endif()
 # BUILDING
 #
 add_subdirectory (lib)
+
+include(PythonSupport)
+FindPythonInterpreter()
+
+# This is a hack to make sure that, while building
+# Quick DER, the asn2quickder script from the SOURCE
+# is used, not an already installed one.
+set(_qd_asn2quickder ${CMAKE_SOURCE_DIR}/python/scripts/asn2quickder
+    CACHE FILEPATH "Path to asn2quickder script" FORCE)
 
 if (NOT NO_INSTALL_PYTHON)
     add_subdirectory (python)
