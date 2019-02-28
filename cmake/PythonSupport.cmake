@@ -11,7 +11,7 @@
 #    SPDX-License-Identifier: BSD-2-Clause.degroot
 #    License-Filename: LICENSES/BSD-2-Clause.degroot
 
-if (WIN32)
+if("${CMAKE_HOST_SYSTEM}" MATCHES ".*Windows.*")
     set (PYTHON_PATH_SEPARATOR ";")
 else()
     set (PYTHON_PATH_SEPARATOR ":")
