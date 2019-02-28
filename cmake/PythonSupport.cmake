@@ -15,7 +15,7 @@
 # is Windows. Here, we need it while building, regardless of target,
 # on a Windows host.
 if (CMAKE_HOST_SYSTEM MATCHES "Windows")
-    set (PYTHON_PATH_SEPARATOR ";")
+    set (PYTHON_PATH_SEPARATOR "\;")
 else()
     set (PYTHON_PATH_SEPARATOR ":")
 endif()

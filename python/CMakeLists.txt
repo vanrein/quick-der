@@ -16,7 +16,7 @@ AppendToPythonPath (_ppath
     ${CMAKE_CURRENT_SOURCE_DIR}/sully2
     )
 add_custom_target(ppath_test
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} 
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=$<SHELL_PATH:${_ppath}>
         ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py
     )
 add_custom_target(ppath_notest
