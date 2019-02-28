@@ -1,0 +1,1 @@
+flavors=("CHOCOLATE", "MAPLE", "PLAIN")

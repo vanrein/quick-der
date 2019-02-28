@@ -10,3 +10,13 @@ if (NOT NO_TESTING)
              COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/setup.py test
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
+
+AppendToPythonPath (_ppath 
+    ${CMAKE_CURRENT_SOURCE_DIR}/silly1 
+    ${CMAKE_CURRENT_SOURCE_DIR}/sully2
+    )
+add_custom_target(ppath_test
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} 
+        ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py
+    )
+   
