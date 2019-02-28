@@ -102,7 +102,7 @@ macro(add_asn1_module _modulename _groupname)
 		add_dependencies(asn2quickder-done ${_modulename}_asn1_h)
 	
 		add_test(${_modulename}-test-h ${_modulename}-test-h)
-		add_test(${_modulename}-test-py ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} python ${_modulename}-test.py)
+		add_test(${_modulename}-test-py ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} ${PYTHON_EXECUTABLE} ${_modulename}-test.py)
 	endif()
 endmacro()
 
@@ -119,7 +119,7 @@ endmacro()
 
 macro(add_asn1_document _docname _groupname)
 	add_custom_command (OUTPUT doc/${_docname}.md
-		COMMAND ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
+		COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/python/scripts/asn1literate ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1 ${_docname}.md
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_docname}.asn1
 		WORKING_DIRECTORY doc
 		COMMENT "Build markdown text file ${_docname}.md from ASN.1 spec")
