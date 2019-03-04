@@ -12,12 +12,12 @@ if (NOT NO_TESTING)
 endif()
 
 AppendToPythonPath (_ppath 
-    ${CMAKE_CURRENT_SOURCE_DIR}/silly1 
-    ${CMAKE_CURRENT_SOURCE_DIR}/sully2
+    "${CMAKE_CURRENT_SOURCE_DIR}/silly 1"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sully 2"
     )
 add_custom_target(ppath_test
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=$<SHELL_PATH:${_ppath}>
-        ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py
+        $<SHELL_PATH:${PYTHON_EXECUTABLE}> $<SHELL_PATH:${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py>
     )
 add_custom_target(ppath_notest
     COMMAND ${CMAKE_COMMAND} -E env
