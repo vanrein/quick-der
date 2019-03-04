@@ -70,7 +70,7 @@ macro(add_asn1_module _modulename _groupname)
 # Generate the module file in <quick-der/modulename.h>
 # and python/testing/modulename.py
 # and install the header file to include/quick-der/modulename.h.
-	AppendToPythonPath (_ppath ${CMAKE_SOURCE_DIR}/python)
+	set (_ppath ${_ppath} ${CMAKE_SOURCE_DIR}/python)
 	add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/quick-der/${_modulename}.h
 		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} ${PYTHON_EXECUTABLE} ${_qd_asn2quickder} -l c ${asn1module_asn2quickder_options} ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${_modulename}.asn1

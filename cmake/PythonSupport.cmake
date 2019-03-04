@@ -11,36 +11,6 @@
 #    SPDX-License-Identifier: BSD-2-Clause.degroot
 #    License-Filename: LICENSES/BSD-2-Clause.degroot
 
-# Not using WIN32 here, because that's set when the **target** system
-# is Windows. Here, we need it while building, regardless of target,
-# on a Windows host.
-if (CMAKE_HOST_SYSTEM MATCHES "Windows")
-    set (PYTHON_PATH_SEPARATOR "\;")
-else()
-    set (PYTHON_PATH_SEPARATOR ":")
-endif()
-
-# Sets @p VARNAME to the value of the environment-variable PYTHONPATH,
-# with @p path appended to it with a suitable separator. If more than
-# one value is passed in, they are all appended with suitable separators.
-#
-# This **could** be generalized, to use a different ENV variable.
-function (AppendToPythonPath VARNAME path)
-    set (_ppath $ENV{PYTHONPATH})
-    # Special-case if the existing environment variable is empty.
-    if (NOT _ppath)
-        set (_ppath ${path})
-    else()
-        set (_ppath "${_ppath}${PYTHON_PATH_SEPARATOR}${path}")
-    endif()
-    # And append all the rest.
-    foreach (a ${ARGN})
-        set (_ppath "${_ppath}${PYTHON_PATH_SEPARATOR}${a}")
-    endforeach()
-    
-    set (${VARNAME} "${_ppath}" PARENT_SCOPE)
-endfunction()
-
 # Find a Python3 interpreter. This is a flimsy wrapper around find_package,
 # and only sets PYTHON_FOUND and PYTHON_EXECUTABLE, as the old-fashioned way.
 macro (FindPythonInterpreter)

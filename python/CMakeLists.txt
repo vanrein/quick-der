@@ -11,12 +11,13 @@ if (NOT NO_TESTING)
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 
-AppendToPythonPath (_ppath 
+set (_ppath 
+	${_ppath}
     "${CMAKE_CURRENT_SOURCE_DIR}/silly 1"
     "${CMAKE_CURRENT_SOURCE_DIR}/sully 2"
     )
 add_custom_target(ppath_test
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=$<SHELL_PATH:${_ppath}>
+    COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<SHELL_PATH:${_ppath}>"
         $<SHELL_PATH:${PYTHON_EXECUTABLE}> $<SHELL_PATH:${CMAKE_CURRENT_SOURCE_DIR}/ppathtest.py>
     )
 add_custom_target(ppath_notest
