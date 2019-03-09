@@ -9,7 +9,7 @@ here = (path.dirname(path.realpath(__file__)))
 class TestQuickDER2source(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        repo = path.join(here, '../../rfc')
+        repo = path.join(here, '..', '..', 'rfc')
         asn_test = path.join(repo, 'rfc1422.asn1')
         cls.defmods, cls.refmods = realise([repo], [asn_test])
 
