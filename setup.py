@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 from setuptools import setup, Extension, find_packages
-from os import path, mkdir
+from os import path
+from re import compile as re_compile
 from subprocess import check_call
 from tempfile import mkdtemp
-from atexit import register as atexit_register
 
 here = (path.dirname(path.realpath(__file__)))
 
@@ -19,42 +19,41 @@ extension = Extension(name='_quickder',
 
 # Before we enter setup() we need to build the Python libraries
 # from their ASN.1 sources using the asn2quickder script.
+# We work around CMake, but then need regexp matching on scripts.
+# CMake however, is quite troublesome in multilinux targets.
 
-a2qd = mkdtemp ()
-dest_parent = path.join(a2qd, 'python')
-dest_pkgdir = path.join(a2qd, 'python', 'quick_der')
-orig_pkgdir = path.join(here, 'python', 'quick_der')
-a2qd_pkgdir = path.join(a2qd, 'python', 'testing')
-
-atexit_register (check_call, ['cmake', 'remove_directory', a2qd])
-
-mkdir (dest_parent)
-mkdir (dest_pkgdir)
-
-check_call (['cmake', here], cwd=a2qd)
-check_call (['cmake', '--build', a2qd])
-#RECURSIVE# check_call (['ctest', '-VV'], cwd=a2qd)
-check_call (['cmake', '-E', 'copy_directory', a2qd_pkgdir, dest_pkgdir], cwd=a2qd)
-check_call (['cmake', '-E', 'copy_directory', orig_pkgdir, dest_pkgdir], cwd=a2qd)
-
-#DEBUG# check_call (['ls', dest_pkgdir])
+add1_open_re = re_compile ('[ \t\n]add_asn1_modules[ \t\n]*\(')
+asn2cmd = [ path.join (here, 'python', 'scripts', 'asn2quickder'), '-l', 'python' ]
+for asn1dir in ['rfc', 'itu', 'arpa2']:
+	asn2cmd.append ('-I')
+	asn2cmd.append (path.join (here, asn1dir))
+	cmf = open (path.join (asn1dir, 'CMakeLists.txt')).read ()
+	comment_re = re_compile ('#[^\n]*\n')
+	cmf2 = '\n'.join (comment_re.split (cmf))
+	for mtch in add1_open_re.split (cmf2) [1:]:
+		closed = mtch.find (')')
+		if closed == -1:
+			continue
+		for asn1spec in mtch [:closed].split () [1:]:
+			asn1path = path.join (here, asn1dir, asn1spec + '.asn1')
+			print ('Generating module \"quick_der.%s\" from %s' % (asn1spec,asn1path))
+			check_call (asn2cmd + [ asn1path ], cwd='/tmp')
 
 setup(
     scripts=['python/scripts/asn1literate', 'python/scripts/asn2quickder'],
-    name='quick-der',
+    name='quick_der',
     author='Rick van Rein',
     author_email='rick@openfortress.nl',
     license='BSD-2',
-    description="Quick `n' Easy DER library",
-    long_description=open (path.join (here, 'README.MD')).read(),
+    description='Quick (and Easy) DER, a Library for parsing ASN.1',
+    long_description=open (path.join (here, 'PYTHON.MD')).read(),
     long_description_content_type='text/markdown',
-    url="https://github.com/vanrein/quick-der",
+    url='https://github.com/vanrein/quick-der',
     version='1.2.2',
     ext_modules=[extension],
-    packages=find_packages(where=dest_parent),
+    packages=find_packages(where='python'),
     package_dir={
-        'quick_der': dest_pkgdir,
-         #DO_NOT_INSTALL# 'tests': path.join ('python', 'tests'),
+        'quick_der': 'quick_der',
     },
     install_requires=[
         'six',
