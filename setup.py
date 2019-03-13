@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, Extension, find_packages
+from sys import executable
 from os import path, environ
 from re import compile as re_compile
 from subprocess import check_call
@@ -20,7 +21,7 @@ here = (path.dirname(path.realpath(__file__)))
 
 environ ['PYTHONPATH'] = '%s:%s' % (path.join (here, 'python'), environ.get ('PYTHONPATH', ''))
 add1_open_re = re_compile ('[ \t\n]add_asn1_modules[ \t\n]*\(')
-asn2cmd = [ path.join (here, 'python', 'scripts', 'asn2quickder'), '-l', 'python' ]
+asn2cmd = [ executable, path.join (here, 'python', 'scripts', 'asn2quickder'), '-l', 'python' ]
 for asn1dir in ['rfc', 'itu', 'arpa2']:
 	asn2cmd.append ('-I')
 	asn2cmd.append (path.join (here, asn1dir))
