@@ -64,6 +64,7 @@ setup(
     packages=find_packages(where='python'),
     package_dir={
         'quick_der': path.join (here, 'python', 'quick_der'),
+        'tests': path.join (here, 'python', 'tests'),
     },
     install_requires=[
         'six',
