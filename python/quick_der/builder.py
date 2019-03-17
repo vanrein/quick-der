@@ -22,10 +22,11 @@ def build_asn1(context, recipe, bindata=None, ofs=0, outer_class=None):
 		# Numbers refer to a dercursor index number
 		offset = recipe
 		return ofs + offset
+
 	elif recipe [0] == '_NAMED':
 		# dictionaries are ASN.1 constructed types
 		# TODO:OLD# (_NAMED,pck,map) = recipe
-		_NAMED, map_ = recipe
+		(_NAMED, map_) = recipe
 
 		return classes.ASN1ConstructedType (
 				recipe=recipe,
@@ -35,7 +36,7 @@ def build_asn1(context, recipe, bindata=None, ofs=0, outer_class=None):
 				context=context)
 
 	elif recipe [0] in ['_SEQOF', '_SETOF']:
-		_STHOF, allidx, subpck, subnum, subrcp = recipe
+		(_STHOF, allidx, subpck, subnum, subrcp) = recipe
 		if outer_class:
 			cls = outer_class
 		elif _STHOF == '_SEQOF':
@@ -71,7 +72,7 @@ def build_asn1(context, recipe, bindata=None, ofs=0, outer_class=None):
 		# Reference to an ASN1Object subclass
 		instme = None
 		while type (recipe) == tuple and recipe [0] == '_TYPTR':
-			_TYPTR, [subcls], subofs = recipe
+			(_TYPTR, [subcls], subofs) = recipe
 			ofs += subofs
 			if type (subcls) == str:
 				# TODO# Try to remove these, since we now generate it?

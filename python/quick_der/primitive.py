@@ -25,7 +25,6 @@ from six.moves import intern
 # Pattern definitions
 #
 
-re_oid_jer = re.compile ('^"[1-9][0-9]*([.][1-9][0-9]*)*$"')
 
 
 #
@@ -123,10 +122,7 @@ def der_parse_OID (derblob):
 jer_format_OID = jer_format_STRING
 
 
-def jer_parse_OID (jerstr):
-	if re_oid_jer.match (jerstr) is None:
-		raise Exception ("Syntax Error in OID: %s" % (jerstr [1:-1],))
-	return jerstr [1:-1]
+jer_parse_OID = jer_parse_STRING
 
 
 def der_format_RELATIVE_OID (oidstr):

@@ -26,25 +26,26 @@ class ASN1Object (object):
 	_recipe = None
 	_numcursori = None
 
-	def __init__ (self, derblob=None, bindata=None, offset=0, der_packer=None, recipe=None, context=None):
+	def __init__ (self, derblob=None, jertokens=None, bindata=None, offset=0, der_packer=None, recipe=None, context=None):
 		"""Initialise the current object; abstract classes require
 		   parameters with typing information (der_packer, recipe,
 		   numcursori).  Instance data may be supplied through bindata
 		   and a possible offset, with a fallback to derblob that
 		   will use the subclasses' _der_unpack() methods to form the
-		   _bindata values.  If neither bindata nor derblob are
+		   _bindata values.  If none of bindata, derblob, jertokens are
 		   supplied, then an empty instance is delivered.  The optional
 		   context defines the globals() map in which type references
 		   should be resolved.
 		"""
 		# TODO:OLD# assert der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
 		assert (
-			   bindata is not None and recipe is not None) or der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
+		   bindata is not None and recipe is not None) or der_packer is not None or self._der_packer is not None, 'You or a class from asn2quickder must supply a DER_PACK_ sequence for use with Quick DER'
 		assert recipe is not None or self._recipe is not None, 'You or a class from asn2quickder must supply a recipe for instantiating object structures'
 		# TODO:OLD# assert bindata is not None or derblob is not None or self._numcursori is not None, 'When no binary data is supplied, you or a class from asn2quickder must supply how many DER cursors are used'
 		# TODO:NEW:MAYBENOTNEEDED# assert self._numcursori is not None, 'You should always indicate how many values will be stored'
 		assert context is not None or getattr (self, "_context",
-											  None) is not None, 'You or a subclass definition should provide a context for symbol resolution'
+		    None) is not None, 'You or a subclass definition should provide a context for symbol resolution'
+		assert derblob is None or jertokens is None, 'Supply a derblob or jertokens, but not both'
 		# Construct the type if so desired
 		if der_packer is not None:
 			self._der_packer = der_packer
@@ -65,6 +66,12 @@ class ASN1Object (object):
 			assert len (self._bindata) == self._numcursori, 'Wrong number of values returned from der_unpack ()'
 			assert offset == 0, 'You supplied a derblob, so you cannot request any offset but 0'
 			self.__init_bindata__ ()
+		elif jertokens:
+			# Start empty, then fill, then check
+			self._bindata = [None] * self._numcursori
+			assert offset == 0, 'You supplied jertokens, so you cannot request any offset but 0'
+			self._jer_parse (jertokens, offset)
+			#ALREADY_DONE# self.__init_bindata ()
 		elif self._numcursori:
 			self._bindata = [None] * self._numcursori
 			self._offset = offset
@@ -73,6 +80,9 @@ class ASN1Object (object):
 
 	def __init_bindata__ (self):
 		assert False, 'Expected __init_bindata__() method not found in ' + self.__class__.__name__
+
+	def _jer_parse (self):
+		assert False, 'Expected _jer_parse() method not found in ' + self.__class__.__name__
 
 
 # The ASN1ConstructedType is a nested structure of named fields.
@@ -203,6 +213,44 @@ class ASN1ConstructedType (ASN1Object):
 		(tag, ilen, hlen) = _quickder.der_header (packed)
 		return packed [hlen: hlen + ilen]
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse JER tokens from an iterator and plant information in
+		   the bindata subject to the given offset.  When an element
+		   is added, build the underlying object and start again.
+
+		   SEQUENCE in JER is an OBJECT with field names as keys.
+		   (An ARRAY encoding instruction exists.)
+
+		   SET in JER are an OBJECT with field names as keys.
+		   (There is no ARRAY encoding instruction.)
+
+		   CHOICE in JER is an OBJECT with one member, the variant
+		   being selected by its field name.
+		   (An UNWRAPPED encoding instruction is just the value.)
+
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		jertokens.require_next ('{')
+		(_NAMED,nmidx) = self._recipe
+		# Parse with a loop traversal for each "name" : value
+		done = jertokens.lookahead () == '}'
+		while not done:
+			# Collect a string that serves as the field name
+			tok = jertokens.require_next ('"')
+			fld = primitive.jer_parse_STRING (tok)
+			if not nmidx.has_key (fld):
+				raise jertokens.syntax_error ('Unknown field name "%s"' % (fld,))
+			tok = jertokens.require_next (':')
+			# Build field from subrecipe + jertokens; same object -> same offset
+			subrcp = nmidx [tok]
+			TODO_build_subrcp_at_offset_subrcp_holds_any_further_additions
+			TODO_check_primitive_field_being_empty
+			# Beyond the value, we see if we should loop around
+			tok = jertokens.require_next (',}')
+			done = (tok == '}')
+		# Parsing done
+		#TODO# Consistency: all required / one choice / ...
+
 	def __str__ (self):
 		retval = '{\n	'
 		comma = ''
@@ -267,6 +315,27 @@ class ASN1SequenceOf (ASN1Object, list):
 		"""
 		return primitive.der_prefixhead (DER_PACK_ENTER | DER_TAG_SEQUENCE,
 										self._der_format ())
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse JSON tokens for a SEQUENCE OF and construct the
+		   resulting elements, as well as the element class for
+		   each entry.
+
+		   SEQUENCE OF in JER is an ARRAY with member JSON values.
+		"""
+		jertokens.require_next ('[')
+		(_SEQOF, allidx, subpck, subnum, subrcp) = recipe
+		self._bindata [offset + allidx] = []
+		# Parse with a loop traversal for each value
+		done = jertokens.lookahead () == ']'
+		while not done:
+			# Build value from subrecipe + jertokens; fresh offset counting
+			TODO_build_subrcp_at_fresh_offset_subrcp_holds_any_further_additions
+			self._bindata [offset + allidx].append (val)
+			# Beyond the value, we see if we should loop around
+			tok = jertokens.require_next (',]')
+			done = (tok == ']')
+		# Parsing done
 
 	def _der_format (self):
 		"""Format the current ASN1SequenceOf using DER notation,
@@ -340,6 +409,27 @@ class ASN1SetOf (ASN1Object, set):
 		   the tag to prefix before the body).
 		"""
 		return ''.join ([elem._der_pack () for elem in self])
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse JSON tokens for a SET OF and construct the
+		   resulting elements, as well as the element class for
+		   each entry.
+
+		   SET OF in JER is an ARRAY with member JSON values.
+		"""
+		jertokens.require_next ('[')
+		(_SETOF, allidx, subpck, subnum, subrcp) = recipe
+		self._bindata [offset + allidx] = set ()
+		# Parse with a loop traversal for each value
+		done = jertokens.lookahead () == ']'
+		while not done:
+			# Build value from subrecipe + jertokens; fresh offset counting
+			TODO_build_subrcp_at_fresh_offset_subrcp_holds_any_further_additions
+			self._bindata [offset + allidx].add (val)
+			# Beyond the value, we see if we should loop around
+			tok = jertokens.require_next (',]')
+			done = (tok == ']')
+		# Parsing done
 
 	def __str__ (self):
 		entries = ',\n'.join ([str (x) for x in self])
@@ -509,6 +599,11 @@ class ASN1Boolean (ASN1Atom):
 	def _der_format (self):
 		return primitive.der_format_BOOLEAN (self.get ())
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a BOOLEAN"""
+		tok = jertokens.require_next ('tf')
+		self._bindata [offset] = primitive.jer_parse_BOOLEAN (tok)
+
 
 class ASN1Integer (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_INTEGER) + chr(DER_PACK_END)
@@ -533,6 +628,13 @@ class ASN1Integer (ASN1Atom):
 	def _der_format (self):
 		return primitive.der_format_INTEGER (self.get ())
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for an INTEGER"""
+		tok = jertokens.require_next ('-0123456789')
+		if '.' in tok or 'e' in tok or 'E' in tok:
+			raise jertokens.syntax_error ('Not an integer value: "%s"' % (tok,))
+		self._bindata [offset] = primitive.jer_parse_INTEGER (tok)
+
 
 class ASN1BitString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
@@ -553,6 +655,15 @@ class ASN1BitString (ASN1Atom):
 class ASN1OctetString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OCTETSTRING) + chr(DER_PACK_END)
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a binary string; the normal encoding
+		   is a string with hex characters; with the BASE64 encoding
+		   instructions, base64 is also available.
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_HEXSTRING (tok)
+
 
 class ASN1Null (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_NULL) + chr(DER_PACK_END)
@@ -560,9 +671,14 @@ class ASN1Null (ASN1Atom):
 	def __str__ (self):
 		return 'NULL'
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for NULL"""
+		tok = jertokens.require_next ('n')
+		# Keep _bindata [offset] at NULL... bad for consistency checks...
 
 class ASN1OID (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_OID) + chr(DER_PACK_END)
+	_re_jer = re.compile ('^"[1-9][0-9]*([.][1-9][0-9]*)*$"')
 
 	def __str__ (self):
 		oidstr = primitive.der_parse_OID (self.get ())
@@ -571,12 +687,27 @@ class ASN1OID (ASN1Atom):
 	def _der_format (self):
 		return primitive.der_format_OID (self.get ())
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for an OID"""
+		tok = jertokens.require_next ('"')
+		if ASN1OID._re_jer.match (tok) is None:
+			raise jertokens.syntax_error ('Not an OID: %s' % (tok,))
+		_bindata [offset] = primitive.jer_parse_OID (tok)
+
 
 class ASN1Real (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_REAL) + chr(DER_PACK_END)
+	_re_jer = re.compile ('^("(-0|-INF|INF|NaN)"|-?[0-9].*)$')
 
 	def _der_format (self):
 		return primitive.der_format_REAL (self.get ())
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a REAL"""
+		tok = jertokens.require_next ('-0123456789"')
+		if ASN1Real._re_jer.match (tok) is None:
+			raise jertokens.syntax_error ('Not a REALM: %s' % (tok,))
+		_bindata [offset] = primitive.jer_parse_REAL (tok)
 
 
 class ASN1Enumerated (ASN1Atom):
@@ -597,6 +728,11 @@ class ASN1UTF8String (ASN1Atom):
 			retval = 'None'
 		return retval
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
+
 
 class ASN1RelativeOID (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_RELATIVE_OID) + chr(DER_PACK_END)
@@ -616,6 +752,11 @@ class ASN1NumericString (ASN1Atom):
 			retval = 'None'
 		return retval
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
+
 
 class ASN1PrintableString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_PRINTABLESTRING) + chr(DER_PACK_END)
@@ -627,6 +768,11 @@ class ASN1PrintableString (ASN1Atom):
 		else:
 			retval = 'None'
 		return retval
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
 
 
 class ASN1TeletexString (ASN1Atom):
@@ -640,6 +786,15 @@ class ASN1TeletexString (ASN1Atom):
 			retval = 'None'
 		return retval
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a binary string; the normal encoding
+		   is a string with hex characters; with the BASE64 encoding
+		   instructions, base64 is also available.
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_HEXSTRING (tok)
+
 
 class ASN1VideotexString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VIDEOTEXSTRING) + chr(DER_PACK_END)
@@ -652,6 +807,15 @@ class ASN1VideotexString (ASN1Atom):
 			retval = 'None'
 		return retval
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a binary string; the normal encoding
+		   is a string with hex characters; with the BASE64 encoding
+		   instructions, base64 is also available.
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_HEXSTRING (tok)
+
 
 class ASN1IA5String (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_IA5STRING) + chr(DER_PACK_END)
@@ -663,6 +827,11 @@ class ASN1IA5String (ASN1Atom):
 		else:
 			retval = 'None'
 		return retval
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
 
 
 class ASN1UTCTime (ASN1Atom):
@@ -679,6 +848,11 @@ class ASN1UTCTime (ASN1Atom):
 	def _der_format (self):
 		return primitive.der_format_UTCTIME (self.get ())
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
+
 
 class ASN1GeneralizedTime (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GENERALIZEDTIME) + chr(DER_PACK_END)
@@ -694,13 +868,32 @@ class ASN1GeneralizedTime (ASN1Atom):
 	def _der_format (self):
 		return primitive.der_format_GENERALIZEDTIME (self.get ())
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
+
 
 class ASN1GraphicString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_GRAPHICSTRING) + chr(DER_PACK_END)
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a binary string; the normal encoding
+		   is a string with hex characters; with the BASE64 encoding
+		   instructions, base64 is also available.
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_HEXSTRING (tok)
+
 
 class ASN1VisibleString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_VISIBLESTRING) + chr(DER_PACK_END)
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
 
 	def __str__ (self):
 		retval = self.get ()
@@ -722,6 +915,15 @@ class ASN1GeneralString (ASN1Atom):
 			retval = 'None'
 		return retval
 
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a binary string; the normal encoding
+		   is a string with hex characters; with the BASE64 encoding
+		   instructions, base64 is also available.
+		   TODO: Encoding instructions are not yet supported.
+		"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_HEXSTRING (tok)
+
 
 class ASN1UniversalString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_UNIVERSALSTRING) + chr(DER_PACK_END)
@@ -733,6 +935,11 @@ class ASN1UniversalString (ASN1Atom):
 		else:
 			retval = 'None'
 		return retval
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER token for a normal string"""
+		tok = jertokens.require_next ('"')
+		_bindata [offset] = primitive.jer_parse_STRING (tok)
 
 
 class ASN1Any (ASN1Atom):
@@ -780,3 +987,5 @@ class ASN1Any (ASN1Atom):
 	def der_pack (self):
 		from quick_der import format
 		return format.der_pack (self._value, cls=self._class)
+
+

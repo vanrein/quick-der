@@ -65,6 +65,43 @@ class Tokenizer (object):
 		(self.pos_returned,retval) = self.preview [skip_tokens-1]
 		return retval
 
+	tokreq2class = {
+		'{' : 'begin-object',
+		'}' : 'end-object',
+		'[' : 'begin-array',
+		']' : 'end-array',
+		':' : 'name-separator',
+		',' : 'value-separator',
+		'"' : 'string',
+		'f' : 'false',
+		't' : 'true',
+		'n' : 'null',
+		'-' : 'number',
+		'0' : 'number',
+		'1' : 'number',
+		'2' : 'number',
+		'3' : 'number',
+		'4' : 'number',
+		'5' : 'number',
+		'6' : 'number',
+		'7' : 'number',
+		'8' : 'number',
+		'9' : 'number',
+	}
+
+	def require_next (self, requirements):
+		"""Require the next token to start with a given symbol.
+		   This helps to classify the symbol, because this is
+		   usually determined by the first symbol alone.  If
+		   the first character is not listed in requirements,
+		   raise a generic syntax error.
+		"""
+		tok = self.parse_next ()
+		if tok [0] not in requirements:
+			reqset = set ([tokreq2class [r] for r in requirements])
+			reqstr = ','.join (reqset)
+			raise self.syntax_error ('Expected one of %s, got "%s"' % (reqstr,tok))
+
 	def parse_next (self):
 		"""The parse_next() method yields the next (pos,token).
 		   The token is the part of the text that represents
