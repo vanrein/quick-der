@@ -80,7 +80,7 @@ class Tokenizer (object):
 		   a lookahead attempt may store it in the preview
 		   list.
 		"""
-		raise NotImplemented ("Subclasses should override this function")
+		raise NotImplementedError ("Subclasses should override this function")
 
 	def position_string (self, pos):
 		"""Positions as returned by parse_next() are considered
@@ -93,7 +93,7 @@ class Tokenizer (object):
 		   positions.  This works in tandem with string slicing,
 		   which also helps to make the parser efficient.
 		"""
-		raise NotImplemented ("Suclasses should override this function")
+		raise NotImplementedError ("Suclasses should override this function")
 
 	def __iter__ (self):
 		"""Iterator implementation method."""
