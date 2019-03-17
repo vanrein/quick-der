@@ -25,3 +25,7 @@ from .builder import *
 
 # Import the JER support routines
 from .jer import *
+
+# Import the command support routines
+from .commands import *
+
