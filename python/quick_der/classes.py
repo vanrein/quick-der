@@ -140,7 +140,9 @@ class ASN1ConstructedType (ASN1Object):
 			# Field names in Python are always interned
 			subfld = intern (subfld.replace ('-', '_'))
 			self._fields [subfld] = self._offset  # fallback
-			subval = builder.build_asn1 (self._context, subrcp, self._bindata, self._offset)
+			subval = builder.build_asn1 (self._context, subrcp,
+						bindata=self._bindata,
+						ofs=self._offset)
 			if type (subval) == int:
 				# Primitive: Index into _bindata; set in _fields
 				self._fields [subfld] += subval
@@ -304,7 +306,9 @@ class ASN1SequenceOf (ASN1Object, list):
 			subdta = derblob [:hlen + ilen]
 			subcrs = _quickder.der_unpack (subpck, subdta, subnum)
 			# TODO:ALLIDX# subval = builder.build_asn1 (self._context, subrcp, subcrs, allidx)
-			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
+			subval = builder.build_asn1 (self._context, subrcp,
+							bindata=subcrs,
+							ofs=0)
 			self.append (subval)
 			derblob = derblob [hlen + ilen:]
 		self._bindata [self._offset] = self
@@ -314,7 +318,7 @@ class ASN1SequenceOf (ASN1Object, list):
 		   element.
 		"""
 		return primitive.der_prefixhead (DER_PACK_ENTER | DER_TAG_SEQUENCE,
-										self._der_format ())
+		                                 self._der_format ())
 
 	def _jer_parse (self, jertokens, offset):
 		"""Parse JSON tokens for a SEQUENCE OF and construct the
@@ -325,17 +329,20 @@ class ASN1SequenceOf (ASN1Object, list):
 		"""
 		jertokens.require_next ('[')
 		(_SEQOF, allidx, subpck, subnum, subrcp) = recipe
-		self._bindata [offset + allidx] = []
 		# Parse with a loop traversal for each value
 		done = jertokens.lookahead () == ']'
 		while not done:
 			# Build value from subrecipe + jertokens; fresh offset counting
-			TODO_build_subrcp_at_fresh_offset_subrcp_holds_any_further_additions
-			self._bindata [offset + allidx].append (val)
+			subval = builder.build_asn1 (self._context, subrcp,
+							bindata=None,
+							ofs=0)
+			subval._jer_parse (jertokens, 0)
+			self.append (val)
 			# Beyond the value, we see if we should loop around
 			tok = jertokens.require_next (',]')
 			done = (tok == ']')
 		# Parsing done
+		self._bindata [self._offset] = self
 
 	def _der_format (self):
 		"""Format the current ASN1SequenceOf using DER notation,
@@ -388,7 +395,9 @@ class ASN1SetOf (ASN1Object, set):
 			subdta = derblob [:hlen + ilen]
 			subcrs = _quickder.der_unpack (subpck, subdta, subnum)
 			# TODO:ALLIDX# subval = builder.build_asn1 (self._context, subrcp, subcrs, allidx)
-			subval = builder.build_asn1 (self._context, subrcp, subcrs, 0)
+			subval = builder.build_asn1 (self._context, subrcp,
+							bindata=subcrs,
+							ofs=0)
 			self.add (subval)
 			derblob = derblob [hlen + ilen:]
 		self._bindata [self._offset] = self
@@ -398,7 +407,7 @@ class ASN1SetOf (ASN1Object, set):
 		   element.
 		"""
 		return primitive.der_prefixhead (DER_PACK_ENTER | DER_TAG_SET,
-										self._der_format ())
+		                                 self._der_format ())
 
 	def _der_format (self):
 		"""Format the current ASN1SetOf using DER notation,
@@ -424,12 +433,16 @@ class ASN1SetOf (ASN1Object, set):
 		done = jertokens.lookahead () == ']'
 		while not done:
 			# Build value from subrecipe + jertokens; fresh offset counting
-			TODO_build_subrcp_at_fresh_offset_subrcp_holds_any_further_additions
-			self._bindata [offset + allidx].add (val)
+			subval = builder.build_asn1 (self._context, subrcp,
+							bindata=None,
+							ofs=0)
+			subval._jer_parse (jertokens, 0)
+			self.add (subval)
 			# Beyond the value, we see if we should loop around
 			tok = jertokens.require_next (',]')
 			done = (tok == ']')
 		# Parsing done
+		self._bindata [self._offset] = self
 
 	def __str__ (self):
 		entries = ',\n'.join ([str (x) for x in self])
@@ -574,7 +587,8 @@ class ASN1Atom (ASN1Object):
 		"""Return the result of the `der_pack()` operation on this
 		   element.
 		"""
-		return primitive.der_prefixhead (self._der_packer [0], self._der_format ())
+		return primitive.der_prefixhead (self._der_packer [0],
+		                                 self._der_format ())
 
 	def _der_format (self):
 		"""Format the current ASN1Atom using DER notation,
@@ -645,12 +659,15 @@ class ASN1BitString (ASN1Atom):
 	}
 
 	def test (self, bit):
+		#TODO# This does not seem to work?!?
 		return bit in self._bindata [self._offset]
 
 	def set (self, bit):
+		#TODO# This does not seem to work?!?
 		self._bindata [self._offset].add (bit)
 
 	def clear (self, bit):
+		#TODO# This does not seem to work?!?
 		self._bindata [self._offset].remove (bit)
 
 	def _der_format (self):
@@ -667,7 +684,7 @@ class ASN1BitString (ASN1Atom):
 		"""
 		jertokens.require_next ('{')
 		out = { 'value': None, 'length': None }
-		req = { 'value': '"', 'length': '123456789' }
+		req = { 'value': '"', 'length': '0123456789' }
 		while True:
 			# Accept one of the attributes (in any order)
 			attr = jertokens.parse_next ()

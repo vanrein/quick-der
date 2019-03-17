@@ -65,13 +65,14 @@ class Tokenizer (object):
 		(self.pos_returned,retval) = self.preview [skip_tokens-1]
 		return retval
 
-	def insert_tokens (self, tokenlist=[]):
-		"""Insert tokens to be parsed immediately upcoming.
-		   This distorts any image that lookahead() may have
-		   provided.
+	def insert_positioned_tokens (self, postoklist=[]):
+		"""Insert (pos,token) pairs to be parsed immediately upcoming.
+		   This distorts any image that lookahead() may have provided.
+		   The positions should be meaningful to this Tokenizer instance
+		   and are usually obtained by a call to position_returned()
+		   after the token that is being inserted.
 		"""
-		tok_pos = [ (tok,None) for tok in tokenlist ]
-		self.preview = tok_pos + self.preview
+		self.preview = postoklist + self.preview
 
 	tokreq2class = {
 		'{' : 'begin-object',
@@ -143,6 +144,12 @@ class Tokenizer (object):
 		   list.
 		"""
 		raise NotImplementedError ("Subclasses should override this function")
+
+	def position_returned (self):
+		"""Return the position that goes with the last returned
+		   token.
+		"""
+		return self.pos_returned
 
 	def position_string (self, pos):
 		"""Positions as returned by parse_next() are considered
@@ -235,14 +242,15 @@ class SubTokenizer (Tokenizer):
 		bra_ket = 0
 		clx = []
 		for tok in outer_tokenizer:
-			clx.append (tok)
+			pos = self.position_returned ()
+			clx.append ( (pos,tok) )
 			if tok in '[{':
 				bra_ket += 1
 			if tok in ']}':
 				bra_ket -= 1
 			if bra_key == 0:
 				break
-		self.insert_tokens (clx)
+		self.insert_positioned_tokens (clx)
 
 	def position_string (self, pos):
 		return self.outer.position_string (pos)
