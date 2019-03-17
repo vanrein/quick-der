@@ -58,12 +58,12 @@ DER_TAG_BMPSTRING = 0x1e
 
 
 def DER_TAG_APPLICATION(n):
-    return 0x40 | n
+	return 0x40 | n
 
 
 def DER_TAG_CONTEXT(n):
-    return 0x80 | n
+	return 0x80 | n
 
 
 def DER_TAG_PRIVATE(n):
-    return 0xc0 | n
+	return 0xc0 | n

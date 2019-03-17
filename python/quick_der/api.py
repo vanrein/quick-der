@@ -1,4 +1,5 @@
 # api.py represents the general access point to quick_der
+# it does not include the various specifications, though
 
 
 # We need three methods with Python wrapping in C plugin module _quickder:
@@ -22,3 +23,5 @@ from .classes import *
 # Import the build_asn1() routine
 from .builder import *
 
+# Import the JER support routines
+from .jer import *

@@ -74,6 +74,22 @@ def jer_parse_STRING (jerstr):
 		return jerstr [1:-1]
 
 
+def jer_format_HEXSTRING (binstrval):
+	return binstrval.encoder ('hex')
+
+
+def jer_parse_HEXSTRING (jerstr):
+	return jerstr.decode ('hex')
+
+
+def jer_format_BASE64STRING (binstrval):
+	return binstrval.encode ('base64').replace ('\n', '')
+
+
+def jer_parse_BASE64STRING (jerstr):
+	return jerstr.decode ('base64')
+
+
 def der_format_OID (oidstr, hdr=False):
 	oidvals = list (map (int, oidstr.split ('.')))
 	oidvals[1] += 40 * oidvals[0]
