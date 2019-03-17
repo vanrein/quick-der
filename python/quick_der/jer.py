@@ -22,7 +22,7 @@ class Tokenizer (object):
 		self.eof = False
 		self.pos_returned = None
 
-	def syntax_error (self, msg, pos=None, lookahead=0):
+	def stxerr (self, msg, pos=None, lookahead=0):
 		"""Raise a syntax error exception.  Use as much from
 		   the context, notably positions, as possible.  This
 		   can be provided in part by subclasses.
@@ -31,7 +31,7 @@ class Tokenizer (object):
 		   has no other impact on the iterator or parsing
 		   process, so you hould use it like this:
 
-			raise it.syntax_error ("Out of breath")
+			raise it.stxerr ("Out of breath")
 
 		   A position may be supplied to the code; if not,
 		   lookahead_tokens indicates any lookahead or 0
@@ -65,6 +65,14 @@ class Tokenizer (object):
 		(self.pos_returned,retval) = self.preview [skip_tokens-1]
 		return retval
 
+	def insert_tokens (self, tokenlist=[]):
+		"""Insert tokens to be parsed immediately upcoming.
+		   This distorts any image that lookahead() may have
+		   provided.
+		"""
+		tok_pos = [ (tok,None) for tok in tokenlist ]
+		self.preview = tok_pos + self.preview
+
 	tokreq2class = {
 		'{' : 'begin-object',
 		'}' : 'end-object',
@@ -89,18 +97,35 @@ class Tokenizer (object):
 		'9' : 'number',
 	}
 
-	def require_next (self, requirements):
+	def require_next (self, requirements, optional=False):
 		"""Require the next token to start with a given symbol.
 		   This helps to classify the symbol, because this is
 		   usually determined by the first symbol alone.  If
 		   the first character is not listed in requirements,
-		   raise a generic syntax error.
+		   report an error.
+
+		   When optional is False, an error raises a generic
+		   syntax error; when optional is True, None will
+		   instead be returned.
+
+		   The anticipated use of this function is to validate
+		   markers that occur in the syntax, as well as to
+		   constrain the classes of tokens returned.  Inasfar
+		   as a failure is found in the very first symbol of
+		   a structure, and when that structure is marked as
+		   OPTIONAL or with a DEFAULT, the parser can leave
+		   the attempted parsing procedure.  Once parsing has
+		   begun, this would no longer be an option.
+		   TODO: Does JSON need more lookahead?
 		"""
 		tok = self.parse_next ()
 		if tok [0] not in requirements:
 			reqset = set ([tokreq2class [r] for r in requirements])
 			reqstr = ','.join (reqset)
-			raise self.syntax_error ('Expected one of %s, got "%s"' % (reqstr,tok))
+			if optional:
+				return None
+			raise self.stxerr ('Expected one of %s, got "%s"' % (reqstr,tok))
+		return tok
 
 	def parse_next (self):
 		"""The parse_next() method yields the next (pos,token).
@@ -186,14 +211,43 @@ class StringTokenizer (Tokenizer):
 				break
 			self.pos += 1
 		if self.pos == len (self.jsonstr):
-			# Signel end of file
+			# Signal end of file
 			return (self.pos,None)
 		cur = self.re_token.match (self.jsonstr, self.pos)
 		if cur is None:
-			raise self.syntax_error ('Unknown symbol', pos=self.pos)
+			raise self.stxerr ('Unknown symbol', pos=self.pos)
 		token = cur.group ()
 		retval = ( self.pos, token )
 		self.pos += len (token)
 		return retval
+
+
+class SubTokenizer (Tokenizer):
+	"""Extract one JSON value from another Tokenizer, and keep
+	   it stored locally.  At a later time, this value can be
+	   parsed like a normal Tokenizer.  This is anticipated to
+	   be useful for skipping values whose type may not be known
+	   immediately.
+	"""
+	def __init__ (self, outer_tokenizer):
+		self.outer = outer_tokenizer
+		Tokenizer.__init__ (self)
+		bra_ket = 0
+		clx = []
+		for tok in outer_tokenizer:
+			clx.append (tok)
+			if tok in '[{':
+				bra_ket += 1
+			if tok in ']}':
+				bra_ket -= 1
+			if bra_key == 0:
+				break
+		self.insert_tokens (clx)
+
+	def position_string (self, pos):
+		return self.outer.position_string (pos)
+
+	def parse_next (self):
+		return (-1,None)
 
 

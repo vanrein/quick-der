@@ -239,7 +239,7 @@ class ASN1ConstructedType (ASN1Object):
 			tok = jertokens.require_next ('"')
 			fld = primitive.jer_parse_STRING (tok)
 			if not nmidx.has_key (fld):
-				raise jertokens.syntax_error ('Unknown field name "%s"' % (fld,))
+				raise jertokens.stxerr ('Unknown field name "%s"' % (fld,))
 			tok = jertokens.require_next (':')
 			# Build field from subrecipe + jertokens; same object -> same offset
 			subrcp = nmidx [tok]
@@ -632,12 +632,17 @@ class ASN1Integer (ASN1Atom):
 		"""Parse a JER token for an INTEGER"""
 		tok = jertokens.require_next ('-0123456789')
 		if '.' in tok or 'e' in tok or 'E' in tok:
-			raise jertokens.syntax_error ('Not an integer value: "%s"' % (tok,))
+			raise jertokens.stxerr ('Not an integer value: "%s"' % (tok,))
 		self._bindata [offset] = primitive.jer_parse_INTEGER (tok)
 
 
 class ASN1BitString (ASN1Atom):
 	_der_packer = chr(DER_PACK_STORE | DER_TAG_BITSTRING) + chr(DER_PACK_END)
+
+	_re_jer = {
+		'length': re.compile ('^[1-9][0-9]*$'),
+		'value':  re.compile ('^([0-9a-fA-F][0-9a-fA-F])*$')
+	}
 
 	def test (self, bit):
 		return bit in self._bindata [self._offset]
@@ -650,6 +655,42 @@ class ASN1BitString (ASN1Atom):
 
 	def _der_format (self):
 		return primitive.der_format_BITSTRING (self.get ())
+
+	def _jer_parse (self, jertokens, offset):
+		"""Parse a JER value for a BITSTRING.  Since size constraints
+		   are not incorporated, we always treat a BITSTRING as a
+		   variable-sized struct.  This is represented in an object
+		   with a "value" and "length" member; the former holding a
+		   HEX encoding for the bytes expressing each bit; the latter
+		   holding the number of bits.  There may be up to 7 extra
+		   bits, which must all be zero.
+		"""
+		jertokens.require_next ('{')
+		out = { 'value': None, 'length': None }
+		req = { 'value': '"', 'length': '123456789' }
+		while True:
+			# Accept one of the attributes (in any order)
+			attr = jertokens.parse_next ()
+			if not out.has_key (attr):
+				raise jertokens.stxerr ('BITSTRING holds only "value" and "length"')
+			if out [attr] is not None:
+				raise jertokens.stxerr ('BITSTRING only needs one "%s"' % (attr,))
+			# Skip ahead to the value
+			jertokens.require_next (':')
+			val = jertokens.require_next (req [attr])
+			if ASN1BitString._re_jer [attr].match (val) is None:
+				raise jertokens.stxerr ('BITSTRING "value" or "length" is invalid')
+			out [attr] = val
+			# End the loop or go for another round
+			if None not in out.values ():
+				break
+			jertokens.require_next (',')
+		jertokens.require_next ('}')
+		numbits = int (out ['length'])
+		if numbits != 8 * len (out ['value']):
+			# BIT STRINGS are only supported with multiple-of-8 bit counts
+			raise jertokens.stxerr ('BITSTRING length seems off')
+		self._bindata [offser] = out ['value'].decode ('hex')
 
 
 class ASN1OctetString (ASN1Atom):
@@ -691,7 +732,7 @@ class ASN1OID (ASN1Atom):
 		"""Parse a JER token for an OID"""
 		tok = jertokens.require_next ('"')
 		if ASN1OID._re_jer.match (tok) is None:
-			raise jertokens.syntax_error ('Not an OID: %s' % (tok,))
+			raise jertokens.stxerr ('Not an OID: %s' % (tok,))
 		_bindata [offset] = primitive.jer_parse_OID (tok)
 
 
@@ -706,7 +747,7 @@ class ASN1Real (ASN1Atom):
 		"""Parse a JER token for a REAL"""
 		tok = jertokens.require_next ('-0123456789"')
 		if ASN1Real._re_jer.match (tok) is None:
-			raise jertokens.syntax_error ('Not a REALM: %s' % (tok,))
+			raise jertokens.stxerr ('Not a REALM: %s' % (tok,))
 		_bindata [offset] = primitive.jer_parse_REAL (tok)
 
 
@@ -959,6 +1000,7 @@ class ASN1Any (ASN1Atom):
 
 	_der_packer = chr(DER_PACK_ANY) + chr(DER_PACK_END)
 	_class = None
+	_jer_tokens = None
 
 	def set (self, val):
 		"""You cannot set the value of an ANY type object.  You may
@@ -981,11 +1023,25 @@ class ASN1Any (ASN1Atom):
 		self._value = cls (recipe=cls._recipe,
 		                   der_packer=cls._der_packer,
 		                   derblob=self._bindata [self._offset],
+		                   jertokens=_jer_tokens,
 		                   offset=0,
 		                   context=cls._context)
 
 	def der_pack (self):
 		from quick_der import format
 		return format.der_pack (self._value, cls=self._class)
+
+	def _jer_parse (self, jertokens, offset):
+		"""JER tokens for ANY cannot be processed before the
+		   class has been set with set_class().  However, what
+		   we can assume is that a single value will be parsed
+		   later on, and that we can store that one token for
+		   future use.  Of course, if the class has been set,
+		   processing can commence immediately.
+		"""
+		if self._class is None:
+			self._jer_tokens = jer.SubTokenizer (jertokens)
+		else:
+			self._value._jer_parse (jertokens, 0)
 
 
