@@ -105,6 +105,10 @@ class Tokenizer (object):
 		   the first character is not listed in requirements,
 		   report an error.
 
+		   When requirements is set to None, anything will be
+		   accepted; in that case, require_next() behaves just
+		   like parse_next().
+
 		   When optional is False, an error raises a generic
 		   syntax error; when optional is True, None will
 		   instead be returned.
@@ -120,7 +124,7 @@ class Tokenizer (object):
 		   TODO: Does JSON need more lookahead?
 		"""
 		tok = self.parse_next ()
-		if tok [0] not in requirements:
+		if requirements is not None and tok [0] not in requirements:
 			reqset = set ([tokreq2class [r] for r in requirements])
 			reqstr = ','.join (reqset)
 			if optional:
