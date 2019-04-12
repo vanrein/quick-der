@@ -8,6 +8,10 @@
  * header by updating both its derptr and derlen components.  This function
  * returns 0 on success, or -1 on error (in which case it sets errno).
  *
+ * It is not an error if crs->derlen spans less than *lenp + *hlenp; the
+ * caller should check this condition.  It is an error if the crs->derlen
+ * spans less than the DER header, so *lenp.
+ *
  * For BIT STRINGS, this routine validates that remainder bits are cleared.
  * Note that this is a difference between BER and DER; DER requires that
  * the bits are 0 whereas BER welcomes arbitrary values.  In the interest
@@ -70,10 +74,13 @@ int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
 		errno = ERANGE;
 		return -1;
 	}
+#if 0
+/* Do not require the entire message yet */
 	if (len > crs->derlen) {
 		errno = EBADMSG;
 		return -1;
 	}
+#endif
 	// Special treatment for BIT STRING (one additional header byte)
 	if (tag == DER_TAG_BITSTRING) {
 		rembits = *crs->derptr;
