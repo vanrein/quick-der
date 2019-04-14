@@ -125,8 +125,8 @@ class QuickDER2c(QuickDERgeneric):
         self.writeln(' */')
         self.writeln()
         self.writeln()
-        self.writeln('#ifndef QUICK_DER_' + self.unit + '_H')
-        self.writeln('#define QUICK_DER_' + self.unit + '_H')
+        self.writeln('#ifndef QUICK_DER_' + tosym (self.unit) + '_H')
+        self.writeln('#define QUICK_DER_' + tosym (self.unit) + '_H')
         self.writeln()
         self.writeln()
         self.writeln('#include <quick-der/api.h>')
@@ -171,7 +171,7 @@ class QuickDER2c(QuickDERgeneric):
     def generate_tail(self):
         self.writeln()
         self.writeln()
-        self.writeln('#endif /* QUICK_DER_' + self.unit + '_H */')
+        self.writeln('#endif /* QUICK_DER_' + tosym (self.unit) + '_H */')
         self.writeln()
         self.writeln()
         self.writeln('/* asn2quickder output for ' + self.semamod.name + ' ends here */')
@@ -221,7 +221,7 @@ class QuickDER2c(QuickDERgeneric):
         # OLD:TEST:TODO# mod = node.module_ref or self.unit
         mod = self.unit
         self.comma()
-        self.writeln('const struct der_subparser_action DER_PSUB_' + mod + '_' + tp + fld + ' [] = { \\')
+        self.writeln('const struct der_subparser_action DER_PSUB_' + tosym (mod) + '_' + tp + fld + ' [] = { \\')
         for (idx, esz, pck, sub) in subquads:
             self.writeln('\t\t{ ' + str(idx) + ', \\')
             self.writeln('\t\t  ' + str(esz) + ', \\')
@@ -271,29 +271,29 @@ class QuickDER2c(QuickDERgeneric):
         self.to_be_overlaid = [(tosym(node.type_name), node.type_decl)]
         while len(self.to_be_overlaid) > 0:
             (tname, tdecl) = self.to_be_overlaid.pop(0)
-            key = (self.unit, tname)
+            key = (tosym (self.unit), tname)
             if key not in self.issued_typedefs:
                 self.issued_typedefs[key] = str(tdecl)
                 self.write('typedef ')
                 self.generate_overlay_node(tdecl, tname, '0')
-                self.writeln(' DER_OVLY_' + self.unit + '_' + tname + ';')
+                self.writeln(' DER_OVLY_' + tosym (self.unit) + '_' + tname + ';')
                 self.writeln()
             else:
                 if self.issued_typedefs[key] != str(tdecl):
                     raise TypeError("Redefinition of type %s." % key[1])
         for tbd in self.to_be_defined:
-            if tbd != 'DER_OVLY_' + self.unit + '_' + tosym(node.type_name) + '_0':
+            if tbd != 'DER_OVLY_' + tosym (self.unit) + '_' + tosym(node.type_name) + '_0':
                 self.writeln('typedef struct ' + tbd + ' ' + tbd + ';')
         self.writeln()
 
     def packTypeAssignment(self, node, implicit=False):
         # TODO# Would be nicer to have DER_PACK_ backref to DER_PIMP_
-        self.write('#define DER_PIMP_' + self.unit + '_' + tosym(node.type_name) + '(implicit_tag)')
+        self.write('#define DER_PIMP_' + tosym (self.unit) + '_' + tosym(node.type_name) + '(implicit_tag)')
         self.newcomma(', \\\n\t', ' \\\n\t')
         self.generate_pack_node(node.type_decl, implicit=False, outer_tag='implicit_tag')
         self.writeln()
         self.writeln()
-        self.write('#define DER_PACK_' + self.unit + '_' + tosym(node.type_name))
+        self.write('#define DER_PACK_' + tosym (self.unit) + '_' + tosym(node.type_name))
         self.newcomma(', \\\n\t', ' \\\n\t')
         self.generate_pack_node(node.type_decl, implicit=False)
         self.writeln()
@@ -301,7 +301,7 @@ class QuickDER2c(QuickDERgeneric):
 
     def psubTypeAssignment(self, node, tp, fld, prim):
         # In lieu of typing context, fld is None; tp probably is too
-        self.newcomma('; \\\n\t', '#define DEFINE_DER_PSUB_' + self.unit + '_' + tosym(node.type_name) + ' \\\n\t')
+        self.newcomma('; \\\n\t', '#define DEFINE_DER_PSUB_' + tosym (self.unit) + '_' + tosym(node.type_name) + ' \\\n\t')
         tp = tosym(node.type_name)
         subquads = self.generate_psub_node(node.type_decl, tp, '0', prim)
         dprint('SUBTRIPLES =', subquads)
@@ -427,9 +427,9 @@ class QuickDER2c(QuickDERgeneric):
                 fld = ''
             else:
                 fld = '_' + fld
-            self.writeln('struct DER_OVLY_' + self.unit + '_' + tp + fld + ' {')
+            self.writeln('struct DER_OVLY_' + tosym (self.unit) + '_' + tp + fld + ' {')
             if fld:
-                self.to_be_defined.append('DER_OVLY_' + self.unit + '_' + tp + fld)
+                self.to_be_defined.append('DER_OVLY_' + tosym (self.unit) + '_' + tp + fld)
         for comp in node.components:
             if isinstance(comp, ExtensionMarker):
                 self.writeln('\t/* ...ASN.1 extensions... */')
@@ -472,7 +472,7 @@ class QuickDER2c(QuickDERgeneric):
                 # TODO:TEST# if subfld != '0':
                 # TODO:TEST# if subfld:
             if subfld != '0':
-                ofs = 'DER_OFFSET (' + self.unit + ',' + subtp + ',' + subfld + ')'
+                ofs = 'DER_OFFSET (' + tosym (self.unit) + ',' + subtp + ',' + subfld + ')'
             else:
                 ofs = '0'
             for (idx, esz, pck, psb) in subquads:
@@ -585,7 +585,7 @@ class QuickDER2c(QuickDERgeneric):
             # 1. produce derwalk for the nested field
             dprint('FIRST STEP OF psubRepeatingStructureType()')
             self.comma()
-            self.write('const derwalk DER_PACK_' + self.unit + '_' + tp + ('_' + fld if fld else '') + ' [] = {')
+            self.write('const derwalk DER_PACK_' + tosym (self.unit) + '_' + tp + ('_' + fld if fld else '') + ' [] = {')
             surround_comma = self.getcomma()
             self.newcomma(', \\\n\t\t', ' \\\n\t\t')
             self.generate_pack_node(elem_type, implicit=False)
@@ -603,9 +603,9 @@ class QuickDER2c(QuickDERgeneric):
             pass  # TODO:DEBUG# print 'FIRST,SECOND,THIRD STEP OF psubRepeatingStructureType() SKIPPED: SECONDARY'
             # 4. return a fresh triple structure defining this repeating field
             dprint('FOURTH STEP OF psubRepeatingStructureType()')
-        nam = self.unit + '_' + tp
+        nam = tosym (self.unit) + '_' + tp
         idx = '0'
-        esz = 'DER_ELEMSZ (' + self.unit + ',' + tp + ',' + (fld or '') + ')'
+        esz = 'DER_ELEMSZ (' + tosym (self.unit) + ',' + tp + ',' + (fld or '') + ')'
         if fld:
             fld = '_' + fld
         else:
