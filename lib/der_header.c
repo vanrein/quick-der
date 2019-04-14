@@ -2,6 +2,8 @@
 
 #include <errno.h>
 
+#include "qd-int.h"
+
 
 /* Analyse the header of a DER structure.  Pass back its tag, len and the
  * total header length.  Analysis starts at crs, which will move past the

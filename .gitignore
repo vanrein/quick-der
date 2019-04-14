@@ -13,3 +13,6 @@ dist/
 .cache/
 .eggs/
 
+lib/
+*.o
+

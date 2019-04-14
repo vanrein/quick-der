@@ -1,5 +1,7 @@
 #include <quick-der/api.h>
 
+#include "qd-int.h"
+
 
 /* Backward-insert the bytes for the individual entries of the given derprep
  * structure; the entry is assumed to be setup with prepack, and so to contain

@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "qd-int.h"
+
 const char usage[] = "Usage: ldapsearch.test <filename>\nReads filename and uses Quick-DER to dump the LDAP message inside.\n";
 
 /* Reads a given @p filename and returns a freshly-allocated buffer

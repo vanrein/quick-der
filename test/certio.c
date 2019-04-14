@@ -8,6 +8,8 @@
 
 #include <quick-der/api.h>
 
+#include "qd-int.h"
+
 
 // Certificate  ::=  SEQUENCE  {
 // 	tbsCertificate       TBSCertificate,
