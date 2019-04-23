@@ -129,7 +129,7 @@ class QuickDER2c(QuickDERgeneric):
         self.writeln('#define QUICK_DER_' + tosym (self.unit) + '_H')
         self.writeln()
         self.writeln()
-        self.writeln('#include <quick-der/api.h>')
+        self.writeln('#include <arpa2/quick-der.h>')
         self.writeln()
         self.writeln()
         closer = ''

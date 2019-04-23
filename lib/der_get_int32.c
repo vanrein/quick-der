@@ -12,7 +12,7 @@
  *     SPDX short identifier: BSD-2-Clause
  */
 
-#include <quick-der/api.h>
+#include <arpa2/quick-der.h>
 
 /* Extract an int from a cursor. Based heavily on tlspool's qder2b_unpack_int32. */
 

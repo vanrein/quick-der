@@ -22,7 +22,7 @@ The walk path is described as a sequence of values that ends in `DER_WALK_END`.
 Here, `path_demo` is such a sequence. It is declared `static const` so that it
 may be placed in read-only memory, but that is not required.
 
-    #include <quick-der/api.h>
+    #include <arpa2/quick-der.h>
 
     static const derwalk path_demo [] = {
             ...,

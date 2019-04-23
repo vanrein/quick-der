@@ -26,7 +26,7 @@ with `DER_PACK_END`. Here, `path_demo` is such a sequence. It is
 declared `static const` so that it may be placed in read-only memory,
 but that is not required.
 
-    #include <quick-der/api.h>
+    #include <arpa2/quick-der.h>
 
     static const derwalk path_demo [] = {
             ...,
@@ -249,7 +249,7 @@ for distribution in the developer version of Quick and Easy DER.
 
 These things combined enable you to specify things like
 
-    #include <quick-der/api.h>
+    #include <arpa2/quick-der.h>
     #include <quick-der/rfc5280.h>
 
     typedef DER_OVLY_rfc5280_Certificate Certificate;

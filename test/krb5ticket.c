@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 
-#include <quick-der/api.h>
+#include <arpa2/quick-der.h>
 
 #include "qd-int.h"
 

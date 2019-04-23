@@ -1,6 +1,6 @@
 // Combine all the .c parts into one file
 
-#include <quick-der/api.h>
+#include <arpa2/quick-der.h>
 
 /* INLINE FUNCTION #include "der_isconstructed.c" */
 /* INLINE FUNCTION #include "der_isprimitive.c"   */

@@ -32,7 +32,7 @@
 
 #include <Python.h>
 
-#include <quick-der/api.h>
+#include <arpa2/quick-der.h>
 
 
 /* _quickder.der_unpack (pck, bin, numcursori) -> cursori */

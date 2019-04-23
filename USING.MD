@@ -6,7 +6,7 @@
 > BER) encoded ASN.1 data really quickly.  It also aims to makes quick parsers,
 > by using shared data structures whenever possible.*
 
-The low-level API for Quick DER is documented in `quick-der/api.h`, the
+The low-level API for Quick DER is documented in `arpa2/quick-der.h`, the
 header that is installed with the library. The document here describes
 general usage patterns and how to process your own ASN.1 definitions
 for your own projects.
@@ -133,7 +133,7 @@ Your source code dealing with DER should read the entire block, and pass it to
 the DER parser.  Initially, `myspecparser.c` would include the
 Quick DER and myspec headers:
 
-    #include <quick-der/api.h>  /* low-level Quick DER API */
+    #include <arpa2/quick-der.h>  /* low-level Quick DER API */
     #include "myspec.h"         /* high-level API for myspec */
 
 and building should include:
@@ -163,7 +163,7 @@ development packages of Quick DER!)  Specifications that have been included
 with the library can be used simply by including the appropriate header
 (e.g. for certificates from RFC 5280):
 
-    #include <quick-der/api.h>
+    #include <arpa2/quick-der.h>
     #include <quick-der/rfc5280.h>
 
 
@@ -176,7 +176,7 @@ with the library can be used simply by including the appropriate header
 Since Kerberos structures are defined (in the default configuration) of
 a Quick DER installation, the header file can simply be included:
 
-    #include <quick-der/api.h>
+    #include <arpa2/quick-der.h>
     #include <quick-der/rfc5280.h>
 
 Before you get to parse DER-encoded structures that match the ASN.1 syntax,

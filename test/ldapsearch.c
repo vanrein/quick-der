@@ -21,7 +21,7 @@
 
 /* Since we're dealing with LDAP, defined in RFC4211, use that header. */
 #include <quick-der/rfc4511.h>
-#include <quick-der/api.h>
+#include <arpa2/quick-der.h>
 
 #include <fcntl.h>
 #include <stdio.h>
