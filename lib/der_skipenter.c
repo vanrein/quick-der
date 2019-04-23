@@ -9,13 +9,13 @@ int der_skip (dercursor *crs) {
 	uint8_t tag;
 	uint8_t hlen;
 	size_t len;
-	if (der_header (crs, &tag, &len, &hlen)) {
+	if (der_header2 (*crs, &tag, &len, &hlen)) {
 		crs->derptr = NULL;
 		crs->derlen = 0;
 		return -1;
 	} else {
-		crs->derptr += len;
-		crs->derlen -= len;
+		crs->derptr += hlen + len;
+		crs->derlen -= hlen + len;
 		return 0;
 	}
 }
@@ -59,8 +59,7 @@ int der_focus (dercursor *crs) {
 	uint8_t tag;
 	uint8_t hlen;
 	size_t len;
-	dercursor crs2 = *crs;
-	if (der_header2 (crs2, &tag, &len, &hlen)) {
+	if (der_header2 (*crs, &tag, &len, &hlen)) {
 		crs->derptr = NULL;
 		crs->derlen = 0;
 		return -1;
