@@ -411,8 +411,15 @@ static inline int der_isnull (const dercursor *crs) {
  * data, this routine rejects non-zero remainder bits with an error.  For
  * your program, this may mean that the number of remainder bits do not
  * need to be checked if zero bits are acceptable without overflow risk.
+ *
+ * der_header() modifies the derlen/derptr of crs, der_header2() does not.
  */
 int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp);
+
+static inline int der_header2 (dercursor crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
+	// Note: crs is a stack copy and so it will not change
+	return der_header (&crs, tagp, lenp, hlenp);
+}
 
 
 /* Update a cursor expression by walking into a DER-encoded ASN.1 structure.
