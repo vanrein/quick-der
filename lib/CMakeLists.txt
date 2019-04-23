@@ -48,3 +48,6 @@ install (TARGETS quickderStatic
 install (DIRECTORY ../include/quick-der
 	DESTINATION include
 	FILES_MATCHING PATTERN "*.h")
+install (DIRECTORY ../include/arpa2
+	DESTINATION include
+	FILES_MATCHING PATTERN "*.h")
