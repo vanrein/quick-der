@@ -24,6 +24,7 @@ set(quickder_SRC
 	der_get_bool.c
 	der_put_bool.c
 	der_cmp.c
+	der_cmp_int.c
 )
 
 add_library (quickderShared SHARED ${quickder_SRC})

@@ -13,6 +13,14 @@ add_test(certio-c-test
 add_test(certio-py-test
 	 ${_python_test} ${CMAKE_CURRENT_SOURCE_DIR}/certio.py ${CMAKE_CURRENT_SOURCE_DIR}/verisign.der)
 
+# Test der_cmp_int()
+add_executable (cmp-int.test
+		test_cmp_int.c)
+target_link_libraries (cmp-int.test
+	quickderStatic)
+add_test (cmp-int-test
+	cmp-int.test)
+
 # Test construction of an empty instance
 add_test(empty-py-test
 	${_python_test} ${CMAKE_CURRENT_SOURCE_DIR}/empty-instance.py)
