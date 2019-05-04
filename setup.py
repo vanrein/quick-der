@@ -25,7 +25,7 @@ asn2cmd = [ executable, path.join (here, 'python', 'scripts', 'asn2quickder'), '
 for asn1dir in ['rfc', 'itu', 'arpa2']:
 	asn2cmd.append ('-I')
 	asn2cmd.append (path.join (here, asn1dir))
-	cmf = open (path.join (asn1dir, 'CMakeLists.txt')).read ()
+	cmf = open (path.join (here, asn1dir, 'CMakeLists.txt')).read ()
 	comment_re = re_compile ('#[^\n]*\n')
 	cmf2 = '\n'.join (comment_re.split (cmf))
 	for mtch in add1_open_re.split (cmf2) [1:]:
@@ -50,7 +50,7 @@ extension = Extension(name='_quickder',
                       )
 
 setup(
-    scripts=['python/scripts/asn1literate', 'python/scripts/asn2quickder'],
+    scripts=[path.join (here, 'python', 'scripts', 'asn1literate'), path.join (here, 'python', 'scripts', 'asn2quickder')],
     name='quick_der',
     author='Rick van Rein',
     author_email='rick@openfortress.nl',
@@ -61,17 +61,18 @@ setup(
     url='https://github.com/vanrein/quick-der',
     version='1.2.2',
     ext_modules=[extension],
-    packages=find_packages(where='python'),
+    packages=['quick_der', 'quick_der.generators'],
     package_dir={
-        'quick_der': path.join (here, 'python', 'quick_der'),
-        'tests': path.join (here, 'python', 'tests'),
+        'quick_der'           : path.join (here, 'python', 'quick_der'              ),
+	'quick_der.generators': path.join (here, 'python', 'quick_der', 'generators'),
+        # 'quick_der.tests': path.join (here, 'python', 'tests'),
     },
     install_requires=[
         'six',
         'asn1ate>=0.6.0',
     ],
-    setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
-    test_suite='tests',
+    # setup_requires=['pytest-runner'],
+    # tests_require=['pytest'],
+    # test_suite='tests',
 )
 
