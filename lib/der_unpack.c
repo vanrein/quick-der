@@ -78,7 +78,7 @@ DPRINTF ("DEBUG: Encountered OPTIONAL\n");
 			// Parse for a choice, leaving the OPTIONAL flag as is
 DPRINTF ("DEBUG: Encountered CHOICE\n");
 			if (choice) {
-				// Nested CHOCIE, that can't be good
+				// Nested CHOICE, that can't be good
 				errno = EBADMSG;
 				return NULL;
 			}

@@ -28,7 +28,6 @@ int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
 	uint8_t rembits;
 	uint8_t rembyte;
 	size_t len;
-	*tagp = tag = *crs->derptr++;
 	if (crs->derlen == 0) {
 		*tagp = DER_PACK_LEAVE;
 		*lenp = 0;
@@ -38,6 +37,7 @@ int der_header (dercursor *crs, uint8_t *tagp, size_t *lenp, uint8_t *hlenp) {
 		errno = EBADMSG;
 		return -1;
 	}
+	*tagp = tag = *crs->derptr++;
 	crs->derlen--;
 	if ((tag & 0x1f) == 0x1f) {
 		// No support for long tags

@@ -1,62 +1,90 @@
 -- # Impromptu Realm Crossover for Kerberos (KXOVER)
 --
 -- > *We sometimes want to connect KDCs that are hitherto unknown, for instance
--- > because they are randomly operated realms on the Internet, and a user in one
--- > realm wants to approach a service managed in another.  To do this, we need
--- > an exchange called KXOVER below.*
+-- > because they are independently operated realms on the Internet, and a user
+-- > in one realm wants to approach a service managed in another.  To do this,
+-- > we need an exchange called KXOVER below.*
 
 -- The KXOVER or `KX` exchange consists of a `KX-REQ` request message and a
--- `KX-REP` reply message.  In each, there is a certificate-based signature
--- over an ECDH public key offer.  These offers combine to form a shared key
--- that serves as a realm crossover key to be stored on each end with an
--- identity like `krbtgt/SERVICE.REALM@CLIENT.REALM`, where the `SERVICE.REALM`
--- and `CLIENT.REALM` are taken from the exchange.
+-- `KX-REP` reply message.  This exchange establishes an intention to setup
+-- a key for realm crossover, with a limited life time and validation based
+-- on certificates, exchanged through an underlying TLS connection and validated
+-- through DNSSEC/DANE and, possibly, LDAP.
+
+-- The primary use case of KXOVER is for use from a client KDC to a service KDC.
+-- In this use case, the identities will take the general crossover form of
+-- `krbtgt/SERVICE.REALM@CLIENT.REALM` with `name-type` set to `NT-SRV-INST`.
+-- Based on a crossover key established between KDCs, the client KDC can send
+-- a constructive response to the client, telling it to follow a crossover
+-- ticket and try elsewhere.  Most clients do this already, as part of the
+-- canonicalization process.  The client KDC must be able to recognise where
+-- to send a client request, and should therefore look for a DNSSEC-protected
+-- _kerberos TXT record under the service hostname to find the target realm
+-- in the first string of that TXT record.
+
+-- A secondary use of KXOVER could be from a client directly to a KDC, in
+-- which case more forms for the PrincipalName are possible.  The client
+-- would need to know where to go, possibly using the same _kerberos TXT
+-- records with DNSSEC protection that the KDC would investigate.  At the
+-- expense of more complicated client code, there is a benefit of not
+-- having the client KDC in the loop, able to decrypt the traffic to the
+-- targeted service.
+-- TODO: How to know if a realm would welcome that?  Use the 2nd TXT string?
+
+-- A third use of KXOVER could be to get a ticket for the client's own realm.
+-- This would effectively be an alternative to PKINIT, founded on a different
+-- cryptographic basis.  Whether this is better would be a local choice in
+-- the client realm.
 
 
--- ## Modified KDC request/response messages
+-- ## KDC request/response messages
 
--- We have created a proof-of-concept for Impromptu Realm Crossover based on an
--- `AS` exchange with PKINIT between KDCs.  We found a few problems with this,
--- which is the reason that we are proposing an alternative KXOVER exchange
--- below:
---
---   * The messages almost the same as for key agreement.  Specifically,
---     the `AS-REP` message must contains a `ticket` and an `enc-part` which
---     are meaningless when establishing a crossover key between KDCs.
---
---   * Overloading of existing messages can more easily lead to confusion in
---     various network components, possibly leading to security risks, than
---     fresh message types.
---
---   * Routing was not entirely logical.  The KDC has places where it can decide
---     to send off traffic, but this is at a later moment in time than routing
---     the messages to a backend daemon for KXOVER.  By using other messages, it
---     is possible to separate this (relatively slow) daemon from the core KDC,
---     and distribute the messages at a message-type-based routing stage inside
---     the KDC.
+-- The messages exchanged for Impromptu Realm Crossover follow the same
+-- general habits as those for `KDC-REQ` and `KDC-REP` messages, but they
+-- are clearly distinguishable.  This allows routing them away from the
+-- KDC, and allow "wrap-around" or "bump-in-the-wire" extensions to an
+-- existing KDC.  Furthermore, the definitions can be more clearly and
+-- more stringently than when using expanding on existing definitions.
+-- The messages use application tags `[APPLICATION 18]` and
+-- `[APPLICATION 19]` which are not used in any current IETF standard for
+-- Kerberos, so there should be no confusion.
 
--- Unlike clients, who share a secret with their KDC to protect their traffic,
--- there is no such prior security relation between two random KDCs.  To
--- establish trust, we use a variation on DANE, where the declaration of the KDC
--- in terms of SRV records in DNS is used to locate the port and transport for
--- the KDC, which is in turn used to lookup TLSA records to provide validation
--- information for certificates that are authoritative for the realm.  Such
--- a certificate must be used to sign a `KX-REQ` as well as a `KX-REP` message,
--- each by their respective sender realms.
+-- Unlike other KDC messages, the `KX-REQ` and `KX-REP` messages are always
+-- exchanged over TLS.  To this end, a TCP connection is made and the
+-- STARTTLS extension requested.  After having completed the handshake,
+-- the TLS client sends a `KX-REQ` and in response the TLS server replies
+-- with a `KX-REP`.  It is possible for the TLS client to initiate multiple
+-- KXOVER exchanges over the same TLS connection.  This might be used to
+-- validate multiple combinations of client and service realm based on the
+-- same TLS exchange.
 
-KXOVER DEFINITIONS ::= BEGIN
+-- Unlike local clients, who already share a secret with their KDC to
+-- protect their traffic, there is no such prior security relation between
+-- two randomly connecting KDCs.  To establish trust, we use DANE and DNSSEC,
+-- where the declaration of the KDC in terms of SRV records in DNS is used to
+-- locate the host name for the KDC, with static prefix labels _88._tcp to find
+-- TLSA records that provide validation information for certificates that are
+-- authoritative for the realm.  Such a certificate must mention a host name
+-- of the KDC as well as a Subject Alternative Name for the Kerberos identity
+-- of the represented party.  When the client is not a KDC, then its KDC is
+-- still used to find DANE/DNSSEC validation for the client certificate,
+-- though failing so there may (also) be a fallback mechanism through an LDAP
+-- service for the realm's domain.
 
-IMPORTS PrincipalName, Realm, Authenticator, PA-DATA,
-       KerberosTime, KerberosString, Int32, UInt32 FROM RFC4120
+KXOVER DEFINITIONS EXPLICIT TAGS ::= BEGIN
 
-       Certificate, AlgorithmIdentifier, SubjectPublicKeyInfo,
-       AuthorityKeyIdentifier FROM RFC5280;
+IMPORTS PrincipalName, Realm, Authenticator,
+        KerberosTime, Int32, UInt32 FROM RFC4120
+
+        KRB5PrincipalName FROM RFC4556
+
+        Certificate, AlgorithmIdentifier, SubjectPublicKeyInfo,
+        AuthorityKeyIdentifier, SubjectAltName, OtherName FROM RFC5280;
 
 -- A few definitions for readability, in line with RFC 4120:
 
 EncryptionType   ::=  Int32
 KeyVersionNumber ::= UInt32
-Nonce            ::= UInt32
 
 
 -- The `KX-REQ` and `KX-REP` messages use an `[APPLICATION n]` tag that is not
@@ -68,8 +96,8 @@ KX-REQ ::= [APPLICATION 18] KX-REQ-MSG
 
 KX-REP ::= [APPLICATION 19] KX-REP-MSG
 
--- The `KX-REQ-MOD` is the special KDC request for the `KX` exchange; its main
--- purpose is to transport and ECDH key exchange request.
+-- The `KX-REQ-MSG` is the special KDC request for the `KX` exchange; its main
+-- purpose is to request the setup of a shared key, usually across realms.
 
 KX-REQ-MSG ::= SEQUENCE {
         pvno            [0] INTEGER (5) ,
@@ -79,8 +107,8 @@ KX-REQ-MSG ::= SEQUENCE {
 }
 
 
--- The `KX-REP-MOD` is the special KDC request for the `KX` exchange; its main
--- purpose is to transport and ECDH key exchange response.
+-- The `KX-REP-MSG` is the special KDC request for the `KX` exchange; its main
+-- purpose is to respond to a shared key setup request, usually across realms.
 
 KX-REP-MSG ::= SEQUENCE {
         pvno            [0] INTEGER (5),
@@ -89,171 +117,146 @@ KX-REP-MSG ::= SEQUENCE {
         ...
 }
 
--- The extension facility `...` exists for possible future extensions, such
--- as direct connections from clients to a (foreign) KDC in a style that may
--- be reminiscent of PKINIT.  Upon reception, KDCs that do not understand such
--- extensions MUST ignore them.
+-- The extension facility `...` in `KX-REQ-MSG` and `KX-REP-MSG` exists for
+-- possible future extensions, such as direct connections from clients to a
+-- (foreign) KDC in a style that may be reminiscent of PKINIT.  Upon reception,
+-- KDCs that do not understand such extensions MUST ignore them.
 
 
 
 -- ## The "symmetric" part of the KXOVER key exchange
 -- 
--- The `KX-OFFER` is a symmetric exchange for the ECDH key exchange.  Both
--- sides can explain their preferences, and learn from each other.  There is
--- however a difference between initiative, so there is some variation in
+-- The `KX-OFFER` is a symmetric exchange for the TLS-protected key exchange.
+-- Both sides can explain their preferences, and learn from each other.  There
+-- is however a difference between initiative, so there is some variation in
 -- the details of the exchange.
 --
 -- Since the purpose of KXOVER is to communicate with unrelated peers on the
 -- Internet, the protocol is more accurately specified than general Kerberos.
 -- For this reason there is no facilitation of `KerberosFlags`.
 -- 
--- Although inspired on PKINIT, the KXOVER exchange makes different choices:
--- 
---   * Key exchange with Forward Secrecy is always required.
---     Crossover keys between KDCs are suggested to last at least a week,
---     perhaps up to a month.  We prefer to setup longer initial times over
---     introducing the code complexity of reusing previously agreed-upon keys.
--- 
---   * No support for Modular-Exponentiation Diffie-Hellman; there is support
---     for Elliptic-Curve Diffie-Hellman only.
--- 
---   * We removed the CMS notation.  The opportunity for reuse of CMS code in a
---     Kerberos context is not very high.  We have replaced it with similar
---     specification patterns as are used in the rest of Kerberos.
--- 
---   * We specify a KDC-to-KDC exchange, but leave room that we expect to be
---     supportive of a potential future client-to-KDC exchange.
---
--- Inspection of certificates is optional, but it may be of use in federated
--- networks.  In the most general case, where the purpose is to span the
--- entire Internet with KXOVER, there is no use for certificates; validation
--- through DNSSEC suffices, and even when a certificate is presented it will
--- be enough to retrieve the public key from it; it does not even have to be
--- self-signed, or validated to be, because DNSSEC already binds this public
--- key to the realm's domain name mapping.
---
--- The `KX-OFFER` structure contains signed information, the signature,
--- information to validate the signature, and a `nonce` field for fast resend
--- discovery in the transport layer.  Most of the signing structures are
--- replicated from their PKIX counterparts.
+-- Inspection of certificate hierarchies is optional, but it may be of use
+-- in federated networks.  In the most general case, where the purpose is to
+-- span the entire Internet with KXOVER, there is no use for certificate
+-- hierarchies; validation through DANE/DNSSEC suffices, and the procedures
+-- presented here assure that it belongs to a realm and the domain name to
+-- which it maps; this suffices to assure that keys are being setup between
+-- the realms at hand.
 
 KX-OFFER ::= SEQUENCE {
 
-     -- Transport-level information:
-        nonce           [0] Nonce,
-
-     -- About the signature:
-        signature-input [1] KX-TBSDATA,
-        signature-owner [2] SEQUENCE OF Certificate,
-
-    --  The action signature:
-        signature-alg   [3] AlgorithmIdentifier,
-        signature-value [4] BIT STRING,
-
-    -- Future extensions
-    ...
-
-}
-
-
--- In this structure:
--- 
---   * The `nonce` field holds a random value that should not be reused quickly.
---     Its purpose is to match a `KX-REP` to a `KX-REQ`, and to detect resends
---     due to (assumed) network dropouts at the transport level.
--- 
---   * The `signature-input` contains the to-be-signed data for this half of
---     the exchange.  Any data in here will be certain to have come from the
---     signature owner.  The field is DER-encoded and the signature applied to
---     it will cover the contents of this field alone; this starts with the
---     tag and length for this field.
--- 
---   * The `signature-owner` field lists standard `Certificate` structures from
---     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.1),
---     in the order of a chain from the end certificate to a self-signed root
---     certificate.  The first certificate represents the KDC that constructed
---     this `KX-PA-DATA`, and it should conform to the Certificate Profile for
---     KXOVER below.  The root certificate is one that is assumed to be
---     acceptable to the intended recipient; if not, then further negotiation
---     may be required.  Most importantly, the first certificate in the list
---     must be confirmed through DANE as specified below.
--- 
---   * The `signature-alg` field holds the algorithm used to sign the
---     `KX-PA-TBSDATA` contents, as defined in
---     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.1.1.2)
---     as a pair of an object identifier and optional parameters.
--- 
---   * The `signature-value` field holds the actual signature, according to
---     the outcome of the `signature-alg` field, and encoded just as the
---     `signatureValue` in a certificate, as defined in
---     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.1.1.3)
--- 
-
-
--- ## Signed Data for KXOVER
---
--- The `KX-TBSDATA` describes the byte sequence that is subjected to digital
--- signing and validation thereof.
-
-KX-TBSDATA ::= SEQUENCE {
-
-     -- Ensuring signature freshness / scattering:
-        authenticator   [0] Authenticator,
+     -- Ensuring signature freshness:
+        request-time    [0] KerberosTime,
+        salt            [1] OCTET STRING,
 
      -- Key description information:
-        kvno            [1] KeyVersionNumber,
-        kxname          [2] PrincipalNameKrbTgt,
-        kxrealm         [3] Realm,
-        key-exchange    [4] SubjectPublicKeyInfo,
+        kx-name         [2] KRB5PrincipalName,
+        kvno            [3] KeyVersionNumber,
+        etypes          [4] SEQUENCE OF EncryptionType,
 
      -- Timing information:
-        till            [5] KerberosTime,
+        from            [5] KerberosTime,
+        till            [6] KerberosTime,
+        max-uses        [7] UInt32 OPTIONAL,
 
-     -- Negotiation terms, each in preference order:
-        accept-etype    [6] SEQUENCE OF EncryptionType,
-        accept-group    [7] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
-        accept-sigalg   [8] SEQUENCE OF AlgorithmIdentifier OPTIONAL,
-        accept-ca       [9] SEQUENCE OF AuthorityKeyIdentifier OPTIONAL
+     -- Sender description information:
+        my-name         [8] KRB5PrincipalName,
+
+     -- Extensions, each identified by an OID:
+        extensions      [9] SEQUENCE OF KX-OFFER-EXTENSION
+
 }
 
 -- The fields of this structure are defined as follows:
 -- 
---   * The `authenticator` serves to scatter the signature, as well as tie in a
---     timestamp.  Since signing is assumed to be done on demand, the timing may
---     be assumed to be very close to the current wallclock time.  KDCs are
---     already required to follow a timekeeping discipline, so this is no new
---     requirement.  The `Authenticator` structure is defined in
---     [RFC4120](https://tools.ietf.org/html/rfc4120#section-5.5.1)
---     and its optional fields are not used; the `crealm` and `cname` fields
---     are not meaningful to `KX` between KDCs and may be set to anything
---     that is both meaningful and syntactically correct.  Extensions to
---     `KX` that add a client-KDC connection may define other uses for these
---     fields in the `Authenticator`.
--- 
---   * The `kvno` is a key version number as used in Kerberos' `EncryptedData`
---     [RFC4120](https://tools.ietf.org/html/rfc4120#section-5.2.9)
---     to help select a long-lasting key from among a set.  This is used to
---     facilitate key rollover, as documented below.  The `kvno` value MUST be
---     the same in the `KX-REQ` and `KX-REP` messages if the result of the
---     key exchange is to be setup on both ends.  When they differ, the KDCs
---     MUST NOT setup the key in their internal databases.
+--   * The `request-time` ties a timestamp into the `KX-TBSDATA`.  Since signing
+--     is assumed to be done on demand, the timing may be assumed to be very
+--     close to the current wallclock time.  KDCs are already required to follow
+--     a timekeeping discipline, so this is no new requirement.  The `KX-REP`
+--     MUST replicate the value from the `KX-REQ`.  No two requests from the
+--     same KDC host may use the same `request-time` value; this includes
+--     retries of a `KX-OFFER`.
 --
---   * The `kxname` is the desired principal name to setup with this exchange.
---     With the `kxrealm` it MUST be `krbtgt/SERVICE.REALM@CLIENT.REALM`, where
---     the `SERVICE.REALM` and `CLIENT.REALM` are placeholders for what their
---     names suggest.  The realm names will be validated against the
---     certificates and DNS, as specified below.  The values of `kxname` and
---     `kxrealm` set in the `KX-REQ` and `KX-REP` MUST match.
+--   * The `salt` is a local string of bytes that will be used when establishing
+--     a unique key.  The TLS connection holds some local salt as well, but its
+--     size may not be sufficiently flexible, or its source may not be relied
+--     upon.  The `salt` MAY be empty, but it MAY also range up to the length
+--     of the longest key for any of the proposed encryption types.  As long as
+--     this is permitted, a recipient MAY disapprove of `salt` if it is
+--     unreasonably long.
 -- 
---   * The `key-exchange` holds a public key meant to establish Forward Secrecy.
---     For now this is constrained to Elliptic-Curve Diffie-Hellman keys such as
---     those defined in
---     [RFC5480](https://tools.ietf.org/html/rfc5480).
---     Note that both `KX-REQ` and `KX-REP` include the group; not only does
---     this keep the message format symmetrical, but it also means that a
---     service can make a counter-proposal if it disagrees with a proposed
---     ECDH group.
--- 
+--   * The `kx-name`, `req-name` and `rep-name` all hold a PrincipalName and
+--     Realm; `kx-name` names the key being setup through KXOVER, `req-name`
+--     and `rep-name` represent the sender of the `KX-REQ` and `KX-REP`,
+--     respectively.
+--
+--     When representing a KDC, the `name-type` MUST be set to `NT-SRV-INST`
+--     with value 2, the number of `name-string` values MUST be 2, the first
+--     set literally to `krbtgt` and the second set to the same value as the
+--     Realm (this deliberatly disables KDCs to act on behalf of others).
+--
+--     When representing a service on a named host, the `name-type` MUST be
+--     set to one of `NT-SRV-HST` or `NT-SRV-XHST` with values 3 or 4
+--     respectively, and the number of `name-string` values MUST be 2 or more
+--     than 2, respectively.
+--
+--     When representing a client, the `name-type` MUST NOT be one of the
+--     values `NT-UNKNOWN`, `NT-SRV-INST`, `NT-SRV-HST` and `NT-SRV-XHST`
+--     with values 0, 2, 3 and 4 and the number of `name-string` values MUST
+--     be at least 1.
+--
+--     Note that the various name fields allow a number of different schemes
+--     for realm crossover; between two KDCs, between client and KDC, between
+--     service and KDC, between client and service, but also between two
+--     clients or between two services.  The trick in these cases would be
+--     to setup the TLS connection.  The certificate format shall contain
+--     the exact name as represented in `rep-name` and `req-name` on the
+--     side of the sender of the `KX-REP` and `KX-REQ`, respectively.  When
+--     more than one of these messages is exchanged, it is possible to use
+--     a different `rep-name` or `req-name` in each, thanks to the possible
+--     occurrence of multiple names in one end point's certificate.
+--
+--   * The `kvno` is a key version number as used in Kerberos' `EncryptedData`
+--     [RFC4120](https://tools.ietf.org/html/rfc4120#section-5.2.9) that
+--     is specified to synchronise the client and server on this number.
+--     The client makes a proposal, indicating where a range of `kvno`
+--     values is free to be used.  The highest of the values suggested by the
+--     `KX-REQ` and its matching `KX-REP` will be the `kvno` value used.
+--
+--     Since the server sends the last message, it can basically decide what
+--     `kvno` value will be used.  Formally, the client's KDC can take the
+--     initiative for revolving back to a lower `kvno` value.  This is useful
+--     because the clients run the software most likely to get in trouble over
+--     this.  Services should not care, and KDC's can adapt more easily.
+--
+--     One possible numbering scheme is to add 20,000 to a number that would
+--     print as `MMDDS`: month `MM`, day `DD` and within-day serial number `S`.
+--     This is not enforced, but advised to keep the keys readable.  Their
+--     rotary scheme would cycle each year.  The month December might be
+--     numbered in two ways, namely as `00` and as `12`, as a way to overcome
+--     software problems with rotary schemes; this would be something the
+--     client decides on.
+--
+--     A service KDC may insist on this scheme, for example to be able to count
+--     the number of prior attempts (and their possible failure) to fight off
+--     denial of service attacks.  It might allow higher values of `S` or
+--     attempts for different `MMDD` values at a lower priority than others,
+--     so as to fight off denial of service attacks.
+--
+--   * The `from` field defines the earliest time at which `TGS` requests
+--     based on this key would be permitted.  Each side makes a proposal, but
+--     the key MUST NOT be used across either sides' proposal, so effectively
+--     the `from` for an established key is the latest of the two proposed
+--     `from` time stamps.  Specifically user `Tickets` must not be released
+--     before this latest of `from` time stamps.  One use of the `from` field
+--     is to prepare early in requesting a key for continued use, which might
+--     be triggered when a client uses a KXOVER key approaching its time of
+--     expiration.  When absent, a value for the `from` logic is taken from
+--     the `request-time` field.
+--
+--     The `from` field in a message MUST NOT fall before the `request-time`
+--     field.
+--
 --   * The `till` field defines the latest time at which `TGS` requests based
 --     on this key would be permitted.  Each side makes a proposal, but the key
 --     MUST NOT be used across either sides' proposal, so effectively the
@@ -266,261 +269,415 @@ KX-TBSDATA ::= SEQUENCE {
 --     as a default for `till` timing.  Note that it is possible to continue to
 --     verify DNS on the credentials gathered to get to the key, in order to
 --     learn if it may still be used.
--- 
--- The remaining fields constitute negotiation, always as a list of values
--- ordered from most-preferred to least-preferred.  All these lists MUST NOT
--- be empty.  In all cases, the responding service KDC MAY include entries
--- not sent by the initiating client KDC, so as to suggest alternatives.
--- 
---   * The `accept-etype` field defines encryption types that may be derived for
---     the ECDH shared key, once it is established.  Each side lists its
---     capabilities, and the service's KDC MUST create a realm crossover key
---     for each of encryption types that occurs in both lists.  Note that the
---     service is the responding party, and as such it can control which keys it
---     will actually create from the list offered by the client KDC.  The client
---     KDC MUST NOT construct TGTs for encryption types that were not in both
---     the lists.
--- 
---   * The `accept-group` field contains acceptable `AlgorithmIdentifier` values
---     for key exchange with Forward Secrecy.  At present, the algorithms are
---     limited to Elliptic-Curve Diffie-Hellman algorithms, but future
---     extensions may expand on this; unknown algorithms MUST be silently
---     ignored.
--- 
---   * The `accept-sigalg` field indicates acceptable signature algorithms.
---     **TODO:** Is this the right thing in the right place at the right time?
 --
---   * **TODO:** If so desired, we might also negotiate the hash algorithm used
---     over `KXOVER-KEY-INFO` below.
+--     The `till` field in a message MUST fall after both the `request-time`
+--     field and the `from` field.
 -- 
---   * The `accept-ca` field lists certificate authority certificates
---     acceptable to the sender.  This can be used in situations that intend to
---     enforce the use of a public or private CA on top of the DNSSEC-based
---     validation described below.  Applications include enforcing a federation.
---     A reason to announce more than one CA, can be to express participation
---     in multiple federations.  Each CA is identified by an
---     `AuthorityKeyIdentifier` as defined in
---     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.2.1.1)
---     for purposes of this kind.
+--   * The `max-uses` field, when supplied, indicates a maximum use count
+--     for `etypes` that need it.  There are currently no algorithms calling
+--     for this information, but it is anticipated that hash-based signatures
+--     may be added in the future, which would call for this counter limit.
+--     The effective value exists only if it exists in both `KX-REP` and
+--     `KX-REQ`, in which case it is the lowest of the two.
+--
+--   * The `etypes` field defines encryption types that the sender can create
+--     for realm crossover.  The numeric values MUST be a rising sequence.
+--     The sequence MAY be empty if there are no capabilities.  The sequence
+--     sent in a `KX-REP` MAY specify encryption types that are not listed in
+--     the matching `KX-REQ` to indicate extra possibilities.
+--
+--     A shared secret is derived for any `etype` that overlaps between a pair
+--     of `KX-REQ` and `KX-REP` messages.  The same `kvno` is assigned to all
+--     these newly generated keys.
+--
+--   * The `extensions` field is filled with individual extensions, identified
+--     by an object identifier and followed by arbitrary content.
+
+KX-OFFER-EXTENSION ::= SEQUENCE {
+        oid         [0] OBJECT IDENTIFIER,
+        critical    [1] BOOLEAN DEFAULT FALSE,
+        value       [2] OCTET STRING
+}
+
+-- The interpretation is very much in line with RFC 5280 for Certificates:
+--
+--   * `oid` holds a unique object identifier to identify the extension.
+--
+--   * `critical` indicates whether the extension must be recognised by the
+--     recipient.  If `critical` is `TRUE` but the recipient does not know
+--     about the `oid` then the exchange MUST NOT be completed.
+--
+--   * `value` holds any number of bytes as defined by the `oid` field.
+
+
+-- ### Object Identities for Extensions
+
+-- Any OID is valid, as long as it is unique and claimed under the
+-- defining party's start of authority in the OID tree.  We define a
+-- subtree for a few (to be standardised) extensions.
+
+id-kxover-ext OBJECT IDENTIFIER ::= {
+        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
+        ext(2) }
 
 
 -- ## Establishing Crossover Keys
 --
--- Realm crossover keys established with KXOVER can be derived from the shared
--- secret established by ECDH key exchange.  It is useful to have different
--- keys for different encryption types.  Since it is common to hash the outcome
--- of an ECDH exchange, we can use that time to hash in a few other things.
--- 
--- The hash algorithm is not a primary security concern, since the shared key is
--- already well-protecting (its bits only need a good shuffle) and the outcome
--- is not made publicly visible either.  Based on this observation, we choose a
--- fixed algorithm, namely SHA-256, and compute a series of hashes as long as
--- needed for the key material desired by the targeted encryption type.
+-- The purpose of KXOVER is to establish a shared key that can crossover
+-- between realms.  This is done with RFC 5705, using a label and a context
+-- value.
 --
--- The data to be hashed is the DER encoding of the `KXOVER-KEY-INFO` structure
--- defined below.
+-- The label is the ASCII string "EXPERIMENTAL-INTERNETWIDE-KXOVER" prior to
+-- registration, and "INTERNETWIDE-KXOVER" once it is registered.
+--
+-- The context value is the byte sequence obtained by encoding the below
+-- definition for `KXOVER-KEY-INFO` in DER.
+--
+-- The output of the RFC 5705 exporter should be taken as long as the key.
+-- RFC 3961 requires that this is always a whole number of bytes.  These
+-- bytes are passed into the targeted encryption type's random-to-key
+-- operation, which is defined for any Kerberos5 encryption type, also
+-- according to RFC 3961.
 
 KXOVER-KEY-INFO ::= SEQUENCE {
-        kxover-name     [0] IA5String --("KXOVER")--,   -- fixed string "KXOVER"
-        seq-nr          [1] INTEGER --(1..)--,          -- hash index counter 1+
-        kxname          [2] PrincipalNameKrbTgt,        -- from KX-PA-TBSDATA
-        kxrealm         [3] Realm,                      -- from KX-PA-TBSDATA
-        till            [3] KerberosTime,               -- from KX-PA-TBSDATA
-        kvno            [4] KeyVersionNumber,           -- from KX-PA-TBSDATA
-        etype           [5] EncryptionType,             -- from KX-PA-TBSDATA
-        shared-key      [6] OCTET STRING                -- the standard value Z
+
+        -- Identity information:
+        kx-name         [0] KRB5PrincipalName,          -- from KX-OFFER
+        req-name        [1] KRB5PrincipalName,          -- from KX-OFFER.my-name in KX-REQ
+        rep-name        [2] KRB5PrincipalName,          -- from KX-OFFER.my-name in KX-REP
+
+        -- Timing information:
+        from            [3] KerberosTime,               -- from KX-OFFER, the latest
+        till            [4] KerberosTime,               -- from KX-OFFER, the earliest
+        max-uses        [5] UInt32 OPTIONAL,            -- from KX-OFFER, the lowest
+
+        -- Key descriptive information:
+        kvno            [6] KeyVersionNumber,           -- from KX-OFFER
+        etype           [7] EncryptionType,             -- from KX-OFFER, one at a time
+
+        -- Additional salt:
+        req-salt        [8] OCTET STRING,               -- from KX-OFFER.salt in KX-REQ
+        rep-salt        [9] OCTET STRING,               -- from KX-OFFER.salt in KX-REP
+
+        -- Extensions:
+        extension-info [10] SEQUENCE OF KX-OFFER-EXTENSION
 }
 
--- The value `kxover-name` is a fixed string.
+-- The `kx-name` value is taken from the `KX-OFFER`; this value is the
+-- same in both directions.  The `req-name` and `rep-name` come from the
+-- `my-name` field in the `KX-OFFER`, respectively from the `KX-REQ` and
+-- `KX-REP` messages.
 --
--- The `kxname` and `kvno` values are taken from the `KX-PA-TBSDATA`; these
--- values are the same in both directions.
+-- The `from` value represents the latest of the two values in `KX-REQ`
+-- and `KX-REP`.  The `till` value represents the earliest of the two
+-- values in `KX-REQ` and `KX-REP`.  The `max-uses` value exists only if
+-- it exists in either or both of `KX-REQ` and `KX-REP`.  It is set to
+-- the lowest of the one or two values.
 --
--- The `till` value represents the earliest of the two values in `KX-REQ` and
--- `KX-REP`.
+-- The `kvno` value is taken from the `KX-OFFER` in the `KX-REP`.  This
+-- value is often based on the suggestion of `kvno` in `KX-REQ`, but it
+-- is not incorporated in this calculation.
 --
--- The `enc-type` is a value that has occurred in the `accept-etype` field in
--- both the `KX-REQ` and `KX-REP`.  There may be multiple that occur in both,
--- and each leads to a different structure and a different hash value.
+-- The `etype` is a value that has occurred in the `etypes` field in both
+-- the `KX-REQ` and `KX-REP`.  The overlap should be non-empty, and may
+-- hold multiple encryption types; the same `kvno` can be used with multiple
+-- `etype` values because `kvno` is not used witout `etype` in Kerberos.  The
+-- various `etype` and `kvno` pairs each derive their own `KXOVER-KEY-INFO`
+-- and corresponding secret key.
 --
--- The value of `shared-key` is the value usually referred to as Z, and is
--- included as a raw OCTET STRING; leading zero bytes are not removed.
+-- The `req-salt` and `rep-salt` are taken from the `salt` field in the
+-- `KX-OFFER` as respectively found in `KX-REQ` and `KX-REP`.
+--
+-- The `extension-info` may be an empty list or a longer one, though care
+-- should be taken not to be too demanding on the size of the RFC 5705
+-- exporter mechanism.  The elements of this list are dictated by the
+-- `extensions` fields in `KX-REP` and `KX-REQ` respectively, and within
+-- these fields, the order of the `extensions` determines the order of
+-- the `extension-info` field.  An extension may for instance specify two
+-- OID-identified elements in `extension-info` for `KX-REP` and none for
+-- the same extension in `KX-REQ`.  Or it may only add an element to the
+-- `extension-info` when an offer in `KX-REQ` is answered in a `KX-REQ`.
+-- It is generally useful to be mild on expectations on software, and do
+-- little more than copy values in an `extension`.
+--
+-- One possible use of `extensions` may be a reference to one or more
+-- shared keys that were previously setup.  To allow an M-out-of-N scheme
+-- for these, it would be possible to compute the shortest distance from
+-- the origin to an affine space with N vectors spanning M degrees of
+-- freedom, and store the result in the `extension-info`.  This could be
+-- used to integrate both out-of-band keys and previously shared (and
+-- still valid) keys.  Such a mechanism could help to fend off attacks by
+-- Quantum Computers while still relying on algorithms sensitive to them.
 
 
--- A virtually infinite sequence of SHA-256 computations can be constructed from
--- this structure by starting with `seq-nr` set to 1, and incrementing it for
--- each new hash computation.  The concatenated hashed results form a sequence
--- of bytes that reflect the entropy of the `KXOVER-KEY-INFO` structure and,
--- more specifically, of the `shared-key` contained in it.  A prefix from this
--- sequence is taken to provide the targeted encryption type, as mentioned in
--- the `etype` field, with a raw symmetric key.  This key will be inserted on
--- both the client's KDC and the service's KDC with its name set to `kxname`
--- and `kxrealm`.
-
-
--- ## Key Rollover between KDCs
+-- ## Key Sharing between KDCs
 --
 -- The `KX` exchange establishes shared keys for a certain time.  Based on these
 -- keys, the client KDC can construct Ticket Granting Tickets that last for one
 -- user session.  At some point near the end of the lifetime of the realm
 -- crossover key however, it may not be possible to supply keys to users that
--- last long enough, and there is a need to rerun the `KX` exchange.  After the
--- new key is established, there will be previously supplied clients using the
--- old key and others using the new key.
+-- last as long as the client's ticket.  A shorter-lived ticket can then be
+-- returned to the user, but it is helpful to anticipate later renewal by
+-- running KXOVER once more and setup a newer key.  This is a completely new
+-- key; given the automation of the process, there is no reason to complicate
+-- the protocol and software and perhaps risk security as a result.
+
+
+-- ## Key Sharing between Others
 --
--- To handle this overlap of keys properly, there is a `kvno` field in the
--- `KX-PA-TBSDATA` structure that is setup with the express intent to identify
--- to the service's KDC's crossover key.  The client's KDC MUST NOT provide
--- clients with Ticket Granting Tickets for the service's KDC that expire after
--- the earliest `till` time, and the service's KDC MUST NOT remove the
--- crossover key before the earliest `till` time.
+-- There is no reason why others than two KDCs could not use KXOVER to share
+-- keys.  This is why the `req-name` and `rep-name` are made explicit.  Though
+-- Kerberos defines no strict procedures on what to do in such situations,
+-- the basic idea of Kerberos is invariably that two parties can communicate
+-- as soon as they share a key; the only problem is that a Ticket holds a
+-- version of the key to the remote that was encrypted by the KDC with a
+-- long-lasting secret for the two parties, so that phase must be skipped,
+-- but any further use of Kerberos would work.
 --
--- When sending a Ticket Granting Ticket to a client that addresses a service
--- KDC whose crossover key was established through KXOVER, then the client KDC
--- MUST include a suitable `kvno` field in the `EncryptedData` structure of that
--- Ticket Granting Ticket.
+-- Looking at RFC 4120, messages that are usable without Ticket but with a
+-- shared key include `KRB-SAFE`, `KRB-PRIV` and even `KRB-CRED`.  Further
+-- integration into protocols with MIME Content-Types or TLS' ALPN and of
+-- course GSS-API would be possible, should applications need this.
+--
+-- In service of this kind of pattern, this specification emphasises the use
+-- of the KDC host name in the certificates used by KXOVER end points, even
+-- when the end points represent a principal.  There is no requirement for
+-- the IP address of an end point to be one owned by the KDC, but it is a
+-- security requirement that the name of a KDC host is used and that both
+-- that host name and the certificate can be validated under the DNS mapping
+-- for the realm.  Note that DANE can validate end certificates for a KDC
+-- and/or a signing certificate under which principals are signed.  These
+-- concerns were also present in PKINIT, but KXOVER makes them publicly
+-- verifiable through DANE and DNSSEC.
 
 
 -- ## Certificate Profile for KXOVER
 --
--- To facilitate the `KX` exchange, a KDC needs a certificate under the
--- following constraints:
+-- KXOVER runs over TLS, and requires that both client and server present
+-- a certificate as part of the handshake.  There will be no renegotiation
+-- or additional request to ask for a client certificate after the first
+-- handshake, so it will be requested and provided right away.
 --
---   * The certificate holds a *realm set* name to claim its realm names; this
---     MUST contain the `CLIENT.NAME` part of the `kxname` when the certificate
---     is used to sign for a `KX-REQ`; and it MUST contain the `SERVICE.NAME`
---     part of the `kxrealm` when the certificate is used to sign for a
---     `KX-REP`.  Note that it is possible for additional realms to be
---     contained, which is quite acceptable, and only presence of the realm
---     from the `kxname` is assured.
+-- The TLS handshake validates ownership of the certificate by seeking
+-- proof that each side holds the private key matching the certificate.
+-- The authority of the certificate is sought through DANE, and is based
+-- on the contained server host name for the KDC (also when the owner of
+-- the certificate is a client of that KDC) and, if locally administrative
+-- policy requires it, the certificate may have to fall under a certain
+-- certificate hierarchy.
 --
---   * The certificate holds an Extended Key Usage OIDs as defined in
---     [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.2.1.12)
---     to indicate support for `KX`; for the certificate signing the `KX-REQ`,
---     the OIDs MUST include `id-kxover-kdc-service`; for the certificate
---     signing the `KX-REP`, the OIDs MUST include `id-kxover-kdc-client`.
---     It is possible and even likely for general-purpose KDCs to use
---     certificates that hold both OIDs, so they can be used in both directions.
+-- The certificate itself expresses `KRB5PrincipalName` structures in the
+-- `SubjectAltName` extension, as is the case with PKINIT.  These mention
+-- both the `PrincipalName` and `Realm`; the certificate expresses that
+-- these are identities belonging to the certificate owner, which would
+-- be confirmed by the authenticity of the certificate.  Authenticity is
+-- defined by a KDC server host, but the authenticity of this host name
+-- must be related to a `Realm` being considered.  The `Realm` and related
+-- `PrincipalName` are provided by the other side in the `my-name` value
+-- in the `KX-OFFER` sent by the remote peer after TLS is setup.
 --
--- Certificates that supply this information properly are considered acceptable
--- signers, but validating their signatures involves more validation steps:
+-- So, what does a certificate need to support?
 --
---   * The certificate chain in `signature-owner` is acknowledged by the
---     DNS-based validation procedure described below; this is the vital step
---     for the support of impromptu realm crossover.
+--   * One or more `KRB5PrincipalName` values for `SubjectAltName`, as are
+--     used under PKINIT.
 --
---   * The validation of the certificate chain in `signature-owner` MUST
---     succeed.
+--   * One hostname, preferrably as one `DNSName` value under the same or
+--     another `SubjectAltName` extension, or as `cn` field in the
+--     `Subject` of the certificate.
 --
---   * Local policy MAY require additional interrogation of CRLs, OCSP and
---     so on.
+--   * The certificate will be validated under DANE and DNSSEC.  This may
+--     take any of its forms, like end certificate, intermediate or root,
+--     as well as self-signed or as part of a certificate hierarchy.  For
+--     use with KXOVER, the labels prefixed to the KDC host name to find
+--     the TLSA records is always _88._tcp.
 --
---   * Local policy MAY restrict the last certificate in the `signature-owner`
---     chain to be one of a list of accepted CAs.
+--   * The realm(s) for which the certificate is to be used must hold an
+--     SRV record pointing to the KDC host name, protected by DNSSEC.
+--     The SRV record prefixes _kerberos-tls._tcp to the DNS-mapped name
+--     for the realm.
+--
+--   * If so desired by the administrative policy on a remote peer, the
+--     certificate must be part of a certificate hierarcy that it trusts.
+--
+--   * If so desired by the administrative policy on a remote peer, the
+--     certificate must support CRLs, OCSP and so on.
+--
+--   * Once available, support for signatures and key exchange algorithms
+--     that are safe from Quantum Computers.  It is not yet clear how
+--     future standards will split this out between certificates and the
+--     TLS protocol.
 --
 
--- The *realm set* extension is a value in the `subjectAltName` extension
--- [RFC5280](http://tools.ietf.org/html/rfc5280#section-4.2.1.6) which
--- holds a set of realm names that the KDC claims to administer; the extension
--- is of the form `OtherName`, with `type-id` set to `id-kxover-krb5realm` and
--- `value` set to the `KRB5RealmSet` structure defined below:
 
-id-kxover-krb5realmset OBJECT IDENTIFIER ::= {
-        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
-        san(2) realmset(1) }
+-- ## Transport Validation: Certified Endpoints
 
-KRB5RealmSet ::= SET OF Realm
+-- KXOVER runs over a TLS transport.  The purpose of this is to be certain
+-- that KXOVER messaging and key agreement are performed with a known peer.
+-- To know the peer, it must use a certificate and prove ownership of the
+-- corresponding private key, as well as use that vital bit of information
+-- to protect the authenticity of the KXOVER application layer.  The
+-- certificate will be validated by TLS mechanisms, though not beyond the
+-- (customary) point of host name assurance for the KDC.
 
--- The OIDs representing the Extended Key Usage patterns of KXOVER are:
+-- KXOVER end points can be clients or KDCs, but they always refer to a
+-- KDC host name.  The DANE mechanism requires a port as well, but for
+-- KXOVER we fixate the lookup on the reserved port for Kerberos, namely
+-- TCP port 88.  The resulting prefix to the KDC host name is _88._tcp.
+-- regardless of the actual port used by the KDC.  The reasoning is that
+-- any other service on this port on a host appointed for KDC would be
+-- downright silly, so there is no risk of conflict; furthermore, the
+-- order of first starting TLS with a certificate, validated by DANE, and
+-- only then starting to exchange `KX-OFFER` messages, means that the
+-- port number cannot be derived.  When DANE was retrofitted to TLS, this
+-- facility was not added to TLS either.  So we have decided to stick to
+-- the formally standardised port 88 over TCP for the purposes of DANE.
 
-id-kxover-kdc-service OBJECT IDENTIFIER ::= {
-        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
-        role(1) kdc-service(0) }
+-- ### TLS validates Certificate Ownership
 
-id-kxover-kdc-client OBJECT IDENTIFIER ::= {
-        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
-        role(1) kdc-client(1) }
+-- To validate certificate ownership, the primary mechanism is DANE/DNSSEC.
+-- This mechanism is the only required mechanism for KDC-to-KDC uses of
+-- KXOVER.  For clients, there is a secondary option, which may be used if
+-- the primary mechanism fails.  This secondary option is to look for
+-- confirmation of the client certificate in LDAP.  For KXOVER involving
+-- one or more peers as clients, both primary and secondary options are
+-- required.
 
-id-kxover-princ-service OBJECT IDENTIFIER ::= {
-        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
-        role(1) princ-service(2) }
+-- In addition to these general forms of validation, local policies may
+-- place themselves outside this general mechanism that intends to serve
+-- the entire Internet.  Such local policies may introduce additional
+-- requirements, or it may even add alternative paths of validation.
+-- Options to consider might be a certificate hierarchy for federations,
+-- certificate pinning, certificate revocation lists and the online
+-- certificate status protocol.
 
-id-kxover-princ-client OBJECT IDENTIFIER ::= {
-        1 3 6 1 4 1 arpa2(44469) experimental(666) kerberos(88) kxover(1)
-        role(1) princ-client(3) }
+--   * **Primary Validation: DANE.**
+--     This looks for the KDC host name in the certificate.  Any
+--     Subject Alternative Name of type DNSName should be tried.
+--     Optional with DNSname present, otherwise obliged is to
+--     (also) consider the commonName field in the certificate
+--     Subject, provided that it parses as a DNS name.
+--     Given the KDC host name, a DANE lookup is made based with
+--     _88._tcp prefix, in spite of the port used by the other side.
+
+--   * **Secondary Validation: LDAP.**
+--     This uses SRV records for LDAP, found under the KDC host name
+--     with the usual `_ldap._tcp` labels prefixed.  DNSSEC must be
+--     used to protect the server definitions.  Once connected, the
+--     LDAP operation STARTTLS is executed and the certificate used
+--     is looked up in the LDAP tree.  One or more client identities
+--     are then retrieved from the `krb5PrincipalName` and `krb5Realm`
+--     attributes in the LDAP objects that list the certificate.  To
+--     be valid, a last check is whether the `krb5PrincipalName` and
+--     `krb5Realm` values from LDAP combine as a `KRB5PrincipalName`
+--     in the certificate's list of Subject Alternative Names.
+
+--   * **Local Policies: Federations, Pinning, CRLs, OCSP.**
+--     These are extensions that may further constrain access to
+--     stop InternetWide Crossover, or there may be alternative
+--     mechanisms for specific peers to grant them easier access.
+--     Federations might use a certificate hierarchy of their own,
+--     pinning might be used to involve the operator during any
+--     changes to certificates, and CRLs and OCSP could be
+--     considered for additional certificate validation.
+
+-- ### Certificate mentions KDC Host Name
+
+-- The certificate contains the KDC host name, but this is not to be
+-- trusted before the certificate can be trusted.  It is however a
+-- hint, as any self-respecting peer would want to help the process
+-- of being validated.  The KDC host name must therefore be seen as
+-- useful technical information, which however remains to be proven
+-- correct.
+
+-- The best place for the KDC host name (or a few options for those)
+-- is the Subject Alternative Name field, in the form of a DNS name.
+-- The second option, if this one is lacking, is a CN field in the
+-- Subject of the certificate.
+
+-- ### KDC Host Name validates Certificate
+
+-- Given a certificate that has been validated and used in TLS to
+-- protect traffic, we can rely on identify information in the
+-- peer certificate.  This does not mean that we can trust any
+-- realm mentioned in there, just that it follows from the
+-- KDC host name.
+
+-- When used in KXOVER, we must therefore derive the KDC host name
+-- and check it against the certificate-mentioned KDC host name
+-- before we can trust that the other identity claims in the
+-- certificate.  Specifically, KXOVER supplies a realm name that
+-- we shall translate into a (list of) KDC host name(s) and the
+-- only trust that we shall infer is in identities under that
+-- peering realm.
 
 
--- ## DNS-based Validation
---
--- DNS-based validation is the one requirement that MUST be met for all
--- certificates used in the KXOVER framework.  This permits the current habit
--- of KDC-local CAs that can be connected through validation with DNSSEC and
--- DANE.  These technologies are based on public-key cryptography under control
--- of Kerberos and DNS infrastructure operators, respectively.
---
--- The two technologies enhance each other; DANE information is located in DNS,
--- validated through DNSSEC to be present and correct, and only when this is
--- the case will they consider a signer's certificate acceptable, and as a
--- result, the supplied `KX-PA-TBSDATA` contents.
---
--- This results in a global framework of authenticity.  The built-in ECDH key
--- agreement is also authenticated, allowing the setup of rolling shared keys
--- between the end points, which is used to construct a realm crossover key
--- that in turn allows the creation of Ticket Granting Tickets for KDC clients.
---
--- The method by which the client's KDC establishes the realm to which it needs
--- to crossover is considered to fall outside the scope of this specification.
--- Do note that "independent" work has been done on establishing _kerberos TXT
--- records in DNS, also protected through DNSSEC.
---
--- The validation between KDCs is mutually done.  When a KDC (referred to below
--- as the *validating KDC*) wants to validate another, (referred to as the
--- *evaluated KDC*) for which it has a claimed- realm (the *evaluated realm*),
--- it proceeds as follows:
---
---  1. Demanding DNSSEC for security, the validating KDC extracts an `SRV`
---     record under the DNS-mapped name of the evaluated realm, to find the
---     address and port of the evaluated KDC.  This is considered the
---     authoritative information for the evaluated realm, and leading for
---     identifying key material.  This is so strong that there is no
---     requirement to verify the address and port information against incoming
---     requests.
---
---  2. Demanding DNSSEC for security, the validating KDC extracts the `TLSA`
---     records for the evaluated KDC service.
---
---  3. Upon arrival of the `KX-PA-DATA` structure from the other side, the
---     `TLSA` record data is used to validate the `signature-alg` and
---     `signature-value`, possibly based on the `signature-owner` chain of
---     certificates.  Note that KDC clients tend to enforce short timeouts on
---     their UDP communication with the server, so only special circumstances
---     should rely on the `signature-owner` chain; it is generally advised to
---     keep it short, or perhaps empty.  The one exception to this rule is
---     usually within a federation, where the extra delays may be acceptable
---     due to local caching of known peers.
---
---  4. Any places where the DNS supplies multiple values it will be seen as
---     alternative paths of establishing the desired certainty.  When just one
---     such path succeeds, the evaluated KDC is approved.
+-- ## Key Exchange Validation: Proper Identities
+
+-- The KXOVER protocol allows any number of `KX-REQ` and `KX-REP`
+-- messages to be exchanged.  Each of these is independently
+-- validated by looking at the remote realm and assuring that
+-- the requested identity matches that.
+
+-- Realms give rise to the completion of peer validation.  Where
+-- TLS allows the validation of a KDC host name through mechanisms
+-- such as DANE (or LDAP), an additional test is needed to drill
+-- down to a specific realm.
+
+-- ### Realm validates KDC Host Name
+
+-- Given a realm in uppercase domain name style, its DNS name
+-- can be constructed by mapping it to lowercase and reading
+-- it as a DNS name.  Prefixing `_kerberos-tls._tcp` labels and
+-- looking up SRV records then identifies KDC host names with
+-- their TCP ports.  This informtion must be protected by
+-- DNSSEC to be trusted.  The KDC host names can be compared to
+-- the one that TLS validated.
+
+-- When acting as a KXOVER client, a connection is also a TLS
+-- client.  It will use these SRV records to decide where to
+-- connect to, so it already knows the KDC host name to expect,
+-- and will even ask for it in the SNI extension to TLS.  As
+-- it already knows what exchange it wants to start, it also
+-- knows what local certificate to use.
+
+-- When acting as a KXOVER server, a connection is also a TLS
+-- server.  It will use the SNI extension to decide which
+-- local certificate to use.  It cannot infer a realm name
+-- from the certificate yet, but it will validate the peer
+-- with the host name in the local certificate and _88._tcp
+-- as a fixed prefix for the TLSA records.  Once a `KX-REQ`
+-- is received, it knows a realm, so a DNS name and so SRV
+-- records that can be used to check the validity of the
+-- local host name.
+
+-- ### Realm and Certificate validate Client Identity
+
+-- Given the KDC host name and a TLS-validated certificate
+-- using that name it is possible to trust other identities
+-- in the certificate.  Note however, that this is specific
+-- to the realm that has been used to reach the trust in the
+-- certificate.  As a result, any identities with that same
+-- realm can now be trusted, but no others.
+
+-- The client identities are found in the Subject Alternative
+-- Name extension, as a `KRB5PrincipalName` name form.  Also
+-- note the requirements on the `name-type` and the number of
+-- levels in the `PrincipalName` and whether `krbtgt` may or
+-- must be the first level.
+
+-- ### Client Identity validates Requested Crossover Key
+
+-- Given a trusted Client Identity, the crossover key may be
+-- validated.  It is vital that the identity for the key is
+-- also valid, though.  The realm in the `kx-name` must match
+-- the realm in `my-name` in `KX-REQ` and the principal name
+-- in the `kx-name` must either be for a crossover key `krbtgt`
+-- with the realm matching the realm in `my-name` in `KX-REP`.
+
+-- **TODO:NOT_EXHAUSTIVE_YET**
 
 
--- ## PrincipelName parsing variant
 
--- To simplify parsing, this specification specialises the `PrincipalName`
--- syntax to the `PrincipalNameKrbTgt` form.  There is no other use for this
--- but to simplify the parsing procedure, and have more of it done by the
--- packer/unpacker of [Quick DER](https://github.com/vanrein/quick-der).
-
-PrincipalNameKrbTgt ::= SEQUENCE {
-        name-type   [0] INTEGER (2),
-        name-string [1] SEQUENCE {
-                service-name GeneralString ("krbtgt"),
-                other-realm  KerberosString
-        }
-}
-
---
--- This ends the formal definitions:
---
+-- End of ASN.1 definitions for KXOVER, Impromptu Realm Crossover for Kerberos
 
 END
