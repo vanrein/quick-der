@@ -139,7 +139,7 @@ class QuickDER2c(QuickDERgeneric):
             return
 
         for rm in self.semamod.imports.imports.keys():
-            rmfns.add(tosym(str(rm).rsplit('.', 1)[0]).lower())
+            rmfns.add(str(rm).rsplit('.', 1)[0].lower())
 
         for rmfn in rmfns:
             self.writeln('#include <quick-der/' + rmfn + '.h>')
