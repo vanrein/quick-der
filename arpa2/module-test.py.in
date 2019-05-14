@@ -1,9 +1,0 @@
-
-import sys
-
-sys.path = [ '@CMAKE_BINARY_DIR@/python/installroot' ] + sys.path
-
-import quick_der.@ASN1_MODULE_NAME@
-
-sys.exit (0)
-

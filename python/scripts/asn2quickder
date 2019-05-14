@@ -26,7 +26,7 @@
 #
 
 from sys import argv, exit, stderr
-from quick_der.main import main
+from asn2quickder.main import main
 
 
 if __name__ == '__main__':
