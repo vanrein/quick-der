@@ -720,6 +720,24 @@ int der_get_bool (dercursor crs, bool *valp);
 typedef uint8_t der_buf_bool_t [1];
 dercursor der_put_bool (uint8_t *der_buf_bool, bool value);
 
+/* When the optional is absent, set its value to the default.
+ * Since Quick DER does not process default values, this must be
+ * done manually.  The work can help to simplify programs, by
+ * reducing the number of code paths and improve coverage.
+ *
+ * This function is not directly usable for CHOICE, which is
+ * unrolled into a sequence of dercursor values that may or may
+ * not have a value, but the multiplicity of the values is not
+ * taken care of below.
+ */
+void der_put_default (dercursor *optional, dercursor default_value);
+
+/* Test if the appointed optional equals the default.  If so, set it
+ * to the default/absent entry, .derptr==NULL and .derlen==0
+ * This is useful prior to sending.
+ */
+void der_unput_default (dercursor *optional, dercursor default_value);
+
 /* Compare the values pointed to by cursors @p c1 and @p c2.
  * Returns 0 if the (binary) values are equal, otherwise returns
  * the difference between the first two differing bytes (similar
