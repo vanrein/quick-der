@@ -102,7 +102,7 @@ macro(add_asn1_module _modulename _groupname)
 		add_dependencies(asn2quickder-done ${_modulename}_asn1_h)
 	
 		add_test(${_modulename}-test-h ${_modulename}-test-h)
-		add_test(${_modulename}-test-py ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/python:${_ppath} python ${_modulename}-test.py)
+		add_test(${_modulename}-test-py ${CMAKE_COMMAND} -E env PYTHONPATH=${_ppath} ${PYTHON_EXECUTABLE} ${_modulename}-test.py)
 	endif()
 endmacro()
 

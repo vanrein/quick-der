@@ -11,8 +11,11 @@
 #    SPDX-License-Identifier: BSD-2-Clause.degroot
 #    License-Filename: LICENSES/BSD-2-Clause.degroot
 
-if("${CMAKE_HOST_SYSTEM}" MATCHES ".*Windows.*")
-    set (PYTHON_PATH_SEPARATOR ";")
+# Not using WIN32 here, because that's set when the **target** system
+# is Windows. Here, we need it while building, regardless of target,
+# on a Windows host.
+if (CMAKE_HOST_SYSTEM MATCHES "Windows")
+    set (PYTHON_PATH_SEPARATOR "\\\;")
 else()
     set (PYTHON_PATH_SEPARATOR ":")
 endif()
@@ -20,6 +23,8 @@ endif()
 # Sets @p VARNAME to the value of the environment-variable PYTHONPATH,
 # with @p path appended to it with a suitable separator. If more than
 # one value is passed in, they are all appended with suitable separators.
+#
+# This **could** be generalized, to use a different ENV variable.
 function (AppendToPythonPath VARNAME path)
     set (_ppath $ENV{PYTHONPATH})
     # Special-case if the existing environment variable is empty.
