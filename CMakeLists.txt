@@ -3,6 +3,10 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 # License-Filename: LICENSE.MD
+
+message(FATAL_ERROR "This repository has moved to GitLab\n\nGet Quick-DER from\n\thttps://gitlab.com/arpa2/quick-der/\n")
+
+
 cmake_minimum_required (VERSION 3.2 FATAL_ERROR)
 project ("Quick-DER" C)
 
